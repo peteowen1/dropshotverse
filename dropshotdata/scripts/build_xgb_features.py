@@ -1,0 +1,189 @@
+"""Issue 26: build the feature set for `elo + hier raw state + engineered
+features -> xgb.cv`, per Pete's direction in RESUME-beat-elo.md.
+
+Read-only wrt hierarchical_model.py / elo_baseline.py - only consumes their
+already-written prediction parquets (hier_v25_eval_predictions.parquet,
+tune_scratch/v25_tune_preds.parquet) and this session's own already-verified
+elo_raw_ratings_full.parquet (built by elo_raw_ratings_for_xgb.py, itself a
+read-only copy of elo_baseline.py's logic - not an edit of that file).
+
+Produces two parquets:
+  tune_scratch/xgb_features_tune.parquet      (2022-2023, for xgb.cv)
+  tune_scratch/xgb_features_holdout.parquet   (2024-2025, revealed once)
+
+Symmetric construction (matches this session's convention for
+leakage-free classifier framing): each match's two players are assigned to
+side A / side B via a hash of (date, sorted uid pair) - NOT winner/loser,
+which would trivially leak the label. y = 1 if side A won. Every numeric
+feature is a sideA-minus-sideB differential; surface/round/best_of/tour/tier
+are kept as non-differential categorical context, per the task brief.
+
+Market odds/probability is explicitly EXCLUDED from the feature set (would be
+circular against the project's actual goal - calibration parity WITH the
+market, not beating it by copying it).
+"""
+from __future__ import annotations
+
+import hashlib
+import pickle
+
+import numpy as np
+import pandas as pd
+
+DD = r"C:\dev\dropshotverse\dropshotdata"
+HIER_TUNE = rf"{DD}\tune_scratch\v25_tune_preds.parquet"          # 2022-23
+HIER_HOLDOUT = rf"{DD}\hier_v25_eval_predictions.parquet"          # 2024-25
+ELO_RAW = rf"{DD}\tune_scratch\elo_raw_ratings_full.parquet"       # full archive
+LAYOFF = rf"{DD}\tune_scratch\diag_layoff.parquet"                 # full archive
+CACHE = rf"{DD}\tune_scratch\prepared_matches_cache.pkl"           # full archive
+OUT_TUNE = rf"{DD}\tune_scratch\xgb_features_tune.parquet"
+OUT_HOLDOUT = rf"{DD}\tune_scratch\xgb_features_holdout.parquet"
+
+ELITE_LEVELS = frozenset({"G", "M", "F", "PM", "O"})
+
+
+def log(m: str) -> None:
+    print(m, flush=True)
+
+
+def side_a_is_winner(date: pd.Timestamp, w_uid: str, l_uid: str) -> bool:
+    """Deterministic, outcome-blind side assignment: hash of (date, sorted
+    uid pair) only - never touches winner/loser identity or any outcome-
+    derived quantity, so it cannot leak the label."""
+    key = f"{date.date()}|{'|'.join(sorted([w_uid, l_uid]))}"
+    h = hashlib.sha256(key.encode()).digest()
+    return (h[0] % 2) == 0
+
+
+def compute_h2h(archive: pd.DataFrame) -> pd.DataFrame:
+    """As-of head-to-head win counts: for each row (in chronological order),
+    the number of PRIOR meetings each side won, before this match's own
+    outcome is folded in. archive must already be sorted chronologically
+    (elo_raw_ratings_full.parquet is - it's prepare()'s own (date,round_rank)
+    sort, preserved through run_elo_raw())."""
+    wins: dict[tuple[str, str], int] = {}   # (uid_a, uid_b) -> uid_a's win count vs uid_b
+    n = len(archive)
+    h2h_w = np.zeros(n, dtype=np.int32)   # prior wins by the match WINNER over this opponent
+    h2h_l = np.zeros(n, dtype=np.int32)   # prior wins by the match LOSER over this opponent
+    for i, (w, l) in enumerate(zip(archive["winner_uid"].values, archive["loser_uid"].values)):
+        h2h_w[i] = wins.get((w, l), 0)
+        h2h_l[i] = wins.get((l, w), 0)
+        wins[(w, l)] = wins.get((w, l), 0) + 1
+    out = archive[["date", "tour", "winner_uid", "loser_uid"]].copy()
+    out["h2h_prior_wins_winner"] = h2h_w
+    out["h2h_prior_wins_loser"] = h2h_l
+    return out
+
+
+def build_window(hier_path: str, window_name: str, elo_raw: pd.DataFrame,
+                  layoff: pd.DataFrame, arc_small: pd.DataFrame,
+                  h2h: pd.DataFrame) -> pd.DataFrame:
+    hier = pd.read_parquet(hier_path)
+    hier = hier[["date", "tour", "surface", "best_of", "winner_uid", "loser_uid",
+                 "winner_name", "loser_name", "d1_mean", "d1_var", "d2_mean", "d2_var"]].copy()
+    n0 = len(hier)
+
+    hier = hier.merge(elo_raw, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
+    hier = hier.merge(layoff, on=["date", "winner_uid", "loser_uid"], how="left")
+    hier = hier.merge(arc_small, on=["date", "winner_uid", "loser_uid"], how="left")
+    hier = hier.merge(h2h, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
+
+    before = len(hier)
+    hier = hier.drop_duplicates(subset=["date", "winner_uid", "loser_uid"], keep="first")
+    if len(hier) != before:
+        log(f"  [{window_name}] deduped {before - len(hier)} rows (round-robin "
+            f"rematches / many-to-one merges)")
+
+    hier["is_elite"] = hier["tourney_level"].isin(ELITE_LEVELS)
+
+    req = ["ro_winner", "ro_loser", "rs_winner", "rs_loser",
+           "weeks_since_last_w", "weeks_since_last_l", "n_prior_w", "n_prior_l",
+           "round", "tourney_level", "h2h_prior_wins_winner", "h2h_prior_wins_loser"]
+    miss = hier[req].isna().any(axis=1)
+    log(f"  [{window_name}] {n0:,} hier rows -> {len(hier):,} after merges, "
+        f"{int(miss.sum()):,} dropped for missing joined feature(s)")
+    hier = hier[~miss].reset_index(drop=True)
+
+    # ---- symmetric side assignment (outcome-blind)
+    a_is_winner = np.array([side_a_is_winner(d, w, l) for d, w, l in
+                             zip(hier["date"], hier["winner_uid"], hier["loser_uid"])])
+    hier["a_is_winner"] = a_is_winner
+    y = a_is_winner.astype(int)  # 1 if side A (== winner in this case) won
+
+    def pick(win_col: str, lose_col: str) -> np.ndarray:
+        wv = hier[win_col].values
+        lv = hier[lose_col].values
+        return np.where(a_is_winner, wv, lv), np.where(a_is_winner, lv, wv)
+
+    a_ro, b_ro = pick("ro_winner", "ro_loser")
+    a_rs, b_rs = pick("rs_winner", "rs_loser")
+    a_dmean, b_dmean = pick("d1_mean", "d2_mean")
+    a_dvar, b_dvar = pick("d1_var", "d2_var")
+    a_weeks, b_weeks = pick("weeks_since_last_w", "weeks_since_last_l")
+    a_nprior, b_nprior = pick("n_prior_w", "n_prior_l")
+    a_h2h, b_h2h = pick("h2h_prior_wins_winner", "h2h_prior_wins_loser")
+
+    feat = pd.DataFrame({
+        "date": hier["date"], "tour": hier["tour"], "window": window_name,
+        "winner_uid": hier["winner_uid"], "loser_uid": hier["loser_uid"],
+        "y": y,
+        # --- numeric sideA-minus-sideB differentials
+        "elo_overall_diff": a_ro - b_ro,
+        "elo_surface_diff": a_rs - b_rs,
+        "hier_dmean_diff": a_dmean - b_dmean,
+        "hier_dvar_diff": a_dvar - b_dvar,
+        "hier_dvar_sum": a_dvar + b_dvar,          # combined uncertainty - symmetric, not a leak
+        "weeks_since_last_diff": a_weeks - b_weeks,
+        "n_prior_diff": a_nprior - b_nprior,
+        "h2h_diff": a_h2h - b_h2h,
+        # --- non-differential categorical context
+        "surface": hier["surface"].astype(str),
+        "round": hier["round"].astype(str),
+        "best_of": hier["best_of"].astype("Int64"),
+        "tourney_level": hier["tourney_level"].astype(str),
+        "is_elite": hier["is_elite"].astype(bool),
+    })
+    return feat
+
+
+def main() -> None:
+    log("loading shared full-archive feature sources...")
+    elo_raw = pd.read_parquet(ELO_RAW)
+    elo_raw = elo_raw[elo_raw["level_file"] == "tour"][
+        ["date", "tour", "winner_uid", "loser_uid", "ro_winner", "ro_loser",
+         "rs_winner", "rs_loser"]]
+
+    layoff = pd.read_parquet(LAYOFF)[
+        ["date", "winner_uid", "loser_uid", "weeks_since_last_w", "weeks_since_last_l",
+         "n_prior_w", "n_prior_l"]]
+
+    # nosec: this session's own prepared-archive cache (hierarchical_model.py's
+    # load_prepared()), not an externally-sourced pickle - same trust basis as
+    # diag2_build.py's identical load earlier this session.
+    with open(CACHE, "rb") as f:
+        arc, _ = pickle.load(f)
+    arc_small = arc[["date", "winner_uid", "loser_uid", "round", "tourney_level"]].drop_duplicates(
+        subset=["date", "winner_uid", "loser_uid"])
+
+    log("computing as-of head-to-head from the full chronological archive...")
+    full_elo_raw = pd.read_parquet(ELO_RAW)  # unfiltered, all levels, for the fullest possible H2H history
+    h2h = compute_h2h(full_elo_raw)
+
+    log("\nbuilding tune window (2022-2023)...")
+    tune = build_window(HIER_TUNE, "tune_2022_2023", elo_raw, layoff, arc_small, h2h)
+    log("\nbuilding holdout window (2024-2025)...")
+    holdout = build_window(HIER_HOLDOUT, "holdout_2024_2025", elo_raw, layoff, arc_small, h2h)
+
+    for name, df in (("tune", tune), ("holdout", holdout)):
+        bal = df["y"].mean()
+        log(f"\n[{name}] n={len(df):,}  label balance (P(y=1))={bal:.4f} "
+            f"({'OK ~50/50' if abs(bal - 0.5) < 0.02 else 'WARNING: imbalanced, check side assignment'})")
+
+    tune.to_parquet(OUT_TUNE)
+    holdout.to_parquet(OUT_HOLDOUT)
+    log(f"\nwrote {OUT_TUNE} ({len(tune):,} rows)")
+    log(f"wrote {OUT_HOLDOUT} ({len(holdout):,} rows)")
+
+
+if __name__ == "__main__":
+    main()
