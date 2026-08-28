@@ -1,0 +1,104 @@
+{
+ "baseline": {
+  "tag": "t24_v25_baseline",
+  "n": 8460,
+  "weighted_logloss": 0.5759,
+  "plain_logloss": 0.6347,
+  "lopsided_logloss": 0.4325,
+  "corruption_pct": 0.0,
+  "fit_s": 42.3
+ },
+ "step1_default_nu": {
+  "tag": "t24_heavytail_on_default_nu",
+  "n": 8460,
+  "weighted_logloss": 0.5759,
+  "plain_logloss": 0.6347,
+  "lopsided_logloss": 0.4327,
+  "corruption_pct": 0.0,
+  "fit_s": 43.6
+ },
+ "nu_scan": [
+  {
+   "nu": "2.0",
+   "tag": "t24_nu_2p0",
+   "n": 8460,
+   "weighted_logloss": 0.576,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4329,
+   "corruption_pct": 0.0,
+   "fit_s": 35.3
+  },
+  {
+   "nu": "3.0",
+   "tag": "t24_nu_3p0",
+   "n": 8460,
+   "weighted_logloss": 0.576,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4328,
+   "corruption_pct": 0.0,
+   "fit_s": 43.2
+  },
+  {
+   "nu": "4.0",
+   "tag": "t24_heavytail_on_default_nu",
+   "n": 8460,
+   "weighted_logloss": 0.5759,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4327,
+   "corruption_pct": 0.0,
+   "fit_s": 43.6
+  },
+  {
+   "nu": "6.0",
+   "tag": "t24_nu_6p0",
+   "n": 8460,
+   "weighted_logloss": 0.5759,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4327,
+   "corruption_pct": 0.0,
+   "fit_s": 42.6
+  },
+  {
+   "nu": "10.0",
+   "tag": "t24_nu_10p0",
+   "n": 8460,
+   "weighted_logloss": 0.5759,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4326,
+   "corruption_pct": 0.0,
+   "fit_s": 31.5
+  },
+  {
+   "nu": "20.0",
+   "tag": "t24_nu_20p0",
+   "n": 8460,
+   "weighted_logloss": 0.5759,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4325,
+   "corruption_pct": 0.0,
+   "fit_s": 30.8
+  },
+  {
+   "nu": "30.0",
+   "tag": "t24_nu_30p0",
+   "n": 8460,
+   "weighted_logloss": 0.5759,
+   "plain_logloss": 0.6347,
+   "lopsided_logloss": 0.4325,
+   "corruption_pct": 0.0,
+   "fit_s": 31.2
+  }
+ ],
+ "best_nu": "4.0",
+ "best": {
+  "tag": "t24_heavytail_on_default_nu",
+  "n": 8460,
+  "weighted_logloss": 0.5759,
+  "plain_logloss": 0.6347,
+  "lopsided_logloss": 0.4327,
+  "corruption_pct": 0.0,
+  "fit_s": 43.6
+ },
+ "baseline_weighted_logloss": 0.5759,
+ "best_vs_baseline_delta": 0.0
+}
