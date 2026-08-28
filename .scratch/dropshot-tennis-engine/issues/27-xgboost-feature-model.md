@@ -6,8 +6,13 @@ correction — see "## Validation" below. A real leakage bug was found in the ra
 `hier_dmean_diff`/`hier_dvar_*` feature source, fixed, and the pipeline re-run.
 Corrected headline: ALL log-loss **0.6041** (not 0.6025), still beats Elo (0.6121)
 in both tours independently. The "Diagnostic slicing pass" section further below
-predates this fix and its exact numbers are superseded — see "## Validation" for
-what changed and what didn't.)
+predates this fix (RETRACTED, see its own header) and its exact numbers are
+superseded — see "## Validation" for the first correction pass, then
+"## Diagnostic slicing pass v2 (corrected, re-run on post-fix predictions)" near the
+end of the file for the full corrected cuts sweep and an explicit what-changed-vs-
+what-held comparison against the retracted version. Headline of that v2 pass:
+the retracted claim "Elo beats XGBoost in the top confidence bucket" does NOT hold
+— XGBoost beats Elo in every market-confidence bucket on corrected data.)
 
 ## Question
 
@@ -194,6 +199,16 @@ Elo, layoff, tier and H2H are real but much smaller contributors, and `best_of`/
   is already extracting most of the hierarchical model's own signal on top of Elo.
 
 ## Diagnostic slicing pass (same day, follow-up) — where does XGBoost's remaining gap to market concentrate?
+
+**RETRACTED/SUPERSEDED 2026-08-28 (later same day) — this entire section was run
+against the pre-leakage-fix, stale `hier_dmean_diff` predictions (and, additionally,
+against a stale pre-round-9-fix Elo reference joined via `diag2_enriched.parquet`).
+Its per-bucket numbers are not reliable. Its one headline claim ("Elo beats XGBoost
+in the top confidence bucket") does NOT hold on the corrected data. See
+"## Diagnostic slicing pass v2 (corrected, re-run on post-fix predictions)" near the
+end of this file for the re-run against the final, corrected
+`xgb_v1_holdout_predictions.parquet` (post commit `9678fda`), with an explicit
+what-changed-vs-what-held comparison. Kept below, unedited, for the record.**
 
 Ran the same kind of cut-by-cut sweep issue 20's round-3 diagnostics used for the
 hierarchical model, on the XGBoost holdout (`tune_scratch/xgb_v1_holdout_predictions
@@ -594,6 +609,251 @@ until re-run against the corrected `xgb_v1_holdout_predictions.parquet`.
   all regenerated with the fix; these are now the corrected, current numbers.
 - `dropshotdata/tune_scratch/xgb_calibration_report.json` — self-referential
   calibration report (ECE/Brier/log-loss/reliability table) on the corrected model.
+
+## Diagnostic slicing pass v2 (corrected, re-run on post-fix predictions, 2026-08-28 later same day)
+
+Re-run of the retracted "Diagnostic slicing pass" section above, this time against
+the CORRECTED, final artifacts: `tune_scratch/xgb_v1_holdout_predictions.parquet`
+(mtime 23:22, written by `train_xgb.py` after the `hier_dmean_diff` leak fix — i.e.
+after the regeneration underlying commit `9678fda`; n=8,593, confirmed identical to
+the file the "## Validation" section scored), joined to `diag2_enriched.parquet` for
+`p_mkt`/`p_winner_hier_mc` and to `prepared_matches_cache.pkl`'s `score` column for
+set-count, same as the original pass. Read-only throughout.
+
+**A second staleness bug caught before trusting any number here**: `diag2_enriched
+.parquet`'s own `p_elo` column (mtime 16:35) also predates the round-9
+causal-ordering fix (21:55/21:56) — using it gives Elo log-loss 0.6153 on this
+holdout, not the documented 0.6121. This means the ORIGINAL retracted sweep's
+per-bucket Elo reference numbers were themselves drawn from a stale Elo file, not
+just the XGBoost side. Fixed here by sourcing Elo from the current
+`elo_eval_predictions.parquet` (mtime 22:43, post-fix) directly, exactly as
+`train_xgb.py` itself does. **Sanity check**: with this fix, this re-run's overall
+numbers reproduce the doc's headline exactly — ALL XGBoost 0.6041, Elo 0.6121, ATP
+XGBoost 0.6063/Elo 0.6174, WTA XGBoost 0.6019/Elo 0.6067 — confirming both the
+correct predictions file and the correct Elo reference are in use below.
+
+### 1) Market-confidence bucket (the main ask — full table, pooled ATP+WTA)
+
+| bucket | n | XGBoost pred | XGBoost err | Elo pred | Elo err | Hier pred | Hier err | Market pred | Market err | realized |
+|---|---|---|---|---|---|---|---|---|---|---|
+| (0.5,0.6] | 2625 | 0.5377 | +0.0151 | 0.5439 | +0.0089 | 0.5305 | +0.0222 | 0.5536 | -0.0008 | 0.5528 |
+| (0.6,0.7] | 2462 | 0.6224 | +0.0198 | 0.6281 | +0.0141 | 0.6020 | +0.0402 | 0.6468 | -0.0046 | 0.6422 |
+| (0.7,0.8] | 1820 | 0.7130 | +0.0260 | 0.7192 | +0.0198 | 0.6683 | +0.0707 | 0.7473 | -0.0083 | 0.7390 |
+| (0.8,0.9] | 1124 | 0.7982 | +0.0479 | 0.8035 | +0.0426 | 0.7336 | +0.1125 | 0.8445 | +0.0016 | 0.8461 |
+| (0.9,1.0] | 544  | 0.8860 | +0.0478 | 0.8904 | +0.0434 | 0.8166 | +0.1172 | 0.9375 | -0.0037 | 0.9338 |
+
+Same table with log-loss:
+
+| bucket | n | XGBoost ll | Elo ll | Hier ll | Market ll | gap XGB−Elo | gap XGB−Mkt |
+|---|---|---|---|---|---|---|---|
+| (0.5,0.6] | 2625 | 0.6989 | 0.7146 | 0.7072 | 0.6871 | -0.0157 | +0.0118 |
+| (0.6,0.7] | 2462 | 0.6685 | 0.6694 | 0.6774 | 0.6475 | -0.0009 | +0.0210 |
+| (0.7,0.8] | 1820 | 0.5857 | 0.5927 | 0.6253 | 0.5726 | -0.0070 | +0.0131 |
+| (0.8,0.9] | 1124 | 0.4426 | 0.4504 | 0.4752 | 0.4277 | -0.0078 | +0.0149 |
+| (0.9,1.0] | 544  | 0.2484 | 0.2519 | 0.3187 | 0.2346 | **-0.0035** | +0.0138 |
+
+**What changed vs the retracted sweep — this is the headline correction**: in the
+top bucket, XGBoost log-loss is **0.2484 vs Elo's 0.2519 — XGBoost still wins**
+(gap -0.0035). The retracted sweep's inversion claim (XGBoost 0.2642 losing to Elo
+0.2507) does not hold anywhere in the corrected table; XGBoost beats or ties Elo in
+every single market-confidence bucket, confirming the "## Validation" section's
+finding (XGBoost 0.248 vs Elo 0.251 in that section's own independently-computed
+version of this same check).
+
+**What's more nuanced than either the retracted sweep or the Validation section
+suggested**: XGBoost's calibration error is still positive (underconfident) and
+still rises with market confidence (+0.0151 → +0.0198 → +0.0260 → +0.0479 → +0.0478,
+essentially flat between the last two buckets rather than still climbing). But
+**Elo's own error in the top bucket also rose once the correct, current Elo file is
+used** (+0.0402 in the retracted sweep's stale-Elo table → +0.0434 here). The result:
+XGBoost's top-bucket error is now only about **1.1x** Elo's own error (+0.0478 vs
++0.0434), not the **1.5-2x** the retracted sweep claimed (+0.0672 vs +0.0402). Both
+models are underconfident in the tail by a similar amount on the corrected data —
+this reads much less like "XGBoost is specifically leaving edge on the table
+relative to Elo" and much more like "the whole tail is a hard region for anything
+that isn't the market," matching what R128's top buckets independently show below.
+
+### 2) Tour — market-conditioned calibration by tour
+
+| tour | bucket | n | XGBoost pred | XGBoost err | Elo pred | Elo err | Hier pred | Hier err | Market pred | Market err |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ATP | (0.5,0.6] | 1343 | 0.5360 | +0.0261 | 0.5440 | +0.0181 | 0.5321 | +0.0301 | 0.5542 | +0.0080 |
+| ATP | (0.6,0.7] | 1265 | 0.6216 | +0.0345 | 0.6295 | +0.0266 | 0.6018 | +0.0543 | 0.6471 | +0.0090 |
+| ATP | (0.7,0.8] | 886  | 0.7127 | +0.0198 | 0.7262 | +0.0063 | 0.6680 | +0.0645 | 0.7475 | -0.0150 |
+| ATP | (0.8,0.9] | 565  | 0.7983 | +0.0389 | 0.8067 | +0.0305 | 0.7309 | +0.1063 | 0.8448 | -0.0076 |
+| ATP | (0.9,1.0] | 284  | 0.8857 | +0.0474 | 0.8924 | +0.0407 | 0.8088 | +0.1243 | 0.9398 | -0.0067 |
+| WTA | (0.5,0.6] | 1282 | 0.5393 | +0.0036 | 0.5437 | -0.0008 | 0.5289 | +0.0140 | 0.5530 | -0.0101 |
+| WTA | (0.6,0.7] | 1197 | 0.6232 | +0.0042 | 0.6265 | +0.0009 | 0.6022 | +0.0252 | 0.6465 | -0.0191 |
+| WTA | (0.7,0.8] | 934  | 0.7134 | +0.0318 | 0.7125 | +0.0327 | 0.6686 | +0.0766 | 0.7471 | -0.0020 |
+| WTA | (0.8,0.9] | 559  | 0.7981 | +0.0570 | 0.8002 | +0.0549 | 0.7362 | +0.1189 | 0.8443 | +0.0108 |
+| WTA | (0.9,1.0] | 260  | 0.8864 | +0.0483 | 0.8883 | +0.0463 | 0.8251 | +0.1095 | 0.9350 | -0.0004 |
+
+**Holds unchanged**: top-bucket underconfidence is still essentially symmetric
+between tours (ATP +0.0474, WTA +0.0483) — still architecture-level, not
+tour-specific. **New nuance**: in WTA specifically, Elo's own error is now nearly
+identical to XGBoost's at every bucket (e.g. (0.8,0.9]: XGBoost +0.0570 vs Elo
++0.0549) — the corrected Elo file makes WTA's story "both models similarly
+underconfident," not "XGBoost worse than Elo."
+
+### 3) Surface
+
+| surface | n | XGBoost ll | Elo ll | Hier ll | Market ll | gap XGB−Elo | gap XGB−Mkt |
+|---|---|---|---|---|---|---|---|
+| Clay  | 2338 | 0.5950 | 0.6043 | 0.6159 | 0.5752 | -0.0093 | +0.0198 |
+| Grass | 1059 | 0.6201 | 0.6243 | 0.6479 | 0.5952 | -0.0042 | +0.0249 |
+| Hard  | 5196 | 0.6050 | 0.6131 | 0.6272 | 0.5938 | -0.0082 | +0.0112 |
+
+**Holds, narrower**: no concentrated surface defect, same as before — but the
+XGBoost−Elo gap is smaller everywhere now (-0.0042 to -0.0093, vs the retracted
+sweep's -0.0104 to -0.0181), because both the XGBoost fix and the Elo-file fix
+moved the two models slightly closer together. Still comfortably large n
+everywhere, still all three surfaces favor XGBoost.
+
+### 4) Round
+
+| round | n | XGBoost ll | Elo ll | Hier ll | Market ll | gap XGB−Elo | gap XGB−Mkt |
+|---|---|---|---|---|---|---|---|
+| F    | 198  | 0.6171 | 0.6228 | 0.6532 | 0.6034 | -0.0057 | +0.0137 |
+| Q2   | 2    | — | — | — | — | *n=2, too sparse to trust, excluded* | |
+| QF   | 752  | 0.6173 | 0.6183 | 0.6431 | 0.6103 | -0.0010 | +0.0070 |
+| R128 | 1509 | 0.5964 | 0.6070 | 0.6156 | 0.5713 | -0.0106 | +0.0251 |
+| R16  | 1519 | 0.6052 | 0.6120 | 0.6362 | 0.5904 | -0.0068 | +0.0149 |
+| R32  | 2704 | 0.6050 | 0.6134 | 0.6271 | 0.5894 | -0.0084 | +0.0156 |
+| R64  | 1489 | 0.5909 | 0.5999 | 0.6031 | 0.5794 | -0.0090 | +0.0115 |
+| RR   | 44   | 0.5619 | 0.5998 | 0.6246 | 0.5887 | *n=44, borderline sparse* -0.0379 | -0.0268 |
+| SF   | 376  | 0.6499 | 0.6568 | 0.6759 | 0.6384 | -0.0069 | +0.0115 |
+
+R128 top-two buckets vs the rest of the draw:
+
+| cut | bucket | n | XGBoost err | Elo err | Hier err | Market err | realized |
+|---|---|---|---|---|---|---|---|
+| R128 | (0.8,0.9] | 189 | +0.0831 | +0.1066 | +0.1634 | +0.0307 | 0.8730 |
+| R128 | (0.9,1.0] | 145 | +0.0514 | +0.0751 | +0.1290 | +0.0020 | 0.9448 |
+| non-R128 | (0.8,0.9] | 935 | +0.0408 | +0.0297 | +0.1022 | -0.0043 | 0.8406 |
+| non-R128 | (0.9,1.0] | 399 | +0.0465 | +0.0319 | +0.1129 | -0.0058 | 0.9298 |
+
+**Changed in a way that strengthens the original conclusion**: with the correct Elo
+file, Elo's own error in R128's top buckets (+0.1066/+0.0751) is now noticeably
+**worse than XGBoost's** (+0.0831/+0.0514) — the reverse of the retracted sweep,
+which had them nearly tied (+0.1004 vs +0.1028). R128 remains a shared hard region
+(the market itself still shows elevated error there, +0.0307 vs ~0 elsewhere) but
+it is now more clearly NOT an XGBoost-specific weak spot — if anything XGBoost
+handles it relatively better than Elo does on the corrected data.
+
+### 5) Player experience (`n_prior_diff`)
+
+| n_prior_diff quintile | n | XGBoost ll | Elo ll | gap XGB−Elo |
+|---|---|---|---|---|
+| most negative | 1720 | 0.6017 | 0.6158 | -0.0141 |
+| | 1722 | 0.6000 | 0.6113 | -0.0114 |
+| middle | 1714 | 0.6060 | 0.6062 | -0.0002 |
+| | 1718 | 0.6129 | 0.6151 | -0.0022 |
+| most positive | 1719 | 0.6002 | 0.6122 | -0.0120 |
+
+| \|n_prior_diff\| quintile (experience gap magnitude) | n | XGBoost ll | Elo ll | gap XGB−Elo |
+|---|---|---|---|---|
+| smallest gap | 1731 | 0.6069 | 0.6071 | -0.0002 |
+| | 1716 | 0.6136 | 0.6209 | -0.0072 |
+| | 1713 | 0.5990 | 0.6065 | -0.0076 |
+| largest gap | 1725 | 0.5931 | 0.5996 | -0.0065 |
+| | 1708 | 0.6081 | 0.6267 | -0.0186 |
+
+**Holds**: still no clean monotonic lever, still a genuine null (all bins n≈1700+).
+Gap magnitudes shrank a little across the board (consistent with the Elo-file fix
+narrowing the general XGBoost−Elo gap), but the qualitative finding — no usable
+experience-based lever — is unchanged.
+
+### 6) Best-of and match length
+
+| cut | n | XGBoost ll | Elo ll | gap XGB−Elo |
+|---|---|---|---|---|
+| Bo3 | 7747 | 0.6133 | 0.6208 | -0.0075 |
+| Bo5 | 846  | 0.5203 | 0.5325 | -0.0121 |
+
+By sets actually played:
+
+| cut | n | XGBoost ll | Elo ll | gap XGB−Elo |
+|---|---|---|---|---|
+| Bo3: straight 2 sets | 5005 | 0.5700 | 0.5764 | -0.0064 |
+| Bo3: went 3 sets     | 2742 | 0.6923 | 0.7019 | **-0.0095** |
+| Bo5: straight 3 sets | 360  | 0.4179 | 0.4329 | **-0.0151** |
+| Bo5: went 4-5 sets   | 486  | 0.5963 | 0.6062 | -0.0100 |
+
+**Changed — this is the one piece of the retracted sweep's corroboration that does
+NOT clearly survive.** The retracted sweep's story was "XGBoost's edge over Elo is
+smaller on straight-set blowouts, larger on matches that go the distance" — offered
+as independent corroboration of the top-bucket underconfidence finding. On the
+corrected data, Bo3 still points that direction (straight-2 gap -0.0064 <
+went-3 gap -0.0095), but **Bo5 now points the other way**: straight-3-set gap
+(-0.0151) is *larger* than the went-4-5-sets gap (-0.0100) — the opposite of the
+original claim. Both n are moderate (360/486), not sparse, so this isn't a noise
+artifact from small samples, but it does mean the "goes the distance" story is now
+mixed rather than a clean three-way corroboration — Bo5 alone no longer supports it.
+
+### 7) Tournament tier
+
+| cut | n | XGBoost ll | Elo ll | gap XGB−Elo |
+|---|---|---|---|---|
+| is_elite=False | 4281 | 0.6192 | 0.6293 | -0.0101 |
+| is_elite=True  | 4312 | 0.5891 | 0.5951 | -0.0059 |
+
+**Holds**: still mostly a wash, elite events still show a slightly smaller gap, same
+as before (retracted sweep: -0.0155/-0.0102; here: -0.0101/-0.0059 — same shape,
+smaller absolute values).
+
+### Synthesis — what changed, what held, revised recommendation
+
+**What changed** (the corrected-data picture is genuinely different from the
+retracted sweep, not just re-labeled):
+1. **The headline "Elo beats XGBoost in the top bucket" claim is false on corrected
+   data.** XGBoost beats or ties Elo in every single market-confidence bucket,
+   including the top one (0.2484 vs 0.2519).
+2. **XGBoost's top-bucket miscalibration is only mildly worse than Elo's own**
+   (~1.1x, not ~1.5-2x) — the corrected Elo file (which itself needed a
+   round-9-fix refresh, a second staleness bug caught in the course of this re-run)
+   shows Elo is nearly as underconfident in the tail as XGBoost is. This weakens the
+   "XGBoost specifically leaves edge on the table relative to Elo" framing; it now
+   looks more like a shared hard-tail problem that XGBoost has inherited only
+   slightly more of, not a lot more of.
+3. **R128's top buckets now favor XGBoost over Elo**, reversing the near-tie the
+   retracted sweep found — one of the corroborating angles for "XGBoost has a
+   defect" has flipped to actively arguing against a defect.
+4. **The Bo5 set-count corroboration is now mixed**, not clean — straight-set Bo5
+   matches show a *larger* XGBoost-Elo gap than distance-going Bo5 matches, opposite
+   the retracted claim (Bo3 still points the original direction).
+
+**What held**:
+- No concentrated tour, surface, tier, or player-experience defect — all flat/noisy,
+  same conclusion as before, just with smaller absolute gaps (because the Elo
+  reference itself moved slightly).
+- XGBoost's calibration error is still positive (underconfident) and still highest
+  in the top two market-confidence buckets, in both tours roughly symmetrically.
+- R128 remains a genuinely harder region for every model, market included — that
+  conclusion is unchanged and, if anything, better supported now.
+
+**Revised recommendation**: the case for the retracted sweep's #1 suggestion
+(a narrow, tail-only post-hoc recalibration aimed at fixing an "XGBoost-specific"
+defect) is **weaker** now — the defect looks shared with Elo, not XGBoost-specific,
+so a recalibration narrowly targeting XGBoost's tail risks fixing something that
+isn't really XGBoost's problem alone. The residual gap to MARKET at the top
+(XGBoost 0.2484 vs Market 0.2346, +0.0138) is still real and worth closing, but the
+better-motivated next step is still recommendation #2 from the original writeup —
+**feed Elo's own already-blended `p_winner` as an additional XGBoost feature**
+(not just the raw rating diff) — since Elo's own extremization shape is available
+and cheap to hand to the trees directly, rather than asking XGBoost to reconstruct
+it. A cheap general (not top-decile-only) recalibration check is still reasonable
+to try given both models underextremize similarly, but framing it as fixing an
+"XGBoost-specific inherited hier defect" is no longer well supported by this
+corrected pass.
+
+### Artifacts (this v2 pass)
+
+Read-only, ad hoc, run from a scratch location outside the repo. Loads
+`tune_scratch/xgb_v1_holdout_predictions.parquet` (corrected, post-fix),
+`elo_eval_predictions.parquet` directly (NOT `diag2_enriched.parquet`'s stale
+`p_elo`), `tune_scratch/diag2_enriched.parquet` for `p_mkt`/`p_winner_hier_mc`
+only, and `prepared_matches_cache.pkl` for the `score` column. No new persistent
+files written to `dropshotdata/`.
 
 ## Artifacts
 
