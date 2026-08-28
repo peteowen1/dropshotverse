@@ -81,6 +81,25 @@ REGIME_B_N = float(os.environ.get("DSV_REGIME_B_N", "1.0"))
 # was clipped away by MAX_SHIFT, instead of merely protecting variance from
 # shrinking (bug 8's fix). Off (0.0) until scanned through the corruption gate.
 CLIP_REINFLATE_K = float(os.environ.get("DSV_CLIP_REINFLATE_K", "0.0"))
+# Ticket 24: heavy-tailed (scale-mixture-of-normals) process-noise treatment
+# for the Gaussian PRIOR term inside adf_update's/adf_update_full_dp's Newton
+# step - the actual generalization this ticket asked for, not another
+# clamp-detection proxy like CLIP_REINFLATE_K above. A literal Student-t
+# random walk (mixture/lambda variables carried and convolved at every one of
+# ~1.9M per-match time steps) has no closed-form recursion, so per issue 24's
+# own spec ("approach a": a local Gaussian approximation with an
+# adjusted/inflated variance per update) this treats each individual ADF
+# update's local Gaussian prior (m_d, v_d, fed by the ordinary Gaussian
+# random walk in inflate()) as an approximate Student-t via its scale-mixture
+# representation, solved by iteratively reweighting the prior's EFFECTIVE
+# variance inside the SAME Newton loop already in adf_update - no new outer
+# loop, no new state carried between matches, no new per-player fields.
+# See _heavy_tail_var's docstring for the exact formula and the deliberate
+# floor-at-1.0 deviation from a literal Student-t. Default 0 = exact
+# pre-existing Gaussian behaviour (verified bit-identical, not just
+# mathematically equal - v_eff is never reassigned from v_d when this is off).
+HEAVY_TAILED_NOISE = os.environ.get("DSV_HEAVY_TAILED_NOISE", "0") == "1"
+STUDENT_T_NU = float(os.environ.get("DSV_STUDENT_T_NU", "4.0"))  # tuned only on 2022-23
 # Ticket 22: tournament-tier weighting. tourney_level/round were loaded but
 # never used. ticket 20's REGIME_B_N scan proved that RAISING evidence weight
 # for any match subset reopens the absorbing-boundary corruption trap (no
@@ -508,27 +527,77 @@ def apply_side_update(mu_mean: float, mu_var: float, kappa_mean: float,
     return new_mu_mean, new_mu_var, new_kappa_mean, new_kappa_var
 
 
+def _heavy_tail_var(d: float, m_d: float, v_d: float, nu: float) -> float:
+    """Ticket 24: effective (possibly inflated) prior variance for a Newton
+    step's prior term, approximating a Student-t(nu) prior on d via a
+    floored scale-mixture-of-normals weight.
+
+    Standard Student-t-as-scale-mixture EM/IRLS result: d | lambda ~
+    N(m_d, v_d/lambda), lambda ~ Gamma(nu/2, nu/2) => posterior
+    E[lambda | d] = (nu+1) / (nu + r^2), r^2 = (d-m_d)^2 / v_d - so the
+    effective conditional variance at the current Newton iterate is
+    v_d / E[lambda|d] = v_d * (nu + r^2) / (nu + 1).
+
+    DEVIATION FROM A LITERAL STUDENT-T, BY DESIGN: a genuine Student-t with
+    scale^2=v_d is actually slightly TIGHTER than v_d exactly at the mode
+    (ratio nu/(nu+1) < 1 at r=0) - accepting that would silently retune
+    every ordinary, unsurprising update's effective variance, entangling
+    this ticket's fix with every other hyperparameter that already assumes
+    v_d IS the working variance (RW_VAR_PER_WEEK, PHI_MAX, etc., all tuned
+    under that assumption). Flooring the ratio at 1.0 means v_d is NEVER
+    shrunk below its ordinary value, only ever inflated, and only once r^2
+    exceeds 1 (nu+r^2 > nu+1). A typical/unsurprising update (r^2<=1) is
+    therefore byte-for-byte unaffected by nu - the whole mechanism is
+    isolated to genuinely large surprises, the exact failure mode ticket 24
+    targets (what currently hits MAX_SHIFT), without silently reopening any
+    already-tuned hyperparameter's calibration."""
+    if v_d <= 0:
+        return v_d
+    r2 = (d - m_d) * (d - m_d) / v_d
+    ratio = (nu + r2) / (nu + 1.0)
+    return v_d * ratio if ratio > 1.0 else v_d
+
+
 def adf_update(m_a: float, v_a: float, m_b: float, v_b: float,
               y: float, n: float) -> tuple[float, float, float, float]:
     """Binomial Laplace update on d = a-b, y successes of n trials, p=sigmoid(d).
     Returns updated (m_a, v_a, m_b, v_b), splitting shift & variance reduction
-    proportional to each side's prior variance share (Kalman-gain-like)."""
+    proportional to each side's prior variance share (Kalman-gain-like).
+
+    Ticket 24 (DSV_HEAVY_TAILED_NOISE): when enabled, the Gaussian prior
+    term's variance v_d is replaced each Newton iteration by
+    _heavy_tail_var(d, m_d, v_d, STUDENT_T_NU), a floored scale-mixture
+    approximation to a Student-t(nu) prior - recomputed against the CURRENT
+    Newton iterate `d`, so this is a genuine iteratively-reweighted (IRLS)
+    scheme converging toward the Student-t-prior MAP, not a single static
+    adjustment. When off (default), v_eff is never reassigned from v_d, so
+    this is bit-identical to the pre-ticket-24 Gaussian-only update."""
     if n <= 0:
         return m_a, v_a, m_b, v_b
     m_d, v_d = m_a - m_b, v_a + v_b
     d = m_d
+    v_eff = v_d
     for _ in range(6):
         p = sigmoid(d)
-        grad = (y - n * p) - (d - m_d) / v_d
-        hess = -(n * p * (1 - p) + 1.0 / v_d)
+        if HEAVY_TAILED_NOISE:
+            v_eff = _heavy_tail_var(d, m_d, v_d, STUDENT_T_NU)
+        grad = (y - n * p) - (d - m_d) / v_eff
+        hess = -(n * p * (1 - p) + 1.0 / v_eff)
         if hess == 0:
             break
         d -= grad / hess
     p = sigmoid(d)
-    var_post = 1.0 / (n * p * (1 - p) + 1.0 / v_d)
+    if HEAVY_TAILED_NOISE:
+        v_eff = _heavy_tail_var(d, m_d, v_d, STUDENT_T_NU)
+    var_post = 1.0 / (n * p * (1 - p) + 1.0 / v_eff)
     shift = d - m_d
     share_a = v_a / (v_a + v_b)
     share_b = 1.0 - share_a
+    # reduction stays relative to the REAL prior variance v_d (not v_eff) -
+    # v_eff is only a temporary Newton-step device for how much the mean is
+    # allowed to move under a heavy tail; "how much did this observation
+    # actually shrink our real uncertainty" is still measured against the
+    # real prior, same as the pre-ticket-24 code.
     reduction = max(0.0, 1.0 - var_post / v_d)
     return (m_a + share_a * shift, v_a * (1 - reduction * share_a),
             m_b - share_b * shift, v_b * (1 - reduction * share_b))
@@ -634,21 +703,29 @@ def adf_update_full_dp(m_a: float, v_a: float, m_b: float, v_b: float,
     log-likelihood (LL -> weight*LL) - the same role REGIME_B_N already
     plays by scaling y and n together in the old approximation, so the
     already-tuned dials stay meaningful under this mode instead of needing a
-    brand new redundant hyperparameter."""
+    brand new redundant hyperparameter.
+
+    Ticket 24 (DSV_HEAVY_TAILED_NOISE): same floored scale-mixture prior
+    treatment as adf_update - see _heavy_tail_var's docstring. Applies to
+    the same Gaussian prior term (-(d-m_d)/v_d, -1/v_d) this function's
+    Newton step already carries; off by default, bit-identical when off."""
     m_d, v_d = m_a - m_b, v_a + v_b
     if v_d <= 0 or not set_scores or weight <= 0:
         return m_a, v_a, m_b, v_b
     d = m_d
     h = FULL_DP_H
-    hess = -1.0 / v_d
+    v_eff = v_d
+    hess = -1.0 / v_eff
     for _ in range(4):
+        if HEAVY_TAILED_NOISE:
+            v_eff = _heavy_tail_var(d, m_d, v_d, STUDENT_T_NU)
         ll_p = weight * match_log_likelihood(d + h, set_scores)
         ll_0 = weight * match_log_likelihood(d, set_scores)
         ll_m = weight * match_log_likelihood(d - h, set_scores)
         grad_ll = (ll_p - ll_m) / (2 * h)
         hess_ll = (ll_p - 2 * ll_0 + ll_m) / (h * h)
-        grad = grad_ll - (d - m_d) / v_d
-        hess = hess_ll - 1.0 / v_d
+        grad = grad_ll - (d - m_d) / v_eff
+        hess = hess_ll - 1.0 / v_eff
         if hess == 0 or not math.isfinite(hess) or not math.isfinite(grad):
             break
         step = grad / hess
@@ -657,11 +734,13 @@ def adf_update_full_dp(m_a: float, v_a: float, m_b: float, v_b: float,
         d -= step
         d = max(FULL_DP_GRID_MIN, min(FULL_DP_GRID_MAX, d))
     # Final curvature at the converged d, for the posterior (Laplace) variance.
+    if HEAVY_TAILED_NOISE:
+        v_eff = _heavy_tail_var(d, m_d, v_d, STUDENT_T_NU)
     ll_p = weight * match_log_likelihood(d + h, set_scores)
     ll_0 = weight * match_log_likelihood(d, set_scores)
     ll_m = weight * match_log_likelihood(d - h, set_scores)
     hess_ll = (ll_p - 2 * ll_0 + ll_m) / (h * h)
-    hess = hess_ll - 1.0 / v_d
+    hess = hess_ll - 1.0 / v_eff
     if math.isfinite(hess) and hess < 0:
         var_post = -1.0 / hess
     else:

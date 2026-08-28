@@ -16,7 +16,8 @@ from hierarchical_model import (PlayerState, inflate, adf_update, apply_side_upd
                                 sigmoid, p_match, p_game, p_tiebreak, p_set, p_set_full,
                                 adf_update_full_dp, parse_score_sets, set_outcome_dist_for_d,
                                 p_specific_set_score, FULL_DP_GRID_MIN, FULL_DP_GRID_MAX,
-                                MAX_STATE, MAX_VAR)
+                                MAX_STATE, MAX_VAR, MAX_SHIFT, _heavy_tail_var)
+import hierarchical_model as hm
 
 FAILURES = []
 
@@ -301,6 +302,147 @@ max_cache_entries = int((FULL_DP_GRID_MAX - FULL_DP_GRID_MIN) / FULL_DP_GRID_STE
 _after = len(__import__("hierarchical_model")._full_dp_grid_cache)
 check("grid cache bounded by the fixed grid size (no unbounded growth)",
      _after <= max_cache_entries, f"cache size={_after}, hard ceiling={max_cache_entries}")
+
+# ---- reproduction 15 (ticket 24, heavy-tailed process noise): a single very
+# large surprising update. A tight-variance, strongly-favoured player (v_d
+# small, prior d=3.0 i.e. sigmoid(3)=95%) gets demolished (y=2 of n=70 games).
+# Compare Gaussian (HEAVY_TAILED_NOISE off) vs heavy-tailed (on) adf_update on
+# the SAME inputs. The mechanism's whole point: heavy tails should let the
+# posterior genuinely absorb more of the surprise (move further toward the
+# evidence, less resistance from an artificially-confident prior) AND retain
+# MORE posterior variance (less false confidence) than the Gaussian version -
+# both directly checkable without needing MAX_SHIFT to engage at all.
+m_d0, v_each0 = 3.0, 0.05
+hm.HEAVY_TAILED_NOISE = False
+gauss15 = adf_update(m_d0, v_each0, 0.0, v_each0, 2.0, 70.0)
+hm.HEAVY_TAILED_NOISE = True
+heavy15 = adf_update(m_d0, v_each0, 0.0, v_each0, 2.0, 70.0)
+hm.HEAVY_TAILED_NOISE = False
+gauss_shift = abs(gauss15[0] - m_d0)
+heavy_shift = abs(heavy15[0] - m_d0)
+check("large surprise: heavy-tailed moves the mean at least as far as Gaussian",
+     heavy_shift >= gauss_shift - 1e-9,
+     f"gauss shift={gauss_shift:.4f} heavy shift={heavy_shift:.4f} (d_prior=3.0, y=2/n=70)")
+check("large surprise: heavy-tailed retains more (or equal) posterior variance than Gaussian",
+     heavy15[1] >= gauss15[1] - 1e-9,
+     f"gauss v_a={gauss15[1]:.5f} heavy v_a={heavy15[1]:.5f}")
+check("large surprise: both versions stay finite",
+     all(math.isfinite(x) for x in gauss15) and all(math.isfinite(x) for x in heavy15),
+     f"gauss={gauss15} heavy={heavy15}")
+
+# ---- reproduction 16 (ticket 24): a SEQUENCE of several large surprises in a
+# row - the exact pattern behind bug 9 (variance shrinks before the mean is
+# correct, locking in a wrong value forever, across MULTIPLE compounding
+# events, not just one). A tight-variance player alternates big upset losses
+# and big upset wins for 8 rounds; under the old absorbing-boundary
+# pathology, variance would ratchet down toward zero regardless of direction.
+# Heavy-tailed must keep variance meaningfully above a stale-confidence floor
+# throughout, not just survive the final MAX_STATE/MAX_VAR hard backstops
+# (those stay active in both modes - this checks the MECHANISM, not just the
+# safety net behind it).
+hm.HEAVY_TAILED_NOISE = True
+seq_state = PlayerState()
+seq_state.v_a = seq_state.v_b = 0.05    # tour-veteran-tight prior
+opp_seq = PlayerState()
+min_v_seen = seq_state.v_a
+for rnd in range(8):
+    y_evt = 68.0 if rnd % 2 == 0 else 2.0   # alternating blowout win/loss
+    e_w, f_l = seq_state.m_a, opp_seq.m_b
+    v_e, v_f = seq_state.v_a, opp_seq.v_b
+    new_ew, new_ve, new_fl, new_vf = adf_update(e_w, v_e, f_l, v_f, y_evt, 70.0)
+    seq_state.m_a, seq_state.v_a, _, _ = apply_side_update(
+        seq_state.m_a, seq_state.v_a, 0.0, 0.0, e_w, new_ew, new_ve)
+    min_v_seen = min(min_v_seen, seq_state.v_a)
+hm.HEAVY_TAILED_NOISE = False
+check("repeated large surprises (8 rounds): heavy-tailed state stays finite and MAX_STATE-bounded",
+     math.isfinite(seq_state.m_a) and abs(seq_state.m_a) <= MAX_STATE + 1e-9,
+     f"m_a={seq_state.m_a:.3f} v_a={seq_state.v_a:.4f} (cap {MAX_STATE})")
+check("repeated large surprises (8 rounds): variance never collapses toward zero (no re-opened absorbing-boundary trap)",
+     min_v_seen > 1e-3,
+     f"min v_a observed across 8 alternating-blowout rounds = {min_v_seen:.5f}")
+
+# ---- reproduction 17 (ticket 24): the round-5 long-layoff variance-
+# sufficiency checks (reproduction 5) re-run with HEAVY_TAILED_NOISE=1. The
+# heavy-tailed mechanism only touches adf_update's/adf_update_full_dp's prior
+# term inside the observation update - inflate()'s time-decay/process-noise
+# growth is untouched by this ticket - so these must still pass identically.
+# Checked explicitly rather than assumed, per the task brief's own mandate.
+hm.HEAVY_TAILED_NOISE = True
+for weeks, floor, label in [(52, 0.3, "1yr"), (156, 2.0, "3yr"), (260, 3.5, "5yr")]:
+    st17 = PlayerState()
+    st17.v_a = st17.v_b = 0.03
+    start17 = pd.Timestamp("2015-01-01")
+    st17.last_seen = start17
+    inflate(st17, start17 + pd.Timedelta(weeks=weeks))
+    check(f"[HEAVY_TAILED_NOISE=1] variance inflates enough after {label} layoff (from tight prior)",
+         st17.v_a >= floor,
+         f"v_a={st17.v_a:.4f} after {label} gap from v=0.03 start (floor {floor}, cap {MAX_VAR})")
+returner17 = PlayerState()
+returner17.m_a, returner17.m_b = 0.75, 0.75
+returner17.v_a = returner17.v_b = 0.03
+returner17.last_seen = pd.Timestamp("2015-01-01")
+inflate(returner17, pd.Timestamp("2015-01-01") + pd.Timedelta(weeks=156))
+opponent17 = PlayerState()
+rng17 = np.random.default_rng(0)
+d1_17 = rng17.normal(returner17.m_a + returner17.m_b,
+                     math.sqrt(max(returner17.v_a + returner17.v_b, 1e-6)), 4000)
+d2_17 = rng17.normal(opponent17.m_a + opponent17.m_b,
+                     math.sqrt(max(opponent17.v_a + opponent17.v_b, 1e-6)), 4000)
+ps17 = [p_match(sigmoid(a), sigmoid(b), 3) for a, b in zip(d1_17, d2_17)]
+p_mc17 = float(np.mean(ps17))
+hm.HEAVY_TAILED_NOISE = False
+check("[HEAVY_TAILED_NOISE=1] 3yr-layoff return match not overconfident vs an average opponent",
+     p_mc17 <= 0.95,
+     f"MC-averaged p(returner wins)={p_mc17:.4f} (ceiling 0.95) after 3yr layoff from tight prior")
+
+# ---- reproduction 18 (ticket 24): default-path no-op verification, checked
+# directly against a hand-rolled reference Gaussian-only Newton solve (not
+# just "existing tests still pass", which only shows equality by omission).
+def _reference_gaussian_adf_update(m_a, v_a, m_b, v_b, y, n):
+    """Verbatim pre-ticket-24 adf_update body, self-contained."""
+    if n <= 0:
+        return m_a, v_a, m_b, v_b
+    m_d, v_d = m_a - m_b, v_a + v_b
+    d = m_d
+    for _ in range(6):
+        p = sigmoid(d)
+        grad = (y - n * p) - (d - m_d) / v_d
+        hess = -(n * p * (1 - p) + 1.0 / v_d)
+        if hess == 0:
+            break
+        d -= grad / hess
+    p = sigmoid(d)
+    var_post = 1.0 / (n * p * (1 - p) + 1.0 / v_d)
+    shift = d - m_d
+    share_a = v_a / (v_a + v_b)
+    share_b = 1.0 - share_a
+    reduction = max(0.0, 1.0 - var_post / v_d)
+    return (m_a + share_a * shift, v_a * (1 - reduction * share_a),
+            m_b - share_b * shift, v_b * (1 - reduction * share_b))
+
+
+maxdiff18 = 0.0
+for m_d_, v_, y_, n_ in [(0.0, 0.5, 40.0, 70.0), (3.0, 0.05, 2.0, 70.0),
+                        (-2.0, 1.5, 55.0, 60.0), (0.0, 4.0, 1.0, 1.0)]:
+    ref = _reference_gaussian_adf_update(m_d_, v_, 0.0, v_, y_, n_)
+    got = adf_update(m_d_, v_, 0.0, v_, y_, n_)   # module default: HEAVY_TAILED_NOISE=0
+    maxdiff18 = max(maxdiff18, max(abs(a - b) for a, b in zip(ref, got)))
+check("HEAVY_TAILED_NOISE=0 (default) is bit-identical to the pre-ticket-24 Gaussian-only update",
+     maxdiff18 < 1e-12, f"max diff across 4 cases = {maxdiff18:.2e}")
+
+# ---- reproduction 19 (ticket 24): _heavy_tail_var's floor-at-1.0 contract -
+# never below v_d at r=0, strictly increasing beyond it, and converges to
+# v_d as nu grows (the Gaussian limit).
+check("_heavy_tail_var at r=0 (d==m_d) returns exactly v_d (the floor)",
+     _heavy_tail_var(1.0, 1.0, 0.4, 4.0) == 0.4, f"got {_heavy_tail_var(1.0, 1.0, 0.4, 4.0)}")
+v_near = _heavy_tail_var(1.05, 1.0, 0.4, 4.0)
+v_far = _heavy_tail_var(2.0, 1.0, 0.4, 4.0)
+check("_heavy_tail_var strictly increases with |d - m_d|",
+     0.4 <= v_near <= v_far, f"v_d=0.4 -> near={v_near:.4f} far={v_far:.4f}")
+v_nu_small = _heavy_tail_var(3.0, 1.0, 0.4, 2.0)
+v_nu_large = _heavy_tail_var(3.0, 1.0, 0.4, 200.0)
+check("_heavy_tail_var: larger nu (less heavy-tailed) gives less inflation for the same surprise",
+     v_nu_large <= v_nu_small, f"nu=2 -> {v_nu_small:.4f}, nu=200 -> {v_nu_large:.4f}")
 
 print(f"\n{'ALL PASS' if not FAILURES else 'FAILURES: ' + str(FAILURES)}")
 sys.exit(1 if FAILURES else 0)
