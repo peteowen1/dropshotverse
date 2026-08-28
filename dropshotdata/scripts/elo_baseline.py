@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import re
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,80 @@ SURFACES = ("Hard", "Clay", "Grass", "Carpet")
 
 def log(m: str) -> None:
     print(m, flush=True)
+
+
+# Bug fix (2026-08-28): the SAME causal-ordering bug just found and fixed in
+# hierarchical_model.py (commit 111ecce) - this file's load_matches()/prepare()
+# are near-duplicates of that file's, and share the identical defect.
+# `tourney_date` is a TOURNAMENT-level (start) date, not per-match, so a
+# date-only stable sort leaves within-date order at the mercy of raw file
+# concatenation order - and load_matches() above reads ALL main-draw yearly
+# files for a tour before ANY qual_chall/qual_itf yearly files, so for every
+# tournament, every year, both tours, qualifying rounds land AFTER the entire
+# main draw in file order, even though qualifying happens BEFORE the main
+# draw in real life. A player who just won Q1-Q3 would be rated in their
+# R128 match using a state that hadn't yet absorbed those qualifying wins.
+#
+# Q1 < Q2 < Q3 < Q4 < Q5 < ER < R128 < R64 < R32 < R16 < QF < RR < SF < F/BR
+# RR (round-robin, season-ending Finals events) is a group stage, ranked
+# before the SF/F knockout bracket it feeds. BR (bronze/3rd-place playoff) is
+# ranked with F - both happen after SF and are effectively concurrent.
+ROUND_RANK: dict[str, int] = {
+    "Q1": 0, "Q2": 1, "Q3": 2, "Q4": 3, "Q5": 4,
+    "ER": 5,
+    "R128": 6, "R64": 7, "R32": 8, "R16": 9,
+    "QF": 10, "RR": 11, "SF": 12,
+    "F": 13, "BR": 13,
+}
+QUAL_ROUNDS = {"Q1", "Q2", "Q3", "Q4", "Q5", "ER"}
+MAIN_ROUNDS = {"R128", "R64", "R32", "R16", "QF", "RR", "SF", "F", "BR"}
+
+
+def round_rank(series: pd.Series) -> pd.Series:
+    """Map a `round` column to a within-date sort rank. `'f'` is normalized to
+    `'F'` first (confirmed the same round, not a distinct one - a WTA
+    ITF-qualifying final, per hierarchical_model.py's identical fix). Any
+    round value not in ROUND_RANK falls back to a neutral rank (NaN, sorted
+    last within its date via na_position='last') rather than crashing or
+    guessing a position, and is logged so a new label doesn't silently
+    misorder matches."""
+    normalized = series.astype(str).str.strip()
+    normalized = normalized.where(normalized != "f", "F")
+    ranks = normalized.map(ROUND_RANK)
+    unknown = ranks.isna()
+    if unknown.any():
+        bad_vals = sorted(normalized[unknown].unique())
+        warnings.warn(
+            f"prepare(): {int(unknown.sum())} row(s) have round value(s) "
+            f"{bad_vals} not in ROUND_RANK - falling back to date-only order "
+            "for these rows (sorted last within their date).",
+            stacklevel=2,
+        )
+    return ranks
+
+
+def count_round_inversions(df: pd.DataFrame) -> int:
+    """Count (qual_row, main_row) pairs that share a date where the
+    qualifying-round row currently sits AFTER the main-draw row in the
+    DataFrame's own order - exactly the defect this fix corrects. O(n) via a
+    running per-date main-draw counter (requires df already sorted by date,
+    true both before and after the round-rank sort), not O(n^2)."""
+    normalized = df["round"].astype(str).str.strip().replace({"f": "F"})
+    is_qual = normalized.isin(QUAL_ROUNDS).to_numpy()
+    is_main = normalized.isin(MAIN_ROUNDS).to_numpy()
+    dates = df["date"].to_numpy()
+    inv = 0
+    main_seen = 0
+    prev_date = None
+    for d, q, m in zip(dates, is_qual, is_main):
+        if d != prev_date:
+            main_seen = 0
+            prev_date = d
+        if q:
+            inv += main_seen
+        if m:
+            main_seen += 1
+    return inv
 
 
 # --------------------------------------------------------------- load matches
@@ -88,6 +163,19 @@ def prepare(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, int]]:
     df = df[~bad]
 
     df = df.sort_values("date", kind="mergesort").reset_index(drop=True)
+
+    # Round-order fix (see ROUND_RANK docstring above). Verify it changes
+    # something real before trusting any downstream number: count
+    # qual-after-main inversions under the OLD date-only order, then again
+    # after re-sorting by (date, round_rank) - not code-inspection alone.
+    before = count_round_inversions(df)
+    df["_round_rank"] = round_rank(df["round"])
+    df = df.sort_values(["date", "_round_rank"], kind="mergesort", na_position="last").reset_index(drop=True)
+    df = df.drop(columns=["_round_rank"])
+    after = count_round_inversions(df)
+    dropped["_diag_round_inversions_before"] = before
+    dropped["_diag_round_inversions_after"] = after
+
     dropped["_total_in"] = n0
     dropped["_kept"] = len(df)
     return df, dropped
@@ -164,9 +252,14 @@ if __name__ == "__main__":
     log("\n=== COVERAGE ===")
     log(f"  rows read              : {dropped.pop('_total_in'):,}")
     kept = dropped.pop("_kept")
+    inv_before = dropped.pop("_diag_round_inversions_before")
+    inv_after = dropped.pop("_diag_round_inversions_after")
     for reason, n in dropped.items():
         log(f"  excluded, {reason:<28}: {n:,}")
     log(f"  kept                   : {kept:,}")
+    log(f"  round-order fix        : {inv_before:,} qual-after-main inversions "
+        f"before -> {inv_after:,} after "
+        f"({'OK, fix verified' if inv_after == 0 else 'WARNING: nonzero after fix'})")
     log(f"  date range             : {df['date'].min().date()} -> {df['date'].max().date()}")
     log(f"  players                : {len(set(df.winner_uid) | set(df.loser_uid)):,}")
     log("\n  by tour x level:")
