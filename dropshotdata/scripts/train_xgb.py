@@ -24,8 +24,9 @@ HOLDOUT = rf"{DD}\tune_scratch\xgb_features_holdout.parquet"
 DIAG2 = rf"{DD}\tune_scratch\diag2_enriched.parquet"       # source of the odds-joined n=8,594 key set
 ELO_EVAL = rf"{DD}\elo_eval_predictions.parquet"            # post-fix Elo, 0.6120 basis
 
-NUMERIC = ["elo_overall_diff", "elo_surface_diff", "hier_dmean_diff", "hier_dvar_diff",
-           "hier_dvar_sum", "weeks_since_last_diff", "n_prior_diff", "h2h_diff", "best_of"]
+NUMERIC = ["elo_overall_diff", "elo_surface_diff", "elo_logit_pwinner", "hier_dmean_diff",
+           "hier_dvar_diff", "hier_dvar_sum", "weeks_since_last_diff", "n_prior_diff",
+           "h2h_diff", "best_of"]
 CATEGORICAL = ["surface", "round", "tourney_level"]
 BOOL_AS_INT = ["is_elite"]
 

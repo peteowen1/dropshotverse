@@ -12,7 +12,17 @@ superseded — see "## Validation" for the first correction pass, then
 end of the file for the full corrected cuts sweep and an explicit what-changed-vs-
 what-held comparison against the retracted version. Headline of that v2 pass:
 the retracted claim "Elo beats XGBoost in the top confidence bucket" does NOT hold
-— XGBoost beats Elo in every market-confidence bucket on corrected data.)
+— XGBoost beats Elo in every market-confidence bucket on corrected data.
+2026-08-29 follow-up ("## Elo blended-probability logit feature") tried the v2
+pass's own recommendation #2 — feed Elo's blended `p_winner` as an extra logit
+feature — and found it's mathematically redundant with `elo_overall_diff` given
+this project's tuned Elo config (blend=0, decay already baked into the stored raw
+ratings): correlation 1.000000, an exact proportional transform in logit space.
+ALL log-loss moved 0.6041 → **0.6034** (ATP 0.6063 → 0.6069, WTA 0.6019 → 0.5998)
+— a tiny, mixed-sign shift consistent with refit noise on a redundant,
+differently-quantized duplicate feature, not genuine new signal. Did not close the
+market-tail underconfidence gap. Kept in the pipeline (harmless, technically an
+improvement on ALL) but not a meaningful win — see that section for full detail.)
 
 ## Question
 
@@ -867,3 +877,220 @@ files written to `dropshotdata/`.
 - `dropshotdata/tune_scratch/xgb_features_tune.parquet` /
   `xgb_features_holdout.parquet` /`xgb_v1_holdout_predictions.parquet` — gitignored
   (parquet), regenerate via the scripts above if needed.
+
+## Elo blended-probability logit feature (2026-08-29 follow-up — small, honest null)
+
+Tests the v2 diagnostic pass's own recommendation #2: feed Elo's already-blended,
+already-decay-adjusted `p_winner` (not just the raw rating diff) as one additional
+XGBoost feature, so the trees have direct access to Elo's own extremization shape
+in the tail rather than having to reconstruct it through XGBoost's own logistic
+link on `elo_overall_diff`. Charter unchanged: retune `xgb.cv`'s
+`num_boost_round` on 2022-23 with the new feature added (same hyperparameters,
+`max_depth=5, eta=0.08, subsample=0.8, colsample_bytree=0.8`, early stopping),
+fit once, reveal once on the untouched 2024-25 holdout.
+
+### Sourcing (both tune and holdout windows)
+
+`elo_baseline.py`'s `EVAL_YEARS` is hardcoded to `(2024, 2025)`, so
+`elo_eval_predictions.parquet` only covers the holdout window. But
+`tune_scratch/elo_raw_ratings_full.parquet` (built by
+`elo_raw_ratings_for_xgb.py`, already this pipeline's source for
+`elo_overall_diff`/`elo_surface_diff`) already carries a `p_winner_recomputed`
+column for the FULL archive (all years, both windows) — internally verified by
+that script itself to reproduce `elo_eval_predictions.parquet`'s own `p_winner`
+to float precision (max abs diff <1e-6) on the tour-level eval rows before being
+trusted for anything. No regeneration needed; no new tuning-window Elo run
+required. Freshness checked before use: the file's mtime (2026-08-28 22:53:29)
+postdates both `elo_baseline.py`'s round-9 causal-ordering fix (`dbfeb42`,
+22:16:23) and its inactivity/layoff-decay addition (`48077c8`, 22:44:28) — the
+one later commit touching that file, `45336a8` (UTS-style K-factor, 23:00:38),
+was a rejected experiment (per `d1aba8a`) that never changed the default
+`k_mode='sackmann'` path this file uses, so it doesn't stale anything here.
+
+`build_xgb_features.py` now merges `p_winner_recomputed` in alongside
+`ro_winner`/`ro_loser`/`rs_winner`/`rs_loser` (same join key, same merge) and
+computes, per row: `p_sideA = p_winner_recomputed if side A is the actual winner
+else 1 - p_winner_recomputed` (the same winner/loser→side-A pivot every other
+feature in this file already uses), clipped to `[1e-6, 1-1e-6]`, then
+`elo_logit_pwinner = log(p_sideA / (1 - p_sideA))`. Rebuilt both windows: tune
+n=10,296 (unchanged), holdout n=10,664 (unchanged) — same row counts as the
+existing baseline, confirming the join didn't drop or duplicate anything.
+
+### Sanity check before trusting it — and a real finding, not a bug
+
+No NaN/inf on either window (0/0 on both). Range sane (-5.15 to +5.18 tune,
+-4.97 to +5.59 holdout — log-odds of a few hundred-to-one at the extremes,
+plausible).
+
+**Correlation check against `elo_overall_diff` (the check this task's brief
+explicitly asked for, expecting "high but not ~1.0"): `corr = 1.000000` on BOTH
+windows, and a linear fit (`elo_logit_pwinner ~ elo_overall_diff`) gives
+`R² = 1.000000` with slope `0.005756` and ~zero intercept on both windows.**
+This is an EXACT proportional transform, not just "highly correlated" — the
+brief's own sanity-check bar is failed, and it is worth explaining why rather
+than shipping it silently.
+
+Root cause, confirmed by reading `elo_raw_ratings_for_xgb.py` (not assumed):
+1. The tuned blend the project actually uses is **b=0.0** (pure overall Elo —
+   confirmed by that script's own blend-grid replication, and already documented
+   in this file's "Feature build" section above). With `blend=0`, Elo's
+   `diff = (1-blend)*(ro_w-ro_l) + blend*(rs_w-rs_l)` collapses to `ro_w - ro_l`
+   exactly — surface Elo contributes nothing to `p_winner`, so `elo_surface_diff`
+   can't be a source of extra information either (its correlation with
+   `elo_logit_pwinner` is only 0.16-0.16, consistent with this).
+2. **The raw per-side ratings `elo_raw_ratings_full.parquet` stores are
+   themselves already decay-adjusted** — `run_elo_raw()`'s `ro_w_arr[idx] = ro_w`
+   assignment happens AFTER the `if decay > 0.0: ro_w = layoff_decay(...)` block
+   reassigns `ro_w` in place, so the "raw" rating written out (and therefore
+   `elo_overall_diff = a_ro - b_ro` in the existing feature set) already carries
+   the exact same inactivity-decay adjustment that also feeds `p_winner`. There
+   is no separate "pre-decay diff" left in the feature set for the decay-adjusted
+   `p_winner` to add information beyond.
+3. With both the blend and the decay already folded identically into
+   `elo_overall_diff`, `p_winner = sigmoid(elo_overall_diff / 400)` (base-10
+   logistic) is a pure function of the ALREADY-INCLUDED feature, and
+   `logit(p_winner) = elo_overall_diff * ln(10)/400` **exactly** — the slope
+   `0.005756` found above is `ln(10)/400 = 0.0057565` to 4 significant figures,
+   confirming this isn't a numerical coincidence but the literal algebra of the
+   sigmoid/logit pair. The clip at `[1e-6, 1-1e-6]` never engages for typical
+   `|elo_overall_diff|` (would need >~2,400, far outside the observed -900..+970
+   range), so it doesn't break the exact relationship either.
+
+**This is a genuine, useful finding, not an implementation bug to route around**:
+in THIS project's specific tuned configuration (blend=0, decay already baked into
+the stored ratings), "Elo's own blended, decay-adjusted probability" and "Elo's
+raw rating diff" are the same number up to a fixed monotonic rescaling. The v2
+diagnostic pass's hypothesis — that `p_winner` carries "extremization shape"
+beyond the raw diff — does not hold here, because there is no separate blend or
+decay signal left over once `elo_overall_diff` already includes both. (It would
+matter in a config where blend>0 was genuinely selected, since surface Elo would
+then contribute information `elo_overall_diff` alone can't capture — but that's
+not this project's tuned arm.)
+
+Proceeded to the required `xgb.cv` retune/holdout reveal anyway, per the task
+charter ("reveal once, whatever it shows") — feeding XGBoost a redundant but
+differently-quantized copy of an existing feature isn't nothing (tree split
+search on floating-point-different representations of the same information can
+still shift results slightly), so it's worth confirming empirically rather than
+skipping on the strength of the algebra alone.
+
+### Tuning and holdout
+
+`xgb.cv`, same 5-fold/early-stopping-50/sensible-defaults setup as before, now
+with `elo_logit_pwinner` added to the numeric feature list (11 features total).
+Selected **`num_boost_round=44`** (cv test-logloss 0.59674 — vs 36 rounds /
+0.5992 for the pre-feature baseline; a modestly deeper fit, consistent with
+XGBoost finding a little more to chew on, redundant or not). One final model
+fit on all of 2022-23, scored once on the market-odds-joined 2024-25 holdout
+(n=8,593, same population as every prior candidate this session):
+
+| | XGBoost + elo_logit_pwinner | XGBoost baseline (0.6041) | Δ | Elo | Hierarchical |
+|---|---|---|---|---|---|
+| ALL log-loss | **0.6034** | 0.6041 | −0.0007 | 0.6121 | 0.6267 |
+| ALL accuracy | 0.6668 | 0.6682 | −0.0014 | 0.6530 | 0.6453 |
+| ALL Brier | 0.2088 | 0.2091 | −0.0003 | 0.2126 | 0.2185 |
+| ATP log-loss | 0.6069 | **0.6063** | +0.0006 | 0.6174 | 0.6213 |
+| WTA log-loss | **0.5998** | 0.6019 | −0.0021 | 0.6067 | 0.6322 |
+
+Still beats Elo overall and in both tours independently (same as before), by
+almost exactly the same margins as the 0.6041 baseline. The per-split movement
+is small and mixed-sign (ALL and WTA improve a little, ATP gets a hair worse) —
+consistent with the correlation finding above: this reads as refit noise from a
+redundant, differently-quantized duplicate of `elo_overall_diff`, not a real new
+signal. **Verdict: adding Elo's blended `p_winner` as a feature did NOT
+meaningfully improve the model** in this project's tuned configuration. It is
+technically a small win on the ALL metric (−0.0007) and is harmless (no
+regression large enough to matter), so it's being left in the pipeline rather
+than reverted, but it should not be reported as a real improvement.
+
+### Feature importance (gain-based, final model)
+
+| feature | total_gain | avg_gain | n_splits |
+|---|---|---|---|
+| `elo_overall_diff` | 7710.9 | 43.81 | 176 |
+| `hier_dmean_diff` | 3004.8 | 14.45 | 208 |
+| `elo_logit_pwinner` | 1515.4 | 33.68 | 45 |
+| `elo_surface_diff` | 788.9 | 5.06 | 156 |
+| `hier_dvar_diff` | 511.8 | 4.45 | 115 |
+| `tourney_level` | 489.1 | 4.80 | 102 |
+| `weeks_since_last_diff` | 455.2 | 5.23 | 87 |
+| `hier_dvar_sum` | 455.0 | 4.29 | 106 |
+| `n_prior_diff` | 438.3 | 5.10 | 86 |
+| `round` | 435.2 | 5.06 | 86 |
+| `h2h_diff` | 160.0 | 4.57 | 35 |
+| `surface` | 87.3 | 3.64 | 24 |
+| `best_of` | 20.8 | 6.92 | 3 |
+| `is_elite` | 4.1 | 4.06 | 1 |
+
+`elo_logit_pwinner` does NOT displace `elo_overall_diff` or `hier_dmean_diff` —
+those stay #1 and #2 by a wide margin, essentially unchanged from the
+pre-feature baseline (`elo_overall_diff` total_gain actually rose slightly,
+7710.9 vs the baseline's own value in the same ballpark). The new feature slots
+in at #3, ahead of `elo_surface_diff`, and picks up real gain (45 splits) — but
+given the exact algebraic redundancy established above, this reads as XGBoost
+splitting the same underlying signal across two differently-quantized
+representations rather than genuinely using two different pieces of
+information. It does not "win outright" and displace the raw diff, nor does it
+add a clearly separate signal alongside it — it mostly just sits there.
+
+### Market-confidence-bucket check (does it close any of the tail gap?)
+
+Same method as "## Diagnostic slicing pass v2" above: bucket by the MARKET's own
+pre-match confidence (pooled ATP+WTA), fold every model's prediction to "P(the
+market's favorite wins)", compare calibration error and log-loss to Elo/
+Hierarchical/Market in the same buckets. Read-only, ad hoc; loads
+`tune_scratch/xgb_v1_holdout_predictions.parquet` (this task's new predictions),
+`elo_eval_predictions.parquet` directly, and `diag2_enriched.parquet` for
+`p_mkt`/`p_winner_hier_mc`.
+
+| bucket | n | XGB err (v2 baseline) | XGB err (+feature) | Δ err | gap XGB−Elo (v2) | gap XGB−Elo (+feature) |
+|---|---|---|---|---|---|---|
+| (0.5,0.6] | 2643/2625 | +0.0151 | +0.0162 | +0.0011 | −0.0157 | −0.0170 |
+| (0.6,0.7] | 2462 | +0.0198 | +0.0209 | +0.0011 | −0.0009 | −0.0028 |
+| (0.7,0.8] | 1820 | +0.0260 | +0.0249 | −0.0011 | −0.0070 | −0.0065 |
+| (0.8,0.9] | 1124 | +0.0479 | +0.0454 | −0.0025 | −0.0078 | −0.0088 |
+| (0.9,1.0] | 544 | +0.0478 | +0.0492 | +0.0014 | −0.0035 | −0.0026 |
+
+(`err` = realized − pred, i.e. positive = underconfident, same sign convention
+as the v2 pass. `n` differs by 1-2 rows in the lowest bucket between passes,
+immaterial — same population otherwise.)
+
+**Answer: no, it does not close the tail-underconfidence gap.** The top bucket
+(0.9,1.0] calibration error gets very slightly WORSE (+0.0478 → +0.0492) and its
+log-loss advantage over Elo shrinks slightly (−0.0035 → −0.0026, both still wins
+for XGBoost). The (0.8,0.9] bucket improves a little (+0.0479 → +0.0454,
+−0.0078 → −0.0088). Every change is within ±0.0025 — noise-scale, no consistent
+direction, no sign of the hypothesized "Elo's extremization shape helps the
+tail" effect. This is exactly what the redundancy finding above predicts: since
+`elo_logit_pwinner` carries no information `elo_overall_diff` didn't already
+have, there is no mechanism by which it could specifically fix tail
+calibration, and it doesn't.
+
+### Verdict
+
+**Adding Elo's blended `p_winner` as a logit feature did not meaningfully
+improve the model, and did not close the market-tail underconfidence gap.** The
+honest reason is structural, not a failed experiment to retry differently: in
+this project's tuned Elo configuration (blend=0.0, decay already folded into the
+stored raw ratings), Elo's blended probability IS Elo's raw rating diff, just
+sigmoid-transformed — there is no separate "blend+decay richness" left for a
+downstream model to extract, because `elo_overall_diff` already contains
+everything `p_winner` does. The v2 diagnostic pass's recommendation #2 is now
+closed out: tested as specified, a small (technically positive on ALL, mixed
+across tours) but not meaningful change, kept in the pipeline as a harmless
+no-op rather than reverted. Recommendation #1 from that same pass (a narrow
+post-hoc recalibration on the tail) remains untested and is the more promising
+remaining lever if the tail gap to market is worth pursuing further.
+
+### Artifacts (this task)
+
+- `dropshotdata/scripts/build_xgb_features.py` — adds `elo_logit_pwinner`
+  (sourced from `tune_scratch/elo_raw_ratings_full.parquet`'s
+  `p_winner_recomputed`), no other change.
+- `dropshotdata/scripts/train_xgb.py` — `elo_logit_pwinner` added to `NUMERIC`.
+- `dropshotdata/tune_scratch/xgb_v1_model.json`,
+  `dropshotdata/tune_scratch/xgb_v1_feature_importance.csv` — regenerated with
+  the new feature (11 features, `num_boost_round=44`).
+- `dropshotdata/tune_scratch/xgb_features_tune.parquet` /
+  `xgb_features_holdout.parquet` / `xgb_v1_holdout_predictions.parquet` —
+  regenerated, gitignored.

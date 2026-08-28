@@ -2,6 +2,46 @@
 
 **Pete's instruction (still active): keep working autonomously, don't check back in until this is achieved, or you hit a genuine blocker.**
 
+## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
+
+Tested the v2 diagnostic pass's recommendation #2 (see prior section below):
+feed Elo's own already-blended, decay-adjusted `p_winner` — not just the raw
+rating diff already in the feature set — to XGBoost as an extra logit feature
+(`elo_logit_pwinner = log(p/(1-p))`, sourced from `tune_scratch/
+elo_raw_ratings_full.parquet`'s `p_winner_recomputed`, covering both the
+2022-23 tune window and the 2024-25 holdout, verified against
+`elo_eval_predictions.parquet` to float precision). Full detail:
+`issues/27-xgboost-feature-model.md`'s "## Elo blended-probability logit
+feature" section.
+
+1. **Sanity check found the new feature is an EXACT proportional transform of
+   `elo_overall_diff`** (correlation 1.000000, R²=1.000000 in logit space) — not
+   the "correlated but distinct" signal expected. Root cause: this project's
+   tuned Elo config selected blend=0.0 (pure overall Elo, no surface
+   contribution), and the raw per-side ratings this pipeline's
+   `elo_overall_diff` is built from are THEMSELVES already decay-adjusted
+   (the inactivity-decay fix is applied before those ratings are stored) — so
+   `elo_overall_diff` already contains everything `p_winner` does, and
+   `logit(p_winner) = elo_overall_diff * ln(10)/400` exactly. A real, useful
+   finding about this project's specific tuned configuration, not a bug.
+2. **Retuned/refit/revealed once anyway, per charter** — `xgb.cv` selected
+   `num_boost_round=44` (was 36). Holdout: ALL log-loss **0.6034** (was 0.6041,
+   Δ−0.0007), ATP **0.6069** (was 0.6063, Δ+0.0006), WTA **0.5998** (was
+   0.6019, Δ−0.0021). Small, mixed-sign shifts consistent with refit noise on a
+   redundant, differently-quantized duplicate feature — not a real improvement.
+   Feature importance: `elo_overall_diff` and `hier_dmean_diff` stay #1/#2
+   unchanged; `elo_logit_pwinner` slots in at #3 (ahead of `elo_surface_diff`)
+   but doesn't displace either top feature.
+3. **Does not close the market-tail underconfidence gap** — the market-
+   confidence-bucket check (same method as the v2 pass) shows the top-bucket
+   calibration error and log-loss-vs-Elo gap both move by ≤0.0025 in either
+   direction, no consistent improvement. Matches the redundancy finding: there
+   was no separate "blend+decay richness" for the new feature to contribute.
+4. **Kept in the pipeline** (technically a small win on ALL, harmless
+   elsewhere) but should not be reported as a real improvement. The v2 pass's
+   recommendation #1 (a narrow tail-only recalibration) remains the more
+   promising untested lever if closing the market-tail gap is worth pursuing.
+
 ## UPDATE 2026-08-28 (XGBoost on Elo + hierarchical raw state + engineered features — BEATS ELO, per Pete's own direction — first candidate all session to clear the bar)
 
 **Ten rounds of tuning the hierarchical filter directly never beat Elo. Stepping
