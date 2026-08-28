@@ -187,6 +187,93 @@ def k_factor(n: int) -> float:
     return max(K_MIN, K_BASE / ((n + 5) ** K_SHAPE))
 
 
+# ---- UTS-style (tennis-crystal-ball) K-factor: an ALTERNATIVE to k_factor(n)
+# above, not an addition to it. Ported directly from EloCalculator.java
+# (github.com/mcekovic/tennis-crystal-ball, commit fcda1e6 - fetched and
+# read directly, not just Pete's screenshot summary, which turned out to
+# describe only the LEVEL switch; the reference's ROUND switch and its
+# `default: 0.65` are a structurally separate piece the screenshot didn't
+# fully capture - confirmed by reading the actual source).
+#
+# The reference is a THREE-part multiplicative stack:
+#   1. kFactor(level, round, bestOf, outcome) = 32 * level_mult * round_mult
+#      * bestof_mult * wo_mult  -- context only, identical for both players.
+#   2. kFunction(rating) = 1 + 18 / (1 + 2^((rating-1500)/63))  -- PER
+#      PLAYER, evaluated on that player's OWN current rating (not the
+#      opponent's, not the match outcome).
+#   3. newRating = rating +/- clip(kFactor(...) * (1-p_win) * kFunction(rating), 200)
+#      -- the reference's own DELTA_RATING_CAP=200 is genuinely load-bearing
+#      here, not a decoration: kFunction alone reaches ~10x at rating=1500,
+#      so 32 * kFunction(1500) = 320 for a full-weight (Slam, Bo5) match,
+#      well above 200 - ported faithfully as UTS_MAX_DELTA.
+#
+# Level mapping: this archive's tourney_level codes are NOT the same
+# vocabulary as tennis-crystal-ball's own DB (which normalizes ATP+WTA to
+# one shared scheme before ever calling kFactor). Checked via
+# df['tourney_level'].value_counts() rather than assumed - codes actually
+# present include G, F, M, D, O, A (ATP tour), W/P/PM/I/T1-T5 (WTA tier
+# variants), C (challenger), numeric ITF prize-money tiers (10..100), CC, E,
+# J, and two "+H" hybrid codes. Codes with a clear real-world correspondence
+# to the reference's own buckets are mapped there directly; every code with
+# no clean correspondence (Challenger, ITF, exhibitions, juniors, the "+H"
+# codes) falls to the reference's OWN `default: 0.65` fallback, not a new
+# choice invented here.
+UTS_K_BASE = 32.0
+UTS_MAX_DELTA = 200.0   # reference's DELTA_RATING_CAP
+UTS_LEVEL_MULT: dict[str, float] = {
+    "G": 1.00,   # Grand Slam
+    "F": 0.90,   # Tour Finals (ATP/WTA)
+    "M": 0.85,   # ATP Masters 1000
+    "PM": 0.85,  # WTA Premier Mandatory - closest real-world Masters-equivalent
+    "O": 0.80,   # Olympics
+    "A": 0.75,   # ATP regular tour (250/500 not split in this archive)
+    "P": 0.75,   # WTA Premier - closest real-world ATP-500-equivalent
+    "D": 0.70,   # Davis/Fed Cup - reference's own "D" bucket
+    "I": 0.70,   # WTA International (regular tour) - reference's "T"-equivalent bucket
+    "W": 0.70,   # WTA's post-2021 simplified single-tier code - regular tour
+    "T1": 0.70, "T2": 0.70, "T3": 0.70, "T4": 0.70, "T5": 0.70,  # WTA tier codes
+    "CC": 0.70,
+}
+UTS_DEFAULT_LEVEL_MULT = 0.65   # reference's own `default: 0.65` (Challenger, ITF, exhibitions, juniors, "+H")
+
+# Round switch: the reference has NO default case - any round not listed
+# (Q1-Q5, ER - i.e. EVERY qualifying round) falls through UNMULTIPLIED, i.e.
+# gets the SAME full weight as a Final. Confirmed by reading the Java switch
+# itself (no `default:` branch present), not assumed - a genuinely
+# counter-intuitive spec detail, kept faithfully rather than "fixed" here.
+UTS_ROUND_MULT: dict[str, float] = {
+    "F": 1.00, "BR": 0.95, "SF": 0.90, "QF": 0.85, "RR": 0.85,
+    "R16": 0.80, "R32": 0.80, "R64": 0.75, "R128": 0.75,
+}
+
+
+def uts_context_k(level: str, round_: str, best_of: int, is_walkover: bool = False) -> float:
+    """The context-only (player-independent) part of the UTS K stack: base *
+    level * round * best-of * walkover. `is_walkover` is wired for fidelity
+    to the reference but structurally never fires on this archive -
+    `prepare()` already drops every RET/W/O/DEF/ABD/no-score row before any
+    match reaches run_elo()."""
+    k = UTS_K_BASE
+    k *= UTS_LEVEL_MULT.get(level, UTS_DEFAULT_LEVEL_MULT)
+    k *= UTS_ROUND_MULT.get(round_, 1.0)
+    if best_of < 5:
+        k *= 0.90
+    if is_walkover:
+        k *= 0.50
+    return k
+
+
+def uts_kfunction(rating: float) -> float:
+    """Rating-dependent K amplifier: ~10x at rating=START (1500), ~5.5x at
+    1600, ~1.64x at 1800, ~1.07x at 2000, ~1.008x at 2200 (matches the
+    reference's own documented values exactly - checked, not just trusted).
+    This REPLACES k_factor(n)'s matches-played decay entirely when
+    k_mode='uts' - a different K-philosophy (current-rating-based
+    provisional adjustment), not a combination with the matches-played
+    mechanism."""
+    return 1.0 + 18.0 / (1.0 + 2.0 ** ((rating - START) / 63.0))
+
+
 # ---- inactivity/layoff decay (Task 2). Reference mechanism: tennis-crystal-
 # ball's EloCalculator.adjustRating() pulls a returning player's rating back
 # toward START via a logistic function of days since their last match, with
@@ -219,7 +306,8 @@ def layoff_decay(rating: float, days_gap: float, decay: float) -> float:
     return rating - frac * (rating - START)
 
 
-def run_elo(df: pd.DataFrame, blend: float, decay: float = 0.0) -> pd.DataFrame:
+def run_elo(df: pd.DataFrame, blend: float, decay: float = 0.0,
+            k_mode: str = "sackmann") -> pd.DataFrame:
     """Online Elo. `blend` mixes overall and surface rating:
         p = sigma( (1-blend)*overall_diff + blend*surface_diff )
 
@@ -230,7 +318,42 @@ def run_elo(df: pd.DataFrame, blend: float, decay: float = 0.0) -> pd.DataFrame:
     specifically running the decay grid (with `blend` held fixed at whatever
     won the blend grid) - so a difference in score between decay arms is
     attributable to decay alone, not a blend/decay interaction.
+
+    `k_mode` selects the ENTIRE K-factor mechanism and is a THIRD, separate
+    axis from `decay`:
+      - 'sackmann' (default): k_factor(n) above, decaying by matches played.
+      - 'uts': tennis-crystal-ball's tournament-context (level/round/best-of)
+        * current-rating kFunction stack. This REPLACES k_factor(n) entirely
+        (a different K-philosophy, not a combination with it) - `decay`
+        (time-since-last-match inactivity pull) is orthogonal to and kept
+        alongside either k_mode unchanged, so a k_mode difference isn't
+        confounded with a decay difference.
+      - 'uts_context_only' / 'uts_kfunc_only': single-factor ablations of
+        the 'uts' bundle above (context-multiplier stack alone with
+        kFunction fixed at 1.0, or kFunction alone with context fixed at
+        UTS_K_BASE=32) - diagnostic only, to see which piece of the bundle
+        is doing the work, per the task's "if time permits" secondary ask.
+        Not a candidate in its own right; not scored against the market
+        holdout as a real arm, only used for the tour-split diagnosis.
     """
+    is_uts = k_mode in ("uts", "uts_context_only", "uts_kfunc_only")
+    if is_uts:
+        if k_mode == "uts_kfunc_only":
+            ctx_k = np.full(len(df), UTS_K_BASE)
+        else:
+            ctx_k = (UTS_K_BASE
+                     * df["tourney_level"].astype(str).map(
+                           lambda v: UTS_LEVEL_MULT.get(v, UTS_DEFAULT_LEVEL_MULT)).values
+                     * df["round"].astype(str).map(
+                           lambda v: UTS_ROUND_MULT.get(v, 1.0)).values
+                     * np.where(df["best_of"].astype(int).values < 5, 0.90, 1.00))
+        # walkover multiplier omitted here: prepare() already drops every
+        # W/O row, so it would be an unconditional 1.0 for every surviving
+        # row - see uts_context_k()'s docstring for the same point.
+        kfunc = (lambda r: 1.0) if k_mode == "uts_context_only" else uts_kfunction
+    else:
+        ctx_k = None
+
     overall: dict[str, float] = {}
     surf: dict[tuple[str, str], float] = {}
     n_all: dict[str, int] = {}
@@ -262,17 +385,34 @@ def run_elo(df: pd.DataFrame, blend: float, decay: float = 0.0) -> pd.DataFrame:
         # The update is applied on top of the (possibly decayed) rating, so a
         # decay "spends" itself into the persisted state at the moment of
         # return, exactly like the reference's adjustRating().
-        kw, kl = k_factor(n_all.get(w, 0)), k_factor(n_all.get(l, 0))
-        overall[w] = ro_w + kw * (1 - p_w)
-        overall[l] = ro_l - kl * (1 - p_w)
+        if is_uts:
+            delta_base = ctx_k[idx] * (1 - p_w)   # shared context term, both sides
+            dw = math.copysign(min(abs(delta_base * kfunc(ro_w)), UTS_MAX_DELTA),
+                                delta_base) if delta_base else 0.0
+            dl = math.copysign(min(abs(delta_base * kfunc(ro_l)), UTS_MAX_DELTA),
+                                -delta_base) if delta_base else 0.0
+            overall[w] = ro_w + dw
+            overall[l] = ro_l + dl
+
+            dsw = math.copysign(min(abs(delta_base * kfunc(rs_w)), UTS_MAX_DELTA),
+                                 delta_base) if delta_base else 0.0
+            dsl = math.copysign(min(abs(delta_base * kfunc(rs_l)), UTS_MAX_DELTA),
+                                 -delta_base) if delta_base else 0.0
+            surf[(w, s)] = rs_w + dsw
+            surf[(l, s)] = rs_l + dsl
+        else:
+            kw, kl = k_factor(n_all.get(w, 0)), k_factor(n_all.get(l, 0))
+            overall[w] = ro_w + kw * (1 - p_w)
+            overall[l] = ro_l - kl * (1 - p_w)
+
+            ksw, ksl = k_factor(n_surf.get((w, s), 0)), k_factor(n_surf.get((l, s), 0))
+            surf[(w, s)] = rs_w + ksw * (1 - p_w)
+            surf[(l, s)] = rs_l - ksl * (1 - p_w)
+
         n_all[w] = n_all.get(w, 0) + 1
         n_all[l] = n_all.get(l, 0) + 1
         last_all[w] = day
         last_all[l] = day
-
-        ksw, ksl = k_factor(n_surf.get((w, s), 0)), k_factor(n_surf.get((l, s), 0))
-        surf[(w, s)] = rs_w + ksw * (1 - p_w)
-        surf[(l, s)] = rs_l - ksl * (1 - p_w)
         n_surf[(w, s)] = n_surf.get((w, s), 0) + 1
         n_surf[(l, s)] = n_surf.get((l, s), 0) + 1
         last_surf[(w, s)] = day
