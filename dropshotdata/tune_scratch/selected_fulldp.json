@@ -1,0 +1,16 @@
+{
+ "baseline": {"tag": "fulldp_baseline_v25", "n": 8460, "weighted_logloss": 0.5759, "plain_logloss": 0.6347, "lopsided_logloss": 0.4325, "corruption_pct": 0.0, "fit_s": 39.2},
+ "step1_default_n": {"tag": "fulldp_on_default_n", "n": 8460, "weighted_logloss": 0.5758, "plain_logloss": 0.6347, "lopsided_logloss": 0.4324, "corruption_pct": 0.0, "fit_s": 95.5},
+ "scan": [
+  {"n": "0.1", "tag": "fulldp_n_0p1", "n_rows": 8460, "weighted_logloss": 0.576, "plain_logloss": 0.6347, "lopsided_logloss": 0.4329, "corruption_pct": 0.0, "fit_s": 91.3},
+  {"n": "0.25", "tag": "fulldp_on_default_n", "n_rows": 8460, "weighted_logloss": 0.5758, "plain_logloss": 0.6347, "lopsided_logloss": 0.4324, "corruption_pct": 0.0, "fit_s": 95.5},
+  {"n": "0.5", "tag": "fulldp_n_0p5", "n_rows": 8460, "weighted_logloss": 0.576, "plain_logloss": 0.6351, "lopsided_logloss": 0.4321, "corruption_pct": 0.0, "fit_s": 90.6},
+  {"n": "1.0", "tag": "fulldp_n_1p0", "n_rows": 8460, "weighted_logloss": 0.5763, "plain_logloss": 0.6355, "lopsided_logloss": 0.432, "corruption_pct": 0.0, "fit_s": 89.6},
+  {"n": "2.0", "tag": "fulldp_n_2p0", "n_rows": 8460, "weighted_logloss": 0.5763, "plain_logloss": 0.6357, "lopsided_logloss": 0.4317, "corruption_pct": 0.0, "fit_s": 90.7},
+  {"n": "4.0", "tag": "fulldp_n_4p0", "n_rows": 8460, "weighted_logloss": 0.5763, "plain_logloss": 0.6358, "lopsided_logloss": 0.4314, "corruption_pct": 0.0, "fit_s": 91.9}
+ ],
+ "best_n": "0.25",
+ "best_weighted_logloss": 0.5758,
+ "verdict": "flat, no signal - best candidate ties baseline within noise (0.0001 on n=8460), no holdout reveal warranted",
+ "note_step2_stall": "the original single-script scan (tune_ticket21_fulldp.py) stalled during step 2 - PID 35584 (+hidden child 77984) showed 0 CPU delta over 8s after step 1 completed and before any step-2 result printed. Killed via taskkill //T //F, no orphans remained, no corrupt output files left behind (run_candidate cleans up preds/state files on every path). Step 2 was re-run as six individual foreground invocations of tune_step2_single.py instead, one N value at a time, to keep visibility tight - all six completed cleanly with 0% corruption."
+}

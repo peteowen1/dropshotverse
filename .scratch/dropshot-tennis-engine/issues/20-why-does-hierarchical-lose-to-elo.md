@@ -1,7 +1,7 @@
 # 20 — Why does the hierarchical model still lose to plain Elo?
 
 Type: research
-Status: claimed (in progress — Platt scaling tested and found insufficient, see "Hypothesis 5 continued" below; next step identified but not run)
+Status: claimed (in progress — 23 attempts tried and rejected/non-transferring across 7 rounds as of 2026-08-28; ticket 21's full-DP likelihood built, tuned, and found flat/no-signal in round 7, see that section; the diagnosed root cause, MC-averaging's Jensen's-gap convexity cost, still has no untried fix)
 
 ## Question
 
@@ -548,3 +548,49 @@ Revealed once (`tune_scratch/reveal_v26_cond_var_scale.py`), threshold=0.85/scal
 ### MC-variance-scale mechanism family: now closed out
 
 Four independent, well-motivated, properly-gated attempts at fixing the diagnosed MC-averaging convexity/Jensen's-gap undershoot (round 3, third continuation) have now been tried and rejected: `TIER_WEIGHT` (attempt 6, different mechanism but same failure shape), flat `var_scale` (attempt 19), `RW_VAR_PER_WEEK` toward zero (round 5, a different lever touching the same downstream variance-magnitude pathway), and now conditional/point-estimate-gated `var_scale` (this round). The first, third, and this round's each had a distinct shape (monotonic-to-safety-gate-boundary, monotonic-to-grid-boundary, and now a clean non-boundary interior optimum respectively) — ruling out "it only fails because it's a boundary artifact" as a blanket excuse. **All four transfer-failed anyway**, and the mechanism behind this round's failure (gating on the model's own possibly-miscalibrated confidence necessarily also touches some already-wrong-confidence rows) is structural to the family, not an accident of this particular threshold/scale choice — a genuinely different conditioning variable (e.g. gating on an EXTERNAL confidence signal like market/Elo probability rather than the model's own point estimate) is the only variant of this family that hasn't been tried, but that requires the holdout target itself (or a proxy for it) as an eval-time input, which is a different and much riskier kind of leakage risk than anything tried so far — not a natural next step, a different category of risk. **Recommend treating the entire MC-variance-scale-on-`d1_var`/`d2_var` mechanism family as exhausted.** Gap to Elo remains **0.0114**, v25 unchanged, remains best config.
+
+## Round 7 (2026-08-28) — Attempt 23: ticket 21's full-DP scoreline likelihood, built and tuned properly — FLAT/no signal on the tuning window, NOT revealed on holdout
+
+Pete asked for ticket 21's full version to be built regardless of round 5's own hedge that it likely wasn't indicated by the diagnostic evidence (the mean state was already found to extremize correctly - the defect is downstream, in MC-averaging's convexity cost). Built as a real architecture piece, not a shortcut: full detail, code, and stress tests are in `issues/21-build-scoreline-inversion-regime-b.md` (now closed) and commit `a5222a5`.
+
+### What was built
+
+`p_set`'s game-by-game DP was refactored (exact, bit-identical) into `p_set_full()`, returning the complete terminal set-score distribution `{(games_a, games_b): probability}` instead of collapsing to a scalar P(A wins). A new `adf_update_full_dp()` fits the combined-strength gap `d` against the log-likelihood of the OBSERVED set-by-set scoreline (product over sets of `P(exact set score | d)`, looked up from `p_set_full`), via a numerical (central finite-difference) Newton step generalizing `adf_update`'s closed-form Bernoulli Laplace update to a likelihood with no closed form - same prior-combination structure, same final variance-share split into `m_a`/`m_b`.
+
+Symmetric-strength convention, made precise (ticket 12 only specified "symmetric", which is ambiguous - resolved by deriving it from the model's own existing alpha=beta=c/2 regime-B split): `p_a_serve = sigmoid(d/2)`, `p_b_serve = sigmoid(-d/2) = 1 - p_a_serve`. **Not** `p_a_serve == p_b_serve` - that reading is degenerate (it makes `p_match(p,p,...) ≈ 0.5` for every `d`, destroying all signal from the combined-strength gap). Verified via a dedicated monotonicity stress test (`P(A wins set)` non-decreasing in `d`, reaches both extremes, exactly 0.5 at `d=0` matching regime A's own untested-player default).
+
+Gated behind `DSV_REGIME_B_FULL_DP` (default `"0"`, exact no-op - verified two ways: code inspection of the branch order, AND a real fit-output diff against the pre-change code on the full archive, max delta 4.4e-16 = float rounding noise, not a behavior change). 9 new `stress_test_safety.py` reproductions (6-14): refactor bit-identity, distribution normalization (sums to 1.0), extreme scorelines (6-0 6-0) at four different priors, the exact ticket-12 single-extreme-set grid-boundary case (a single 6-0 set under a weak/uninformative prior - the sharpest evidence shape, checked as a Bayesian update where the prior regularizes the otherwise-hopeless per-match MLE, not as a raw MLE), far-from-zero-`d` numerical stability, the symmetric-`d` monotonicity/degeneracy check, no-op guards (empty scores, non-positive weight), `parse_score_sets` edge cases, and grid-cache boundedness. **ALL PASS.**
+
+`parse_score_sets()` parses per-set `(winner_games, loser_games)` tuples (unlike the existing `parse_score_games()`, which lumps the whole match into a single games-won sum) and rejects anything the DP can't represent - old-rules undecided long final sets (e.g. a pre-tiebreak-era 70-68 decider) or malformed tokens - falling back to the existing games-won-count approximation for the WHOLE match in that case (never mixing likelihood models within one match).
+
+### Performance
+
+A real risk given this runs in the hot loop for 72.5% of ~1.9M matches regardless of `DSV_EVAL_YEARS` (the whole archive is always fit, only the eval *rows* are gated by year). Mitigated with a fixed 0.01-wide cache grid over `d ∈ [-12.5, 12.5]` (not an unbounded LRU - bounded memory and lookup cost regardless of run length, unlike a raw cache keyed on continuously-varying real `d` values). Measured: microbenchmark ~50-240us/call depending on cache warmth; full-archive fit time went from ~39s (FULL_DP=0) to ~90-96s (FULL_DP=1) - well within budget for iterative tuning.
+
+### Tuning-window scan (2022-23, v25 config as the fixed base, weighted/lopsided metric)
+
+| config | weighted | plain | lopsided | corruption |
+|---|---|---|---|---|
+| baseline (FULL_DP=0, v25 exactly) | 0.5759 | 0.6347 | 0.4325 | 0.0% |
+| FULL_DP=1, N=0.10 | 0.5760 | 0.6347 | 0.4329 | 0.0% |
+| **FULL_DP=1, N=0.25 (v25's own N)** | **0.5758** | 0.6347 | 0.4324 | 0.0% |
+| FULL_DP=1, N=0.50 | 0.5760 | 0.6351 | 0.4321 | 0.0% |
+| FULL_DP=1, N=1.00 | 0.5763 | 0.6355 | 0.4320 | 0.0% |
+| FULL_DP=1, N=2.00 | 0.5763 | 0.6357 | 0.4317 | 0.0% |
+| FULL_DP=1, N=4.00 | 0.5763 | 0.6358 | 0.4314 | 0.0% |
+
+Best cell (N=0.25) beats baseline by 0.0001 - noise, not a finding, on n=8,460 rows. Across a 40x range of evidence weight, weighted log-loss never leaves the 0.5758-0.5763 band. **Notably, N=2.0 and N=4.0 now pass the corruption gate cleanly (0.0%)** - under the OLD games-won-count approximation, `REGIME_B_N > 1.0` blew the corruption gate immediately (attempt 6, this issue's "Hypothesis 2 tested" section) because scaling up a fake all-or-nothing trial only made an already-maximally-confident data point more confident. The full-DP likelihood doesn't have that pathology (it reflects the actual, non-degenerate evidence in a real scoreline), confirming the new mechanism is qualitatively different and healthier in that specific respect - it just doesn't move the *metric that matters* either direction.
+
+The visible lopsided-improves/plain-worsens trade as N increases (0.4329→0.4314 while 0.6347→0.6358) is recognized as the exact same pattern already rejected three separate times this session (Platt scaling, isotonic calibration, the layoff-bump lever) - not treated as a new lead.
+
+### Verdict: NOT revealed on holdout
+
+Charter: reveal the one-shot holdout check only for a candidate you actually believe in. Nothing here beat baseline by more than tuning-window noise, so no candidate qualifies. `DSV_REGIME_B_FULL_DP` stays at its no-op default; v25 is unchanged. **Gap to Elo: still 0.0114.**
+
+### Why this result matters (confirms round 3's mechanism from a different angle)
+
+Round 3's third continuation found the aggregate defect lives in MC-posterior-averaging's Jensen's-gap convexity cost, downstream of the mean state - and that the mean state itself already extremizes correctly on genuinely lopsided matches. This round tested the complementary hypothesis directly: if regime-B's evidence extraction were the bottleneck (not the downstream averaging), giving the fit access to the FULL scoreline likelihood instead of a coarse games-won-count approximation should have shifted the fitted state and moved the metric. **It changed essentially nothing.** That is strong, independent confirmation that the coarser evidence was already extracting what mattered for this metric - the ceiling here is downstream of fitting, not upstream in how much information gets pulled from each match. Ticket 21 is closed on this finding; see that issue file for the formal resolution.
+
+### Operational note: a scan stalled silently, caught and recovered
+
+The first attempt at this scan (`tune_ticket21_fulldp.py`, one script running all 8 candidates sequentially) stalled mid-scan after step 1 completed - `subprocess.run()` blocked with 0% CPU progress and a hidden child process not visible via a plain `tasklist //FI "IMAGENAME eq python.exe"` listing. Caught by checking CPU-TIME DELTA over an 8-second window (`Get-Process -Id X | Select CPU`, sampled twice - identical CPU value across 8s of wall time means genuinely stalled, "Responding: True" notwithstanding), not just process presence. Killed with `taskkill //PID X //T //F` (cleanly took the hidden child with it), confirmed no orphaned scratch files (`run_candidate()`'s preds/state cleanup runs on every exit path, confirmed empty after the kill). The remaining 5 grid candidates were re-run as individual foreground invocations (`tune_step2_single.py`) instead of one long backgrounded script, for tighter visibility per candidate. **New rule for future scans in this session**: don't conclude "still running fine" from process presence alone if log output has stalled for several minutes - check CPU delta before waiting further.

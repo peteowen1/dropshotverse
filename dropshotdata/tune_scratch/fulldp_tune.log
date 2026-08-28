@@ -1,0 +1,30 @@
+=== Ticket 21 full-DP: does DSV_REGIME_B_FULL_DP=1 beat v25 on (2022, 2023)? ===
+baseline (v25, FULL_DP=0): {'tag': 'fulldp_baseline_v25', 'n': 8460, 'weighted_logloss': 0.5759, 'plain_logloss': 0.6347, 'lopsided_logloss': 0.4325, 'corruption_pct': 0.0, 'fit_s': 39.2}
+FULL_DP=1 at v25's REGIME_B_N=0.25: {'tag': 'fulldp_on_default_n', 'n': 8460, 'weighted_logloss': 0.5758, 'plain_logloss': 0.6347, 'lopsided_logloss': 0.4324, 'corruption_pct': 0.0, 'fit_s': 95.5}
+
+--- step 2: re-scan DSV_REGIME_B_N under FULL_DP=1 ---
+  REGIME_B_N=0.1: weighted=0.576 plain=0.6347 lopsided=0.4329 corruption=0.0% fit=93.2s
+
+--- step 2 resumed as individual foreground runs after original scan stalled (0 CPU delta over 8s, PID 35584 + hidden child 77984 killed via taskkill //T //F) ---
+RESULT n=0.1: {'tag': 'fulldp_n_0p1', 'n': 8460, 'weighted_logloss': 0.576, 'plain_logloss': 0.6347, 'lopsided_logloss': 0.4329, 'corruption_pct': 0.0, 'fit_s': 91.3}
+RESULT n=0.5: {'tag': 'fulldp_n_0p5', 'n': 8460, 'weighted_logloss': 0.576, 'plain_logloss': 0.6351, 'lopsided_logloss': 0.4321, 'corruption_pct': 0.0, 'fit_s': 90.6}
+RESULT n=1.0: {'tag': 'fulldp_n_1p0', 'n': 8460, 'weighted_logloss': 0.5763, 'plain_logloss': 0.6355, 'lopsided_logloss': 0.432, 'corruption_pct': 0.0, 'fit_s': 89.6}
+RESULT n=2.0: {'tag': 'fulldp_n_2p0', 'n': 8460, 'weighted_logloss': 0.5763, 'plain_logloss': 0.6357, 'lopsided_logloss': 0.4317, 'corruption_pct': 0.0, 'fit_s': 90.7}
+RESULT n=4.0: {'tag': 'fulldp_n_4p0', 'n': 8460, 'weighted_logloss': 0.5763, 'plain_logloss': 0.6358, 'lopsided_logloss': 0.4314, 'corruption_pct': 0.0, 'fit_s': 91.9}
+
+=== SUMMARY ===
+baseline (v25, FULL_DP=0):        weighted=0.5759 plain=0.6347 lopsided=0.4325
+FULL_DP=1 N=0.10:                 weighted=0.5760 plain=0.6347 lopsided=0.4329
+FULL_DP=1 N=0.25 (v25's own N):   weighted=0.5758 plain=0.6347 lopsided=0.4324  <- best, ties baseline (delta 0.0001, noise)
+FULL_DP=1 N=0.50:                 weighted=0.5760 plain=0.6351 lopsided=0.4321
+FULL_DP=1 N=1.00:                 weighted=0.5763 plain=0.6355 lopsided=0.4320
+FULL_DP=1 N=2.00:                 weighted=0.5763 plain=0.6357 lopsided=0.4317  (corruption gate PASSES at N=2.0 under full-DP - unlike the old approximation, which hard-rejected N=2.0)
+FULL_DP=1 N=4.00:                 weighted=0.5763 plain=0.6358 lopsided=0.4314
+
+VERDICT: flat, no signal. Weighted log-loss (the actual selection metric) never
+beats baseline by more than 0.0001 anywhere in a 40x range of evidence weight,
+and drifts slightly WORSE as N increases past 0.25. The lopsided-log-loss-improves
+/plain-log-loss-worsens trade at higher N is the SAME already-rejected pattern
+seen in Platt scaling, isotonic calibration, and the layoff-bump lever this
+session - not a new lead. No candidate here clears the bar to spend the one
+holdout reveal on. v25 (FULL_DP=0) remains the best config, unchanged.
