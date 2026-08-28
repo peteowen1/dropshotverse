@@ -594,3 +594,52 @@ Round 3's third continuation found the aggregate defect lives in MC-posterior-av
 ### Operational note: a scan stalled silently, caught and recovered
 
 The first attempt at this scan (`tune_ticket21_fulldp.py`, one script running all 8 candidates sequentially) stalled mid-scan after step 1 completed - `subprocess.run()` blocked with 0% CPU progress and a hidden child process not visible via a plain `tasklist //FI "IMAGENAME eq python.exe"` listing. Caught by checking CPU-TIME DELTA over an 8-second window (`Get-Process -Id X | Select CPU`, sampled twice - identical CPU value across 8s of wall time means genuinely stalled, "Responding: True" notwithstanding), not just process presence. Killed with `taskkill //PID X //T //F` (cleanly took the hidden child with it), confirmed no orphaned scratch files (`run_candidate()`'s preds/state cleanup runs on every exit path, confirmed empty after the kill). The remaining 5 grid candidates were re-run as individual foreground invocations (`tune_step2_single.py`) instead of one long backgrounded script, for tighter visibility per candidate. **New rule for future scans in this session**: don't conclude "still running fine" from process presence alone if log output has stalled for several minutes - check CPU delta before waiting further.
+
+## Round 8 (2026-08-28) — Ticket 24: heavy-tailed process noise, built and tuned properly — FLAT/no signal on the tuning window, NOT revealed on holdout — both remaining scoped rewrites (21, 24) now closed with clean negatives
+
+Picks up round 7's one recommendation and the last unattempted item from round 5's structural analysis. Full spec in `issues/24-robust-filtering-replace-hard-clamps.md`.
+
+### What was built
+
+`adf_update`'s and `adf_update_full_dp`'s Newton step assumes a Gaussian prior on the combined-strength gap `d` (the state fed in from the ordinary Gaussian random walk in `inflate()`). Per issue 24's own spec, approach (a): rather than a literal Student-t random walk (which has no closed-form recursion once convolved across ~1.9M sequential per-match time steps), each individual ADF update's local Gaussian prior is treated as an approximate Student-t(nu) via its scale-mixture-of-normals representation, solved with a genuine IRLS (iteratively reweighted least squares) scheme inside the SAME Newton loop already in `adf_update` - no new outer loop, no new per-player state.
+
+The exact formula (`_heavy_tail_var` in `hierarchical_model.py`): at each Newton iterate `d`, `v_eff = v_d * max(1, (nu + r²)/(nu+1))` where `r² = (d - m_d)² / v_d` is the standardized residual against the prior mean. This is the standard Student-t-as-scale-mixture EM weight (`E[lambda|d] = (nu+1)/(nu+r²)`, effective variance `= v_d / E[lambda|d]`), with one deliberate, documented deviation: **floored at 1.0**. A literal Student-t with scale²=v_d is actually slightly *tighter* than v_d exactly at the mode (ratio `nu/(nu+1) < 1` at r=0) - accepting that would silently retune every ordinary, unsurprising update's effective variance, entangling this fix with every other hyperparameter already tuned under the assumption that v_d IS the working variance (`RW_VAR_PER_WEEK`, `PHI_MAX`, etc.). The floor means a typical/unsurprising update (`r² <= 1`) is byte-for-byte unaffected by `nu` - the mechanism is isolated purely to genuinely large surprises, the exact case MAX_SHIFT's hard clamp exists to guard against.
+
+`MAX_SHIFT`/`MAX_STATE`/`MAX_VAR` are left fully, unconditionally in place - this is an enhancement to the underlying update math that should reduce *reliance* on the hard clamps, not a removal of them (the task brief was explicit this should not be a removal).
+
+### Verification (before any tuning)
+
+- **Bit-identical no-op at the default**, verified two ways, not just code inspection: (1) a synthetic reference-implementation diff — a verbatim copy of the pre-ticket-24 `adf_update` body compared against the new code with `HEAVY_TAILED_NOISE=0` across 4 test cases, max diff 0.0 (stress test reproduction 18); (2) a real fit diff on the 2022-23 window — v25 config run once with the env var unset (implicit default) and once with `DSV_HEAVY_TAILED_NOISE=0` explicit, 10,313 eval rows each, max absolute difference across ALL numeric output columns = 0.0, `DataFrame.equals()` True.
+- **5 new stress tests** (reproductions 15-19, `stress_test_safety.py`, 24 checks total now, ALL PASS):
+  - Repro 15: a single large surprising update (tight prior d=3.0, evidence 2/70 - a near-total upset) - heavy-tailed moves the mean further toward the evidence (shift 3.09 vs Gaussian's 1.55) AND retains MORE posterior variance (0.050 vs Gaussian's 0.034) on the identical input, confirming both halves of the intended mechanism actually fire, not just one.
+  - Repro 16: 8 alternating large surprises in a row (bug 9's exact compounding pattern) - final state stays finite and MAX_STATE-bounded, and minimum variance observed across all 8 rounds never drops below 0.04 (no re-opened absorbing-boundary trap).
+  - Repro 17: round 5's three long-layoff variance-sufficiency floors + the 3yr-layoff-overconfidence check, re-run explicitly under `HEAVY_TAILED_NOISE=1` - unaffected (as expected, since this ticket only touches the observation-update prior term, not `inflate()`'s time-decay process-noise growth), confirming no regression rather than assuming one.
+  - Repro 18: the bit-identical no-op check described above, as a permanent regression test.
+  - Repro 19: `_heavy_tail_var`'s own contract - exactly `v_d` at zero residual, strictly increasing beyond it, and less inflation at larger `nu` (converging toward the Gaussian limit).
+
+### Tuning (2022-23 only, same weighted/lopsided metric v25 was selected on)
+
+| Config | Weighted | Plain | Lopsided | Corruption |
+|---|---|---|---|---|
+| v25 baseline (`HEAVY_TAILED_NOISE=0`) | 0.5759 | 0.6347 | 0.4325 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=2.0 | 0.5760 | 0.6347 | 0.4329 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=3.0 | 0.5760 | 0.6347 | 0.4328 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=4.0 (default) | 0.5759 | 0.6347 | 0.4327 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=6.0 | 0.5759 | 0.6347 | 0.4327 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=10.0 | 0.5759 | 0.6347 | 0.4326 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=20.0 | 0.5759 | 0.6347 | 0.4325 | 0.0% |
+| `HEAVY_TAILED_NOISE=1`, nu=30.0 | 0.5759 | 0.6347 | 0.4325 | 0.0% |
+
+**Completely flat.** Turning the mechanism on at its own default (nu=4.0) is an exact tie with baseline (delta +0.0000) - not even a small wobble in either direction, the flattest result of any lever tried this session (flatter than ticket 21's, which at least showed a genuine, if tiny, 0.0001 movement). Plain log-loss is identical to 4 decimals (0.6347) at *every single nu value* tested, across a 15x range from very heavy tails (nu=2) to nearly-Gaussian (nu=30). Corruption stays at exactly 0.0% throughout - the gate never engages because the mechanism itself never meaningfully engages.
+
+### Why this happened - confirms round 5's diagnostic directly, not just by inference
+
+Round 5's diagnostic (`diag2_fresh_cuts.py`) already found zero of the 10,678 holdout rows have a "wall-proximity" measure anywhere near the `MAX_STATE` clamp - the premise round 5 flagged as undercutting ticket 24's motivation for the CURRENT gap. This round shows the direct mechanical consequence of that finding: `_heavy_tail_var` only produces a DIFFERENT effective variance than the plain Gaussian when `r² > 1`, i.e. exactly the situation where the raw Newton step would otherwise be pulling hard against MAX_SHIFT. If that situation essentially never arises on real archive data (consistent with round 3-continuation's separate finding, ticket 21's section above, that "real evidence almost never hits MAX_SHIFT... shift-survival scaling is a no-op at this evidence strength"), then a mechanism gated on exactly that situation has nothing to act on, regardless of how aggressively `nu` is tuned. **This is now confirmed empirically, not just inferred from a proxy measure, for the second of round 5's two flagged "not indicated" candidates** (ticket 21's richer regime-B likelihood, closed round 7; ticket 24's heavy-tailed noise, closed here) - both independently show flat tuning-window response, via two structurally different implementations, converging on the same conclusion: the MAX_SHIFT-adjacent/absorbing-boundary corner of this architecture, however real and bug-prone historically (bugs 6-9), simply isn't where THIS SPECIFIC holdout's residual gap-to-Elo lives.
+
+### Verdict: NOT revealed on holdout
+
+Charter: reveal the one-shot holdout check only for a candidate you actually believe in. The best case across the entire nu scan was an EXACT tie with baseline, not even a positive wobble - no candidate qualifies. `DSV_HEAVY_TAILED_NOISE` stays at its no-op default; v25 is unchanged. **Gap to Elo: still 0.0114.**
+
+### Where this leaves the session
+
+Both of round 5's flagged "not yet attempted" architecture rewrites - ticket 21 (round 7) and ticket 24 (this round) - are now closed, each with a clean, well-evidenced negative result reached via proper implementation, stress-testing, and charter-compliant tuning, not an abandoned or rushed attempt. Round 3's third-continuation finding (the MC-posterior-averaging Jensen's-gap convexity cost, downstream of an already-correctly-extremizing mean state) remains the best-diagnosed root cause of the residual gap, and now has no untried fix at any layer that's been tried so far: not evidence richness (21), not process-noise shape (24), not MC-variance-scaling (4 variants across rounds 3/6), not calibration (Platt, isotonic), not evidence reweighting (tier/WTA-lower/layoff-bump/RW_VAR_PER_WEEK). A genuinely new idea would need to attack the Jensen's-gap cost directly and structurally - e.g. an analytically-corrected or closed-form expectation of `p_match` over the posterior instead of Monte Carlo averaging a convex function of it - rather than another variant of evidence-weighting, calibration, or process-noise shape. That is unscoped and unattempted as of this round.
