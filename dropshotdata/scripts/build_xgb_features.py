@@ -42,6 +42,25 @@ are kept as non-differential categorical context, per the task brief.
 Market odds/probability is explicitly EXCLUDED from the feature set (would be
 circular against the project's actual goal - calibration parity WITH the
 market, not beating it by copying it).
+
+Issue 27 follow-up (2026-08-29): added `elo_logit_pwinner`, Elo's OWN blended
+p_winner (overall+surface blend weight b=0.0, decay=0.3 - i.e. the exact arm
+written to elo_eval_predictions.parquet) converted to a side-A logit,
+`log(p_sideA/(1-p_sideA))` with p clipped to [1e-6, 1-1e-6] before the
+transform. Sourced from `tune_scratch/elo_raw_ratings_full.parquet`'s
+`p_winner_recomputed` column (built by elo_raw_ratings_for_xgb.py, mtime
+2026-08-28 22:53 - after both the round-9 causal-ordering fix, commit
+dbfeb42 22:16, and the inactivity/layoff-decay addition, commit 48077c8
+22:44 - and internally verified to reproduce elo_eval_predictions.parquet's
+own p_winner to float precision on the tour-level eval rows). This is
+DIFFERENT information from `elo_overall_diff`/`elo_surface_diff`: those are
+raw rating differences on the Elo scale (400-point logistic), pre-blend,
+pre-decay; `elo_logit_pwinner` is Elo's own already-blended, already-decay-
+adjusted prediction, on the same additive logit scale as the label. With the
+tuned blend b=0.0, the two overlap heavily in this case (surface Elo
+contributes nothing to the blend either way) but are NOT identical up to a
+linear transform because of the decay adjustment - see the correlation check
+this task ran before trusting it.
 """
 from __future__ import annotations
 
@@ -119,7 +138,7 @@ def build_window(hier_path: str, window_name: str, elo_raw: pd.DataFrame,
 
     hier["is_elite"] = hier["tourney_level"].isin(ELITE_LEVELS)
 
-    req = ["ro_winner", "ro_loser", "rs_winner", "rs_loser",
+    req = ["ro_winner", "ro_loser", "rs_winner", "rs_loser", "p_winner_recomputed",
            "weeks_since_last_w", "weeks_since_last_l", "n_prior_w", "n_prior_l",
            "round", "tourney_level", "h2h_prior_wins_winner", "h2h_prior_wins_loser"]
     miss = hier[req].isna().any(axis=1)
@@ -146,6 +165,15 @@ def build_window(hier_path: str, window_name: str, elo_raw: pd.DataFrame,
     a_nprior, b_nprior = pick("n_prior_w", "n_prior_l")
     a_h2h, b_h2h = pick("h2h_prior_wins_winner", "h2h_prior_wins_loser")
 
+    # Elo's own blended, decay-adjusted p_winner -> side-A logit. p_winner is
+    # "P(the actual winner wins)", so flip to side-A convention the same way
+    # a_is_winner already gates every other winner/loser-keyed column: side A
+    # gets p_winner as-is when side A IS the winner, else 1-p_winner.
+    p_win_recomp = hier["p_winner_recomputed"].values.astype(float)
+    p_sideA = np.where(a_is_winner, p_win_recomp, 1.0 - p_win_recomp)
+    p_sideA = np.clip(p_sideA, 1e-6, 1 - 1e-6)
+    elo_logit_pwinner = np.log(p_sideA / (1.0 - p_sideA))
+
     feat = pd.DataFrame({
         "date": hier["date"], "tour": hier["tour"], "window": window_name,
         "winner_uid": hier["winner_uid"], "loser_uid": hier["loser_uid"],
@@ -153,6 +181,7 @@ def build_window(hier_path: str, window_name: str, elo_raw: pd.DataFrame,
         # --- numeric sideA-minus-sideB differentials
         "elo_overall_diff": a_ro - b_ro,
         "elo_surface_diff": a_rs - b_rs,
+        "elo_logit_pwinner": elo_logit_pwinner,
         "hier_dmean_diff": a_dmean - b_dmean,
         "hier_dvar_diff": a_dvar - b_dvar,
         "hier_dvar_sum": a_dvar + b_dvar,          # combined uncertainty - symmetric, not a leak
@@ -174,7 +203,7 @@ def main() -> None:
     elo_raw = pd.read_parquet(ELO_RAW)
     elo_raw = elo_raw[elo_raw["level_file"] == "tour"][
         ["date", "tour", "winner_uid", "loser_uid", "ro_winner", "ro_loser",
-         "rs_winner", "rs_loser"]]
+         "rs_winner", "rs_loser", "p_winner_recomputed"]]
 
     layoff = pd.read_parquet(LAYOFF)[
         ["date", "winner_uid", "loser_uid", "weeks_since_last_w", "weeks_since_last_l",
