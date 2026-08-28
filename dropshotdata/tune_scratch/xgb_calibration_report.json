@@ -1,0 +1,102 @@
+{
+  "n": 17186,
+  "brier": 0.20913595426952358,
+  "log_loss": 0.6041376847991399,
+  "ece": 0.009526520153613416,
+  "calibration_table": [
+    {
+      "bin": 1,
+      "lower": 0.0,
+      "upper": 0.1,
+      "n": 307,
+      "mean_probability": 0.07183905528664494,
+      "observed_rate": 0.06514657980456026
+    },
+    {
+      "bin": 2,
+      "lower": 0.1,
+      "upper": 0.2,
+      "n": 1092,
+      "mean_probability": 0.1562193025338828,
+      "observed_rate": 0.152014652014652
+    },
+    {
+      "bin": 3,
+      "lower": 0.2,
+      "upper": 0.3,
+      "n": 1741,
+      "mean_probability": 0.2513702320160827,
+      "observed_rate": 0.2745548535324526
+    },
+    {
+      "bin": 4,
+      "lower": 0.3,
+      "upper": 0.4,
+      "n": 2425,
+      "mean_probability": 0.3541374752783505,
+      "observed_rate": 0.3402061855670103
+    },
+    {
+      "bin": 5,
+      "lower": 0.4,
+      "upper": 0.5,
+      "n": 3028,
+      "mean_probability": 0.45015439774768823,
+      "observed_rate": 0.44980184940554824
+    },
+    {
+      "bin": 6,
+      "lower": 0.5,
+      "upper": 0.6,
+      "n": 3028,
+      "mean_probability": 0.549845602364597,
+      "observed_rate": 0.5501981505944518
+    },
+    {
+      "bin": 7,
+      "lower": 0.6,
+      "upper": 0.7,
+      "n": 2425,
+      "mean_probability": 0.6458625253154638,
+      "observed_rate": 0.6597938144329897
+    },
+    {
+      "bin": 8,
+      "lower": 0.7,
+      "upper": 0.8,
+      "n": 1741,
+      "mean_probability": 0.7486297679264791,
+      "observed_rate": 0.7254451464675474
+    },
+    {
+      "bin": 9,
+      "lower": 0.8,
+      "upper": 0.9,
+      "n": 1092,
+      "mean_probability": 0.8437806968864469,
+      "observed_rate": 0.847985347985348
+    },
+    {
+      "bin": 10,
+      "lower": 0.9,
+      "upper": 1.0,
+      "n": 307,
+      "mean_probability": 0.9281609448859934,
+      "observed_rate": 0.9348534201954397
+    }
+  ],
+  "row_accounting": {
+    "input_rows": 17186,
+    "evaluated_rows": 17186,
+    "rows_excluded_by_missing_values_or_filter": 0
+  },
+  "helper_assessment": {
+    "status": "descriptive-summary-only",
+    "min_bin_n": 20,
+    "sparse_populated_bins": [],
+    "flags": [
+      "held_out_and_walk_forward_provenance_not_verified_by_helper"
+    ]
+  },
+  "verdict": "manual-review-required"
+}

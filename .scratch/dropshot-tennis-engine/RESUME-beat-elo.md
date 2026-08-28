@@ -70,6 +70,40 @@ feature list, and the leakage bug found and fixed along the way:
    likely higher-leverage than continuing to tune the hierarchical filter
    architecture, which XGBoost is already extracting most of the useful signal
    from on top of Elo.
+6. **VALIDATED WITH A CORRECTION (independent post-hoc audit, same day).** A
+   ~0.01 win on a first attempt, when nothing else this session moved the metric
+   by more than ~0.003, is exactly `stats-discipline`'s "suspicious agreement"
+   pattern - it was audited adversarially rather than taken at face value. Found a
+   second real leakage bug, same class as the already-caught `diag_layoff.parquet`
+   staleness: the `d1_mean`/`d1_var`/`d2_mean`/`d2_var` feature source
+   (`hier_v25_eval_predictions.parquet`/`v25_tune_preds.parquet`) was ALSO written
+   hours before round 9's causal-ordering fix, and since `hierarchical_model.py`'s
+   `run()` updates posterior state sequentially, that's a genuine look-ahead leak
+   into `hier_dmean_diff` (the #2 feature by gain), not just a staleness footnote.
+   Regenerated those files against the fixed code+cache
+   (`scripts/regen_hier_v25_postfix.py`) and rebuilt the pipeline:
+   **corrected ALL log-loss is 0.6041, not 0.6025** (ATP 0.6063, WTA 0.6019) - the
+   leak inflated the headline by ~0.0016 (~17% of the claimed edge over Elo).
+   **The core finding survives**: XGBoost still beats Elo overall and in both
+   tours independently post-correction (ATP −0.0111, WTA −0.0048). H2H hand-
+   verified correct (80-meeting rivalry, exact match to manual tally); side
+   assignment is provably outcome-blind by construction (hashes only date+uid
+   pair, never touches outcome/rating); outlier predictions and feature-importance
+   stability (top-1%-outlier-removed refit) both check out clean. Market-
+   conditioned calibration check (bucketing by the MARKET's own confidence, same
+   method as issue 20's `diag2_fresh_cuts.py`): XGBoost IS underconfident in the
+   market's high-confidence tail (error +0.048 at 80-100% market confidence) - a
+   real, smaller, inherited version of hier's known MC-averaging undershoot
+   (hier's own error there is +0.099/+0.115), and worse than Elo's own tail
+   calibration (+0.027/+0.036) - but this does NOT cost XGBoost the tail on
+   log-loss: it still beats or ties Elo in every market-confidence bucket
+   including the top one, post-correction (a separate, PRE-fix diagnostic pass in
+   issue 27 had found an inversion here - XGBoost losing to Elo in the top decile
+   - that does not hold on the corrected predictions). **Both the official
+   pipeline artifacts and `issues/27-xgboost-feature-model.md` have been updated
+   with the corrected numbers** - the 0.6041 figure is what's on disk now, not
+   0.6025. Full detail: `issues/27-xgboost-feature-model.md`'s "## Validation"
+   section.
 
 ## UPDATE 2026-08-28 (UTS-style K-factor tested as a bundled alternative to our Sackmann-style K — REJECTED, small but real net loss — Elo's frozen number stays 0.6120, gap to hierarchical stays ≈0.0155
 
