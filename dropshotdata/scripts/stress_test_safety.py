@@ -13,7 +13,10 @@ sys.path.insert(0, r"C:\dev\dropshotverse\dropshotdata\scripts")
 import numpy as np
 import pandas as pd
 from hierarchical_model import (PlayerState, inflate, adf_update, apply_side_update,
-                                sigmoid, p_match, MAX_STATE, MAX_VAR)
+                                sigmoid, p_match, p_game, p_tiebreak, p_set, p_set_full,
+                                adf_update_full_dp, parse_score_sets, set_outcome_dist_for_d,
+                                p_specific_set_score, FULL_DP_GRID_MIN, FULL_DP_GRID_MAX,
+                                MAX_STATE, MAX_VAR)
 
 FAILURES = []
 
@@ -159,6 +162,145 @@ p_mc = float(np.mean(ps))
 check("3yr-layoff return match not overconfident vs an average opponent",
      p_mc <= 0.95,
      f"MC-averaged p(returner wins)={p_mc:.4f} (ceiling 0.95) after 3yr layoff from tight prior")
+
+# ---- reproduction 6 (ticket 21 full-DP): p_set_full refactor must be
+# bit-identical to the pre-refactor scalar p_set implementation. p_set is
+# used by regime A's eval-time prediction too (p_match), so any drift here
+# would silently change v25's already-reported numbers, not just the new
+# regime-B machinery this ticket adds.
+def _reference_p_set(p_a_serve, p_b_serve, a_serves_first):
+    """Verbatim copy of p_set's pre-refactor body (ticket 21), kept
+    self-contained so this check doesn't just compare the refactor to
+    itself."""
+    states = {(0, 0): 1.0}
+    final = 0.0
+    for _ in range(13):
+        nxt = {}
+        for (a, b), pr in states.items():
+            game_idx = a + b
+            a_serves_game = (game_idx % 2 == 0) == a_serves_first
+            pa = p_game(p_a_serve) if a_serves_game else 1 - p_game(p_b_serve)
+            for winner, w in ((0, pa), (1, 1 - pa)):
+                na, nb = (a + 1, b) if winner == 0 else (a, b + 1)
+                prob = pr * w
+                if prob == 0:
+                    continue
+                if (na >= 6 or nb >= 6) and abs(na - nb) >= 2 and max(na, nb) <= 7:
+                    final += prob if na > nb else 0.0
+                elif na == 7 or nb == 7:
+                    tb = p_tiebreak(p_a_serve, p_b_serve)
+                    final += prob * (tb if na == 7 else (1 - tb))
+                else:
+                    nxt[(na, nb)] = nxt.get((na, nb), 0.0) + prob
+        states = nxt
+        if not states:
+            break
+    final += sum(states.values()) * 0.5
+    return final
+
+
+maxdiff = 0.0
+for pa_, pb_ in [(0.5, 0.5), (0.65, 0.55), (0.9, 0.3), (0.1, 0.95), (0.62, 0.58), (0.99, 0.01)]:
+    for first_ in (True, False):
+        maxdiff = max(maxdiff, abs(_reference_p_set(pa_, pb_, first_) - p_set(pa_, pb_, first_)))
+check("p_set_full refactor bit-identical to pre-refactor p_set",
+     maxdiff < 1e-9, f"max diff across 12 combos = {maxdiff:.2e}")
+
+# ---- reproduction 7 (ticket 21 full-DP): p_set_full's outcome distribution
+# must be a real, normalized probability distribution (sums to 1) - a
+# refactor bug here (e.g. dropping the complementary tiebreak-credit branch)
+# would silently corrupt the log-likelihood every full-DP regime-B update uses.
+maxerr = 0.0
+for pa_, pb_ in [(0.5, 0.5), (0.65, 0.55), (0.9, 0.3), (0.1, 0.95), (0.99, 0.01), (0.01, 0.99)]:
+    s = sum(p_set_full(pa_, pb_, True).values())
+    maxerr = max(maxerr, abs(s - 1.0))
+check("p_set_full outcome distribution normalizes to 1.0",
+     maxerr < 1e-9, f"max |sum-1| across 6 combos = {maxerr:.2e}")
+
+# ---- reproduction 8 (ticket 21 full-DP): extreme scoreline numerical
+# stability - 6-0 6-0 (a genuine blowout) at both a weak and a very tight
+# prior must produce finite, sane m_a/v_a/m_b/v_b, not NaN/inf. This is the
+# direct stress-test analogue of ticket 12's own warning ("a single 6-4 6-4
+# puts the MLE at the grid boundary") - here checked as a Bayesian update
+# (prior-regularised), not a raw MLE, but still the sharpest evidence shape
+# available.
+for m_d, v_each, label in [(0.0, 0.05, "even prior, tight"), (0.0, 2.0, "even prior, wide"),
+                           (5.0, 0.05, "already-lopsided prior, tight"),
+                           (-5.0, 0.05, "prior disagrees with evidence, tight")]:
+    r = adf_update_full_dp(m_d, v_each, 0.0, v_each, [(6, 0), (6, 0)], weight=1.0)
+    ok = all(math.isfinite(x) for x in r)
+    check(f"6-0 6-0 stable ({label})", ok, f"m_d={m_d} v={v_each} -> {r}")
+
+# ---- reproduction 9 (ticket 21 full-DP): the exact grid-boundary case
+# ticket 12 flagged - a SINGLE extreme set (not a whole match) under a weak
+# (uninformative) prior. Per-match MLE is known-hopeless here (ticket 12);
+# the Bayesian update must still stay bounded within the grid range rather
+# than diverging, because the prior regularises even a ridge-shaped likelihood.
+r9 = adf_update_full_dp(0.0, 5.0, 0.0, 5.0, [(6, 0)], weight=1.0)
+check("single-extreme-set grid-boundary case stays bounded and finite",
+     all(math.isfinite(x) for x in r9) and abs(r9[0]) <= FULL_DP_GRID_MAX and abs(r9[2]) <= FULL_DP_GRID_MAX,
+     f"single 6-0 set, wide prior -> {r9}")
+
+# ---- reproduction 10 (ticket 21 full-DP): d far from zero (near the fixed
+# grid's edge) must not blow up or silently clip to a wrong value.
+r10 = adf_update_full_dp(11.0, 1.0, -11.0, 1.0, [(6, 0), (6, 0)], weight=1.0)
+check("far-from-zero d (near grid edge) numerically stable",
+     all(math.isfinite(x) for x in r10), f"prior d=22 -> {r10}")
+
+# ---- reproduction 11 (ticket 21 full-DP): the symmetric-d formula must
+# actually encode the strength gap (p_a_serve=sigmoid(d/2),
+# p_b_serve=sigmoid(-d/2), NOT p_a_serve==p_b_serve - the degenerate reading
+# would make every set ~50/50 regardless of d, silently disabling the whole
+# mechanism). Check P(A wins the set) is monotonically non-decreasing in d
+# and reaches both extremes.
+d_grid = [-6.0, -2.0, 0.0, 2.0, 6.0]
+p_a_wins = []
+for d_ in d_grid:
+    dist = set_outcome_dist_for_d(d_)
+    p_a_wins.append(sum(pr for (a_, b_), pr in dist.items() if a_ > b_))
+monotone = all(p_a_wins[i] <= p_a_wins[i + 1] + 1e-9 for i in range(len(p_a_wins) - 1))
+check("symmetric-d formula: P(A wins set) monotone non-decreasing in d",
+     monotone, f"d={d_grid} -> P(A wins)={[round(x, 4) for x in p_a_wins]}")
+check("symmetric-d formula: d=0 gives an even set-score distribution",
+     abs(p_a_wins[2] - 0.5) < 1e-9, f"P(A wins set) at d=0 = {p_a_wins[2]:.6f} (expect 0.5)")
+
+# ---- reproduction 12 (ticket 21 full-DP): fail-safe guards - empty
+# set_scores, non-positive weight, and non-positive prior variance must all
+# be safe no-ops (return the input unchanged), same convention as
+# adf_update's own n<=0 guard.
+noop1 = adf_update_full_dp(0.3, 0.4, -0.2, 0.4, [], weight=1.0)
+check("adf_update_full_dp no-ops on empty set_scores",
+     noop1 == (0.3, 0.4, -0.2, 0.4), f"got {noop1}")
+noop2 = adf_update_full_dp(0.3, 0.4, -0.2, 0.4, [(6, 4)], weight=0.0)
+check("adf_update_full_dp no-ops on weight<=0",
+     noop2 == (0.3, 0.4, -0.2, 0.4), f"got {noop2}")
+
+# ---- reproduction 13 (ticket 21 full-DP): parse_score_sets rejects
+# old-rules undecided long final sets and malformed tokens (falls back to
+# the existing games-won-count approximation for the whole match), and
+# correctly parses ordinary and tiebreak-annotated sets.
+check("parse_score_sets parses an ordinary 3-set match",
+     parse_score_sets("6-4 3-6 7-6(4)") == [(6, 4), (3, 6), (7, 6)],
+     f"got {parse_score_sets('6-4 3-6 7-6(4)')}")
+check("parse_score_sets rejects an old-rules long undecided decider",
+     parse_score_sets("70-68 6-3") is None, f"got {parse_score_sets('70-68 6-3')}")
+check("parse_score_sets rejects malformed score",
+     parse_score_sets("garbage") is None, f"got {parse_score_sets('garbage')}")
+
+# ---- reproduction 14 (ticket 21 full-DP): the fixed grid cache must be
+# self-consistent - re-querying the same d twice returns the identical
+# (cached) distribution, and the cache never grows unboundedly (fixed range
+# / step means a hard ceiling on distinct entries regardless of how many
+# distinct raw d values a real fit ever queries).
+from hierarchical_model import FULL_DP_GRID_STEP
+_before = len(__import__("hierarchical_model")._full_dp_grid_cache)
+d1 = set_outcome_dist_for_d(3.14159)
+d2 = set_outcome_dist_for_d(3.14159)
+check("grid cache lookup is idempotent (same dict object reused)", d1 is d2, "")
+max_cache_entries = int((FULL_DP_GRID_MAX - FULL_DP_GRID_MIN) / FULL_DP_GRID_STEP) + 2
+_after = len(__import__("hierarchical_model")._full_dp_grid_cache)
+check("grid cache bounded by the fixed grid size (no unbounded growth)",
+     _after <= max_cache_entries, f"cache size={_after}, hard ceiling={max_cache_entries}")
 
 print(f"\n{'ALL PASS' if not FAILURES else 'FAILURES: ' + str(FAILURES)}")
 sys.exit(1 if FAILURES else 0)

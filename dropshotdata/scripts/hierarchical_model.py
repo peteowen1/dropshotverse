@@ -238,6 +238,42 @@ def parse_score_games(score: str) -> tuple[float, float]:
     return float(total_w), float(total_l)
 
 
+_LEGAL_SET_SCORES = frozenset(
+    {(a, b) for a in range(0, 8) for b in range(0, 8)
+     if ((a >= 6 or b >= 6) and abs(a - b) >= 2 and max(a, b) <= 7)
+     or (a, b) in {(7, 6), (6, 7)}}
+)
+
+
+def parse_score_sets(score: str) -> list[tuple[int, int]] | None:
+    """Ticket 21 full-DP: per-set (winner_games, loser_games) tuples, order
+    preserved (unlike parse_score_games's lumped sum) - e.g. "3-6 7-6(4) 6-2"
+    -> [(3,6),(7,6),(6,2)]. Winner's games are always token-group(1), the same
+    archive convention parse_score_games already relies on (the match
+    winner's games are listed first in each set token, regardless of who won
+    that particular set).
+
+    Returns None (never a partial list) if ANY set fails to parse OR isn't a
+    legal short-form set score representable by p_set_full's DP - old-rules
+    undecided long final sets (e.g. pre-tiebreak-era deciders like 70-68), or
+    a malformed/irregular token. The caller falls back to the existing
+    games-won-count approximation for the WHOLE match in that case, rather
+    than mixing two different likelihood models within one match."""
+    tokens = str(score).split()
+    if not tokens:
+        return None
+    sets: list[tuple[int, int]] = []
+    for tok in tokens:
+        m = _SET_SCORE_RE.match(tok)
+        if not m:
+            return None
+        ga, gb = int(m.group(1)), int(m.group(2))
+        if (ga, gb) not in _LEGAL_SET_SCORES:
+            return None
+        sets.append((ga, gb))
+    return sets or None
+
+
 def sigmoid(x: float) -> float:
     if x > 35:
         return 1.0
@@ -301,14 +337,26 @@ def p_tiebreak(p_a_serve: float, p_b_serve: float) -> float:
     return final
 
 
-def p_set(p_a_serve: float, p_b_serve: float, a_serves_first: bool) -> float:
-    """P(A wins the set). Exact DP over games; 7-6 resolved via p_tiebreak."""
-    ga = p_game(p_a_serve if a_serves_first else 1 - p_b_serve)
-    gb = p_game(p_b_serve if a_serves_first else 1 - p_a_serve)
-    # ga = P(server of odd-numbered games, from A's perspective, holds) — simpler:
-    # recompute directly: game i (0-indexed) server is A if (i%2==0)==a_serves_first
+def p_set_full(p_a_serve: float, p_b_serve: float, a_serves_first: bool
+              ) -> dict[tuple[int, int], float]:
+    """Ticket 21 full-DP: the SAME game-by-game DP p_set has always run, but
+    returning the complete terminal-score distribution {(games_a, games_b):
+    probability} instead of collapsing it to the scalar P(A wins). p_set()
+    below is now a thin wrapper (sum over a>b) - an exact refactor, verified
+    bit-identical to the pre-refactor scalar implementation by
+    stress_test_safety.py's dedicated reproduction, not a rewrite of the
+    underlying math (including its existing 7-6 quirk, preserved as-is: the
+    original only ever credited the "A wins" mass at 6-6, using the regular-
+    game pa/(1-pa) transition weight together with the tiebreak probability;
+    this mirrors that exactly by also recording the complementary "B wins"
+    mass at (6,7) so the returned distribution is a real, normalized
+    probability distribution rather than a one-sided partial sum).
+
+    This is what lets regime B score the probability of a SPECIFIC observed
+    set score (e.g. exactly 6-4), not just win/loss - the richer likelihood
+    ticket 21 asked for."""
+    outcomes: dict[tuple[int, int], float] = {}
     states: dict[tuple[int, int], float] = {(0, 0): 1.0}
-    final = 0.0
     for _ in range(13):
         nxt: dict[tuple[int, int], float] = {}
         for (a, b), pr in states.items():
@@ -321,21 +369,35 @@ def p_set(p_a_serve: float, p_b_serve: float, a_serves_first: bool) -> float:
                 if prob == 0:
                     continue
                 if (na >= 6 or nb >= 6) and abs(na - nb) >= 2 and max(na, nb) <= 7:
-                    final += prob if na > nb else 0.0
+                    outcomes[(na, nb)] = outcomes.get((na, nb), 0.0) + prob
                 elif na == 7 or nb == 7:
                     # 7-6: decided by tiebreak. Server of the tiebreak alternates
                     # normally; approximate with the tiebreak function using the
-                    # POINT probabilities (not game probabilities).
-                    tb = p_tiebreak(p_a_serve, p_b_serve) if na == 7 else \
-                         p_tiebreak(p_a_serve, p_b_serve)
-                    final += prob * (tb if na == 7 else (1 - tb))
+                    # POINT probabilities (not game probabilities). Same
+                    # transition weighting as the pre-refactor scalar p_set -
+                    # preserved exactly, not corrected, per this ticket's scope.
+                    tb = p_tiebreak(p_a_serve, p_b_serve)
+                    credit_a = prob * (tb if na == 7 else (1 - tb))
+                    outcomes[(7, 6)] = outcomes.get((7, 6), 0.0) + credit_a
+                    outcomes[(6, 7)] = outcomes.get((6, 7), 0.0) + (prob - credit_a)
                 else:
                     nxt[(na, nb)] = nxt.get((na, nb), 0.0) + prob
         states = nxt
         if not states:
             break
-    final += sum(states.values()) * 0.5   # negligible leftover mass
-    return final
+    leftover = sum(states.values())   # negligible leftover mass (deep-deuce tail)
+    if leftover > 0:
+        outcomes[(7, 6)] = outcomes.get((7, 6), 0.0) + leftover * 0.5
+        outcomes[(6, 7)] = outcomes.get((6, 7), 0.0) + leftover * 0.5
+    return outcomes
+
+
+def p_set(p_a_serve: float, p_b_serve: float, a_serves_first: bool) -> float:
+    """P(A wins the set). Exact DP over games; 7-6 resolved via p_tiebreak.
+    Now a thin wrapper over p_set_full (ticket 21 refactor) - see that
+    docstring for the bit-identical-behaviour guarantee."""
+    return sum(pr for (a, b), pr in
+              p_set_full(p_a_serve, p_b_serve, a_serves_first).items() if a > b)
 
 
 def p_match(p_a_serve: float, p_b_serve: float, best_of: int) -> float:
@@ -464,6 +526,151 @@ def adf_update(m_a: float, v_a: float, m_b: float, v_b: float,
         d -= grad / hess
     p = sigmoid(d)
     var_post = 1.0 / (n * p * (1 - p) + 1.0 / v_d)
+    shift = d - m_d
+    share_a = v_a / (v_a + v_b)
+    share_b = 1.0 - share_a
+    reduction = max(0.0, 1.0 - var_post / v_d)
+    return (m_a + share_a * shift, v_a * (1 - reduction * share_a),
+            m_b - share_b * shift, v_b * (1 - reduction * share_b))
+
+
+# --------------------------------------------------- ticket 21: full-DP regime-B
+# Off by default (DSV_REGIME_B_FULL_DP=0) - the fallback games-won-count path
+# above (adf_update on parse_score_games's summed counts) stays the exact
+# behaviour v25 was selected on. This block replaces it with the ACTUAL
+# log-likelihood of the observed set-by-set scoreline, computed from p_set's
+# own game-by-game DP, when enabled.
+REGIME_B_FULL_DP = os.environ.get("DSV_REGIME_B_FULL_DP", "0") == "1"
+
+# A fixed, pre-registered grid, not an unbounded cache: a fit walks through
+# ~1.9M matches and the combined-strength gap d ranges continuously as player
+# states evolve, so an LRU keyed on raw d values would grow without a real
+# bound over a long run. Snapping to a fixed 0.01-wide grid over the full
+# reachable range of d (cw,cl each bounded by +-2*MAX_STATE, so d in
+# +-4*MAX_STATE with margin) gives O(1) lookups and a fixed, predictable
+# memory footprint regardless of run length.
+FULL_DP_GRID_STEP = 0.01
+FULL_DP_GRID_MIN = -12.5
+FULL_DP_GRID_MAX = 12.5
+FULL_DP_H = 0.05   # finite-difference step for the Newton solve (5 grid
+                    # steps - comfortably resolved after grid-snapping, so
+                    # d-h/d/d+h never alias to the same grid point)
+_SCORE_PROB_FLOOR = 1e-6   # ticket 12: a single extreme set (e.g. 6-0) at a
+                            # moderate d can have near-zero DP mass - floor it
+                            # so log-likelihood/Newton curvature stay finite.
+                            # This is the exact per-match grid-boundary
+                            # failure mode ticket 12 warned about, guarded
+                            # against here instead of rediscovered as a NaN.
+
+_full_dp_grid_cache: dict[float, dict[tuple[int, int], float]] = {}
+
+
+def _snap_to_grid(d: float) -> float:
+    d = max(FULL_DP_GRID_MIN, min(FULL_DP_GRID_MAX, d))
+    return round(round(d / FULL_DP_GRID_STEP) * FULL_DP_GRID_STEP, 6)
+
+
+def set_outcome_dist_for_d(d: float) -> dict[tuple[int, int], float]:
+    """Ticket 21: the per-set outcome distribution for combined-strength gap
+    d, under the symmetric split ticket 12 established is the only
+    identifiable option from a single match - alpha=beta=c/2 for each
+    player, so a player's own serve-point-win probability is
+    sigmoid(their combined edge / 2): p_a_serve=sigmoid(d/2),
+    p_b_serve=sigmoid(-d/2)=1-p_a_serve (NOT p_a_serve==p_b_serve - that
+    degenerate reading would make p_match(p,p,...) ~= 0.5 for every d,
+    destroying all signal; the "symmetric" assumption is between a player's
+    OWN serve and return skill, not between the two players' serve rates).
+    At d=0 this gives p_a_serve=p_b_serve=0.5, the same coin-flip-point
+    default regime A already has for two untested players with m_a=m_b=0.
+
+    Symmetrized over which side serves the first game of the set (real
+    who-served-set-1 data isn't in the archive), matching p_match's own
+    q1/q2 averaging. Snapped to the fixed grid and cached (see module-level
+    comment) rather than computed fresh per call."""
+    d_snap = _snap_to_grid(d)
+    cached = _full_dp_grid_cache.get(d_snap)
+    if cached is not None:
+        return cached
+    pa = sigmoid(d_snap / 2.0)
+    pb = sigmoid(-d_snap / 2.0)
+    o1 = p_set_full(pa, pb, True)
+    o2 = p_set_full(pa, pb, False)
+    keys = set(o1) | set(o2)
+    dist = {k: 0.5 * (o1.get(k, 0.0) + o2.get(k, 0.0)) for k in keys}
+    _full_dp_grid_cache[d_snap] = dist
+    return dist
+
+
+def p_specific_set_score(d: float, ga: int, gb: int) -> float:
+    """P(this exact set score | d), floored per _SCORE_PROB_FLOOR."""
+    return max(set_outcome_dist_for_d(d).get((ga, gb), 0.0), _SCORE_PROB_FLOOR)
+
+
+def match_log_likelihood(d: float, set_scores: list[tuple[int, int]]) -> float:
+    """log P(the full observed set-by-set scoreline | d) - product over sets
+    (independence given d is the same standard tennis-model assumption
+    p_match already makes for whole sets, ticket 05)."""
+    return sum(math.log(p_specific_set_score(d, ga, gb)) for ga, gb in set_scores)
+
+
+def adf_update_full_dp(m_a: float, v_a: float, m_b: float, v_b: float,
+                       set_scores: list[tuple[int, int]], weight: float = 1.0
+                       ) -> tuple[float, float, float, float]:
+    """Ticket 21: regime-B update using the ACTUAL log-likelihood of the
+    observed set-by-set scoreline (via set_outcome_dist_for_d / p_set's own
+    DP), replacing adf_update's Bernoulli games-won-count approximation.
+
+    adf_update's closed-form Newton step is Bernoulli-conjugate-specific -
+    its grad/hess have a closed form only because the binomial
+    log-likelihood does. This richer likelihood has no closed form, so
+    grad/hess of the LIKELIHOOD term are estimated by central finite
+    differences and then combined with the Gaussian PRIOR term exactly the
+    way adf_update does (same Laplace/Newton structure, same final
+    prior-variance-share split into m_a/m_b) - a numerical generalisation of
+    the same update, not a different mechanism.
+
+    `weight` reuses the existing tier_scale evidence-strength dial
+    (REGIME_B_N * TIER_WEIGHT * WTA_LOWER_WEIGHT) as a temperature on the
+    log-likelihood (LL -> weight*LL) - the same role REGIME_B_N already
+    plays by scaling y and n together in the old approximation, so the
+    already-tuned dials stay meaningful under this mode instead of needing a
+    brand new redundant hyperparameter."""
+    m_d, v_d = m_a - m_b, v_a + v_b
+    if v_d <= 0 or not set_scores or weight <= 0:
+        return m_a, v_a, m_b, v_b
+    d = m_d
+    h = FULL_DP_H
+    hess = -1.0 / v_d
+    for _ in range(4):
+        ll_p = weight * match_log_likelihood(d + h, set_scores)
+        ll_0 = weight * match_log_likelihood(d, set_scores)
+        ll_m = weight * match_log_likelihood(d - h, set_scores)
+        grad_ll = (ll_p - ll_m) / (2 * h)
+        hess_ll = (ll_p - 2 * ll_0 + ll_m) / (h * h)
+        grad = grad_ll - (d - m_d) / v_d
+        hess = hess_ll - 1.0 / v_d
+        if hess == 0 or not math.isfinite(hess) or not math.isfinite(grad):
+            break
+        step = grad / hess
+        if not math.isfinite(step):
+            break
+        d -= step
+        d = max(FULL_DP_GRID_MIN, min(FULL_DP_GRID_MAX, d))
+    # Final curvature at the converged d, for the posterior (Laplace) variance.
+    ll_p = weight * match_log_likelihood(d + h, set_scores)
+    ll_0 = weight * match_log_likelihood(d, set_scores)
+    ll_m = weight * match_log_likelihood(d - h, set_scores)
+    hess_ll = (ll_p - 2 * ll_0 + ll_m) / (h * h)
+    hess = hess_ll - 1.0 / v_d
+    if math.isfinite(hess) and hess < 0:
+        var_post = -1.0 / hess
+    else:
+        # pathological/flat curvature (should not happen given the floor on
+        # p_specific_set_score, but guarded rather than trusted): don't
+        # shrink variance at all this round, same fail-safe spirit as
+        # adf_update's n<=0 guard.
+        var_post = v_d
+    var_post = max(var_post, 1e-6)
     shift = d - m_d
     share_a = v_a / (v_a + v_b)
     share_b = 1.0 - share_a
@@ -781,12 +988,24 @@ def run(df: pd.DataFrame) -> pd.DataFrame:
             # evidence-strength dial and must be re-scanned through the
             # corruption gate at its new meaning, not assumed safe at 1.0 just
             # because the old fake-evidence version was.
-            if not math.isnan(row.total_games_w):
+            # Ticket 21 full-DP: try the richer set-by-set-scoreline
+            # likelihood first (only when enabled - see REGIME_B_FULL_DP
+            # docstring). Falls back to the games-won-count approximation
+            # below for any match parse_score_sets rejects (long-form
+            # undecided deciders, malformed tokens) so a single archive
+            # irregularity never breaks the whole fit, and identically to
+            # the pre-existing behaviour whenever the flag is off.
+            full_dp_sets = parse_score_sets(row.score) if REGIME_B_FULL_DP else None
+            if full_dp_sets is not None:
+                new_cw, new_vw, new_cl, new_vl = adf_update_full_dp(
+                    cw, vw, cl, vl, full_dp_sets, weight=tier_scale)
+            elif not math.isnan(row.total_games_w):
                 y_games = row.total_games_w * tier_scale
                 n_games = (row.total_games_w + row.total_games_l) * tier_scale
+                new_cw, new_vw, new_cl, new_vl = adf_update(cw, vw, cl, vl, y_games, n_games)
             else:
                 y_games = n_games = tier_scale   # unparseable score: old fallback
-            new_cw, new_vw, new_cl, new_vl = adf_update(cw, vw, cl, vl, y_games, n_games)
+                new_cw, new_vw, new_cl, new_vl = adf_update(cw, vw, cl, vl, y_games, n_games)
             # Ticket 21 retested bug 8's shift-survival fix here (reverted in
             # ticket 20) now that y/n are real evidence, not the old fake
             # all-or-nothing trial - result was numerically IDENTICAL to no
@@ -835,6 +1054,12 @@ if __name__ == "__main__":
     regime_b_total = int(regime_b_mask.sum())
     log(f"  regime B games-parsed  : {regime_b_parsed:,}/{regime_b_total:,} "
         f"({100*regime_b_parsed/max(regime_b_total,1):.1f}%) - ticket 21")
+    if REGIME_B_FULL_DP:
+        full_dp_ok = int(df.loc[regime_b_mask, "score"].astype(str)
+                        .map(lambda s: parse_score_sets(s) is not None).sum())
+        log(f"  regime B full-DP-eligible: {full_dp_ok:,}/{regime_b_total:,} "
+            f"({100*full_dp_ok/max(regime_b_total,1):.1f}%) - ticket 21 full-DP "
+            f"(ineligible matches fall back to games-won-count, unchanged)")
 
     preds, players = run(df)
     # Ticket 17: output filenames are env-overridable so sweep candidates never
