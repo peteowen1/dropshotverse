@@ -444,5 +444,105 @@ v_nu_large = _heavy_tail_var(3.0, 1.0, 0.4, 200.0)
 check("_heavy_tail_var: larger nu (less heavy-tailed) gives less inflation for the same surprise",
      v_nu_large <= v_nu_small, f"nu=2 -> {v_nu_small:.4f}, nu=200 -> {v_nu_large:.4f}")
 
+v_nu_small = _heavy_tail_var(3.0, 1.0, 0.4, 2.0)
+v_nu_large = _heavy_tail_var(3.0, 1.0, 0.4, 200.0)
+check("_heavy_tail_var: larger nu (less heavy-tailed) gives less inflation for the same surprise",
+     v_nu_large <= v_nu_small, f"nu=2 -> {v_nu_small:.4f}, nu=200 -> {v_nu_large:.4f}")
+
+# ---- reproduction 20 (round-order fix, not tied to a ticket number): the
+# archive's tourney_date is TOURNAMENT-level, and load_matches() concatenates
+# ALL main-draw yearly files before ANY qual_chall/qual_itf file, so for
+# every tournament, every year, both tours, qualifying rounds land AFTER the
+# whole main draw in raw file order. Sorting by date alone (stable mergesort)
+# preserved that WRONG within-date order: a player's R128 match got evaluated
+# using a state that hadn't yet absorbed their real Q1-Q3 wins earlier that
+# same day. This builds a synthetic 4-match same-date scenario in the exact
+# "bad" file order the real archive produces (R128 row first, qualifying rows
+# after - see load_matches()'s pats loop) and checks prepare() reorders them
+# correctly, AND that the resulting player state going into the R128 match
+# reflects the 3 prior qualifying wins.
+import warnings as _warnings20
+
+_cols20 = ["tourney_date", "tourney_level", "surface", "score", "best_of", "round",
+           "winner_id", "loser_id", "winner_name", "loser_name",
+           "w_svpt", "w_1stWon", "w_2ndWon", "l_svpt", "l_1stWon", "l_2ndWon",
+           "tour", "level_file"]
+_rows20 = [
+    # R128 row appears FIRST in raw file order (main-draw file read before
+    # qual files) - this is the bug's exact shape, reproduced deliberately.
+    dict(tourney_date=20230601, tourney_level="A", surface="Hard",
+         score="6-4 6-4", best_of=3, round="R128",
+         winner_id=1, loser_id=104, winner_name="Player A", loser_name="Opp R128",
+         w_svpt=60, w_1stWon=30, w_2ndWon=10, l_svpt=60, l_1stWon=20, l_2ndWon=5,
+         tour="atp", level_file="tour"),
+    dict(tourney_date=20230601, tourney_level="A", surface="Hard",
+         score="6-3 6-2", best_of=3, round="Q1",
+         winner_id=1, loser_id=101, winner_name="Player A", loser_name="Opp Q1",
+         w_svpt=55, w_1stWon=32, w_2ndWon=10, l_svpt=55, l_1stWon=18, l_2ndWon=4,
+         tour="atp", level_file="lower"),
+    dict(tourney_date=20230601, tourney_level="A", surface="Hard",
+         score="6-2 6-3", best_of=3, round="Q2",
+         winner_id=1, loser_id=102, winner_name="Player A", loser_name="Opp Q2",
+         w_svpt=55, w_1stWon=33, w_2ndWon=10, l_svpt=55, l_1stWon=17, l_2ndWon=4,
+         tour="atp", level_file="lower"),
+    dict(tourney_date=20230601, tourney_level="A", surface="Hard",
+         score="6-4 6-3", best_of=3, round="Q3",
+         winner_id=1, loser_id=103, winner_name="Player A", loser_name="Opp Q3",
+         w_svpt=58, w_1stWon=31, w_2ndWon=10, l_svpt=58, l_1stWon=19, l_2ndWon=4,
+         tour="atp", level_file="lower"),
+]
+raw20 = pd.DataFrame(_rows20)[_cols20]
+prepared20, _dropped20 = hm.prepare(raw20.copy())
+rounds_in_order = list(prepared20["round"])
+check("reproduction 20: qualifying rounds sorted before R128 despite bad file order",
+     rounds_in_order == ["Q1", "Q2", "Q3", "R128"], f"order={rounds_in_order}")
+
+# Replay the FIXED row order through the same low-level update primitives
+# run() uses, and confirm Player A's state going INTO the R128 match already
+# reflects the 3 qualifying wins (n_matches==3, variance shrunk below
+# INIT_VAR) - this is the actual causal-ordering assertion, not just a row
+# order check.
+s20 = PlayerState()
+for row20 in prepared20.itertuples(index=False):
+    if row20.round == "R128":
+        break
+    opp20 = PlayerState()
+    inflate(s20, row20.date)
+    inflate(opp20, row20.date)
+    e_w20, f_l20 = s20.m_a, opp20.m_b
+    v_e20, v_f20 = s20.v_a, opp20.v_b
+    n1_20, y1_20 = float(row20.w_svpt), float(row20.w_won)
+    new_ew20, new_ve20, new_fl20, _ = adf_update(e_w20, v_e20, f_l20, v_f20, y1_20, n1_20)
+    s20.m_a, s20.v_a, _, _ = apply_side_update(s20.m_a, s20.v_a, 0.0, 0.0, e_w20, new_ew20, new_ve20)
+    s20.n_matches += 1
+check("reproduction 20: player state reflects qualifying wins before the R128 prediction",
+     s20.n_matches == 3 and s20.v_a < hm.INIT_VAR - 1e-9,
+     f"n_matches={s20.n_matches} v_a={s20.v_a:.4f} (INIT_VAR={hm.INIT_VAR})")
+
+# Negative control: confirm this WOULD have failed under the old date-only
+# sort (proves the fix changes real behavior, not a vacuous assertion) - all
+# four rows share one date, so a pure date sort is a no-op on file order.
+old_order20 = raw20.copy()
+old_order20["date"] = pd.to_datetime(old_order20["tourney_date"], format="%Y%m%d")
+old_order20 = old_order20.sort_values("date", kind="mergesort").reset_index(drop=True)
+check("reproduction 20: old date-only sort put R128 BEFORE qualifying (bug confirmed present pre-fix)",
+     list(old_order20["round"])[0] == "R128", f"old order={list(old_order20['round'])}")
+
+# round_rank() itself must not crash on an unrecognized label - fall back to
+# NaN (sorted last) and log a warning rather than assuming full vocabulary
+# coverage.
+with _warnings20.catch_warnings(record=True) as caught20:
+    _warnings20.simplefilter("always")
+    ranks20 = hm.round_rank(pd.Series(["Q1", "R128", "totally_unknown_round"]))
+check("round_rank: known labels map correctly, unknown label falls back to NaN without crashing",
+     ranks20.iloc[0] == 0 and ranks20.iloc[1] == 6 and pd.isna(ranks20.iloc[2]),
+     f"ranks={list(ranks20)}")
+check("round_rank: unrecognized label triggers a warning",
+     any("totally_unknown_round" in str(w.message) for w in caught20),
+     f"warnings captured: {[str(w.message) for w in caught20]}")
+check("round_rank: 'f' normalizes to the same rank as 'F'",
+     hm.round_rank(pd.Series(["f"])).iloc[0] == hm.round_rank(pd.Series(["F"])).iloc[0],
+     f"f rank={hm.round_rank(pd.Series(['f'])).iloc[0]}, F rank={hm.round_rank(pd.Series(['F'])).iloc[0]}")
+
 print(f"\n{'ALL PASS' if not FAILURES else 'FAILURES: ' + str(FAILURES)}")
 sys.exit(1 if FAILURES else 0)

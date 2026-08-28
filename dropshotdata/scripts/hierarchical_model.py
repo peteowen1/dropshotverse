@@ -39,6 +39,7 @@ import pickle
 import re
 import sys
 import time
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -59,6 +60,58 @@ DEBUG_UID = os.environ.get("DSV_DEBUG_UID", "")   # e.g. "atp:206173" - traces o
                                                    # reproduces the failure this
                                                    # ticket is chasing)
 SURFACES = ("Hard", "Clay", "Grass", "Carpet", "Unknown")
+
+# Bug fix (verified 2026-08-28, not tied to any ticket number): the archive's
+# tourney_date is a TOURNAMENT-level date (its start date), not a per-match
+# date - 26% of player-appearances share a date with another match by the
+# same player (up to 23 matches on one date). Sorting by date alone (with a
+# stable mergesort) means the order WITHIN a date is whatever order
+# load_matches() happened to concatenate rows in - and load_matches() reads
+# ALL main-draw yearly files for a tour first, THEN ALL qual_chall yearly
+# files, THEN ALL qual_itf yearly files (see the `pats` loop), so for every
+# single tournament, every year, both tours, qualifying rounds land AFTER the
+# entire main draw in file order - even though qualifying happens BEFORE the
+# main draw starts in real life. A player who just won Q1-Q3 was, until this
+# fix, evaluated in their R128 match using a state that hadn't yet
+# incorporated those real qualifying wins. Confirmed systemic (not a one-off)
+# via the load_matches() code path itself, not just a spot check of one
+# tournament.
+#
+# Q1 < Q2 < Q3 < Q4 < Q5 < ER < R128 < R64 < R32 < R16 < QF < RR < SF < F/BR
+# RR (round-robin, season-ending Finals events) is a group stage, ranked
+# before the SF/F knockout bracket it feeds. BR (bronze/3rd-place playoff) is
+# ranked with F - both happen after SF and are effectively concurrent.
+ROUND_RANK: dict[str, int] = {
+    "Q1": 0, "Q2": 1, "Q3": 2, "Q4": 3, "Q5": 4,
+    "ER": 5,
+    "R128": 6, "R64": 7, "R32": 8, "R16": 9,
+    "QF": 10, "RR": 11, "SF": 12,
+    "F": 13, "BR": 13,
+}
+
+
+def round_rank(series: pd.Series) -> pd.Series:
+    """Map a `round` column to a within-date sort rank. `'f'` is normalized to
+    `'F'` first (a single-row lowercase/uppercase inconsistency confirmed to
+    be the same round, not a distinct one - a WTA ITF-qualifying final).
+    Any round value not in ROUND_RANK falls back to a neutral rank (NaN,
+    sorted last within its date via na_position='last') rather than crashing
+    or guessing a position - this only affects rows whose round label isn't
+    in the vocabulary this fix was built against, and is logged so a new
+    label doesn't silently misorder matches."""
+    normalized = series.astype(str).str.strip()
+    normalized = normalized.where(normalized != "f", "F")
+    ranks = normalized.map(ROUND_RANK)
+    unknown = ranks.isna()
+    if unknown.any():
+        bad_vals = sorted(normalized[unknown].unique())
+        warnings.warn(
+            f"prepare(): {int(unknown.sum())} row(s) have round value(s) "
+            f"{bad_vals} not in ROUND_RANK - falling back to date-only order "
+            "for these rows (sorted last within their date).",
+            stacklevel=2,
+        )
+    return ranks
 
 # ---- hyperparameters. Originally plausibility-set (see docstring); ticket 17
 # cross-validates the three flagged in ticket 10's verdict via env override, so
@@ -823,7 +876,17 @@ def prepare(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, int]]:
     df["total_games_w"] = [p[0] for p in parsed_games]
     df["total_games_l"] = [p[1] for p in parsed_games]
 
-    df = df.sort_values("date", kind="mergesort").reset_index(drop=True)
+    # Bug fix (see ROUND_RANK docstring above): tourney_date is a
+    # tournament-level date, so sorting by date alone leaves same-date match
+    # order at the mercy of raw file-concatenation order, which systematically
+    # puts qualifying rounds after the whole main draw. Sort by (date,
+    # round_rank) instead - matches with the identical date AND round rank
+    # (the genuinely-simultaneous case, e.g. two different R32 matches on the
+    # same day) keep their original file-order relative sequence via the
+    # stable mergesort, same as before.
+    df["_round_rank"] = round_rank(df["round"])
+    df = df.sort_values(["date", "_round_rank"], kind="mergesort", na_position="last").reset_index(drop=True)
+    df = df.drop(columns=["_round_rank"])
     dropped["_total_in"] = n0
     dropped["_kept"] = len(df)
 
@@ -846,10 +909,17 @@ def load_prepared(use_cache: bool = True) -> tuple[pd.DataFrame, dict[str, int]]
     7.6s parsing) and NEVER changes across hyperparameter candidates within a
     scan - re-paying it on every subprocess in a multi-candidate sweep is pure
     waste. Cache the prepared DataFrame, invalidated whenever any archive CSV
-    is newer than the cache file (so a real data refresh still gets picked up)."""
+    is newer than the cache file (so a real data refresh still gets picked up)
+    OR whenever this script itself is newer than the cache (so an edit to
+    prepare()'s logic - e.g. the round-order sort fix - can't silently keep
+    serving a cache built under the old code; caught the hard way: the
+    archive-mtime check alone does NOT invalidate on a prepare()-only code
+    change, since no CSV touches disk when only this file changes)."""
     if use_cache and PREPARED_CACHE_PATH.exists():
         archive_mtime = max((f.stat().st_mtime for f in ARCHIVE.rglob("*.csv")), default=0.0)
-        if PREPARED_CACHE_PATH.stat().st_mtime > archive_mtime:
+        script_mtime = Path(__file__).stat().st_mtime
+        cache_mtime = PREPARED_CACHE_PATH.stat().st_mtime
+        if cache_mtime > archive_mtime and cache_mtime > script_mtime:
             with open(PREPARED_CACHE_PATH, "rb") as fh:
                 return pickle.load(fh)   # nosec: our own cache, written moments/days ago by this same script
     raw = load_matches()
