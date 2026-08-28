@@ -1,0 +1,37 @@
+tuning window n=8460
+baseline (scale=1.0): {'n': 8460, 'weighted': 0.5671, 'plain': 0.6258, 'lopsided': 0.4238, 'midband_50_70': 0.7007}
+threshold=0.8 scale=0.7: [14s] pooled={'n': 8460, 'weighted': 0.5656, 'plain': 0.628, 'lopsided': 0.4136, 'midband_50_70': 0.7071}
+threshold=0.8 scale=0.75: [13s] pooled={'n': 8460, 'weighted': 0.5656, 'plain': 0.6273, 'lopsided': 0.4152, 'midband_50_70': 0.7057}
+threshold=0.8 scale=0.8: [13s] pooled={'n': 8460, 'weighted': 0.5657, 'plain': 0.6269, 'lopsided': 0.4168, 'midband_50_70': 0.7045}
+threshold=0.8 scale=0.85: [13s] pooled={'n': 8460, 'weighted': 0.566, 'plain': 0.6265, 'lopsided': 0.4186, 'midband_50_70': 0.7034}
+threshold=0.8 scale=0.9: [14s] pooled={'n': 8460, 'weighted': 0.5663, 'plain': 0.6262, 'lopsided': 0.4203, 'midband_50_70': 0.7024}
+threshold=0.8 scale=0.95: [13s] pooled={'n': 8460, 'weighted': 0.5666, 'plain': 0.626, 'lopsided': 0.422, 'midband_50_70': 0.7015}
+threshold=0.8 scale=0.98: [13s] pooled={'n': 8460, 'weighted': 0.5669, 'plain': 0.6259, 'lopsided': 0.4231, 'midband_50_70': 0.701}
+threshold=0.85 scale=0.7: [15s] pooled={'n': 8460, 'weighted': 0.5653, 'plain': 0.6272, 'lopsided': 0.4144, 'midband_50_70': 0.7056}
+threshold=0.85 scale=0.75: [13s] pooled={'n': 8460, 'weighted': 0.5654, 'plain': 0.6268, 'lopsided': 0.4159, 'midband_50_70': 0.7045}
+threshold=0.85 scale=0.8: [13s] pooled={'n': 8460, 'weighted': 0.5656, 'plain': 0.6264, 'lopsided': 0.4174, 'midband_50_70': 0.7036}
+threshold=0.85 scale=0.85: [14s] pooled={'n': 8460, 'weighted': 0.5659, 'plain': 0.6262, 'lopsided': 0.4189, 'midband_50_70': 0.7027}
+threshold=0.85 scale=0.9: [14s] pooled={'n': 8460, 'weighted': 0.5662, 'plain': 0.626, 'lopsided': 0.4205, 'midband_50_70': 0.702}
+threshold=0.85 scale=0.95: [13s] pooled={'n': 8460, 'weighted': 0.5666, 'plain': 0.6259, 'lopsided': 0.4222, 'midband_50_70': 0.7013}
+threshold=0.85 scale=0.98: [13s] pooled={'n': 8460, 'weighted': 0.5669, 'plain': 0.6259, 'lopsided': 0.4232, 'midband_50_70': 0.7009}
+threshold=0.9 scale=0.7: [14s] pooled={'n': 8460, 'weighted': 0.5656, 'plain': 0.6269, 'lopsided': 0.4161, 'midband_50_70': 0.7044}
+threshold=0.9 scale=0.75: [13s] pooled={'n': 8460, 'weighted': 0.5656, 'plain': 0.6266, 'lopsided': 0.4172, 'midband_50_70': 0.7036}
+threshold=0.9 scale=0.8: [13s] pooled={'n': 8460, 'weighted': 0.5658, 'plain': 0.6263, 'lopsided': 0.4184, 'midband_50_70': 0.7029}
+threshold=0.9 scale=0.85: [13s] pooled={'n': 8460, 'weighted': 0.566, 'plain': 0.6261, 'lopsided': 0.4197, 'midband_50_70': 0.7023}
+threshold=0.9 scale=0.9: [13s] pooled={'n': 8460, 'weighted': 0.5663, 'plain': 0.626, 'lopsided': 0.4211, 'midband_50_70': 0.7017}
+threshold=0.9 scale=0.95: [14s] pooled={'n': 8460, 'weighted': 0.5667, 'plain': 0.6259, 'lopsided': 0.4224, 'midband_50_70': 0.7012}
+threshold=0.9 scale=0.98: [13s] pooled={'n': 8460, 'weighted': 0.5669, 'plain': 0.6259, 'lopsided': 0.4233, 'midband_50_70': 0.7009}
+
+done in 282s
+
+=== sorted by weighted (best first) ===
+  threshold=0.85 scale=0.7: {'n': 8460, 'weighted': 0.5653, 'plain': 0.6272, 'lopsided': 0.4144, 'midband_50_70': 0.7056}
+  threshold=0.85 scale=0.75: {'n': 8460, 'weighted': 0.5654, 'plain': 0.6268, 'lopsided': 0.4159, 'midband_50_70': 0.7045}
+  threshold=0.8 scale=0.7: {'n': 8460, 'weighted': 0.5656, 'plain': 0.628, 'lopsided': 0.4136, 'midband_50_70': 0.7071}
+  threshold=0.8 scale=0.75: {'n': 8460, 'weighted': 0.5656, 'plain': 0.6273, 'lopsided': 0.4152, 'midband_50_70': 0.7057}
+  threshold=0.85 scale=0.8: {'n': 8460, 'weighted': 0.5656, 'plain': 0.6264, 'lopsided': 0.4174, 'midband_50_70': 0.7036}
+  threshold=0.9 scale=0.7: {'n': 8460, 'weighted': 0.5656, 'plain': 0.6269, 'lopsided': 0.4161, 'midband_50_70': 0.7044}
+  threshold=0.9 scale=0.75: {'n': 8460, 'weighted': 0.5656, 'plain': 0.6266, 'lopsided': 0.4172, 'midband_50_70': 0.7036}
+  threshold=0.8 scale=0.8: {'n': 8460, 'weighted': 0.5657, 'plain': 0.6269, 'lopsided': 0.4168, 'midband_50_70': 0.7045}
+  threshold=0.9 scale=0.8: {'n': 8460, 'weighted': 0.5658, 'plain': 0.6263, 'lopsided': 0.4184, 'midband_50_70': 0.7029}
+  threshold=0.85 scale=0.85: {'n': 8460, 'weighted': 0.5659, 'plain': 0.6262, 'lopsided': 0.4189, 'midband_50_70': 0.7027}

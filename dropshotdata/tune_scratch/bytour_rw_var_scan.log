@@ -1,0 +1,27 @@
+=== DSV_RW_VAR_PER_WEEK scan (by-tour), v25 base config, (2022, 2023) tuning window ===
+  DSV_RW_VAR_PER_WEEK=0.001: corruption=0.0% fit=44.9s [60s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5641, 'plain': 0.6325, 'lopsided': 0.3976}
+    atp={'n': 4387, 'weighted': 0.5604, 'plain': 0.6297, 'lopsided': 0.3898}
+    wta={'n': 4073, 'weighted': 0.5681, 'plain': 0.6354, 'lopsided': 0.4058}
+  DSV_RW_VAR_PER_WEEK=0.0025: corruption=0.0% fit=39.2s [112s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5686, 'plain': 0.6321, 'lopsided': 0.4139}
+    atp={'n': 4387, 'weighted': 0.5685, 'plain': 0.6326, 'lopsided': 0.4107}
+    wta={'n': 4073, 'weighted': 0.5688, 'plain': 0.6316, 'lopsided': 0.4173}
+  DSV_RW_VAR_PER_WEEK=0.005: corruption=0.0% fit=38.9s [164s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5721, 'plain': 0.6309, 'lopsided': 0.4288}
+    atp={'n': 4387, 'weighted': 0.5731, 'plain': 0.6321, 'lopsided': 0.4277}
+    wta={'n': 4073, 'weighted': 0.5711, 'plain': 0.6296, 'lopsided': 0.4299}
+  DSV_RW_VAR_PER_WEEK=0.0075: corruption=0.0% fit=38.9s [216s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5751, 'plain': 0.6312, 'lopsided': 0.4386}
+    atp={'n': 4387, 'weighted': 0.5764, 'plain': 0.6325, 'lopsided': 0.4384}
+    wta={'n': 4073, 'weighted': 0.5738, 'plain': 0.6298, 'lopsided': 0.4388}
+  DSV_RW_VAR_PER_WEEK=0.01: corruption=0.0% fit=38.0s [267s elapsed]
+    pooled={'n': 8460, 'weighted': 0.578, 'plain': 0.6321, 'lopsided': 0.4462}
+    atp={'n': 4387, 'weighted': 0.5796, 'plain': 0.6334, 'lopsided': 0.4469}
+    wta={'n': 4073, 'weighted': 0.5764, 'plain': 0.6307, 'lopsided': 0.4456}
+  DSV_RW_VAR_PER_WEEK=0.02: corruption=0.0% fit=38.7s [318s elapsed]
+    pooled={'n': 8460, 'weighted': 0.586, 'plain': 0.6356, 'lopsided': 0.4653}
+    atp={'n': 4387, 'weighted': 0.5881, 'plain': 0.6368, 'lopsided': 0.4681}
+    wta={'n': 4073, 'weighted': 0.5838, 'plain': 0.6342, 'lopsided': 0.4623}
+
+done in 318s, wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\bytour_rw_var_per_week_scan.json

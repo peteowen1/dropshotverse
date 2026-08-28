@@ -1,0 +1,9 @@
+{
+ "best": {
+  "DSV_RW_VAR_PER_WEEK": "0.005",
+  "DSV_SURFACE_VAR_SCALE": "4.0",
+  "DSV_OU_THETA_PER_WEEK": "0.0010"
+ },
+ "tuning_logloss": 0.6697,
+ "baseline_logloss": 0.6812
+}

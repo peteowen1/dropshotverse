@@ -1,0 +1,6 @@
+top slice n=594, mid slice n=600
+top baseline: mc600_ll=0.2134 elo_ll=0.0652
+mid baseline: mc600_ll=0.6063 elo_ll=0.5024
+threshold=0.85 scale=0.5: top_ll=0.1573 (n_touched=532/594)  mid_ll=0.6021 (n_touched=166/600)
+threshold=0.9 scale=0.4: top_ll=0.1471 (n_touched=505/594)  mid_ll=0.6030 (n_touched=104/600)
+done.

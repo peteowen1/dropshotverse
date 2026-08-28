@@ -1,0 +1,37 @@
+=== fitting v25 on 2022-23 tuning window (once - var_scale only touches MC step) ===
+  fit vs_tune done in 39s
+  var_scale=1.0: [14s]
+    pooled={'n': 8460, 'weighted': 0.5671, 'plain': 0.6258, 'lopsided': 0.4238, 'midband_50_70': 0.7007}
+    atp={'n': 4387, 'weighted': 0.5679, 'plain': 0.6265, 'lopsided': 0.4236, 'midband_50_70': 0.7049}
+    wta={'n': 4073, 'weighted': 0.5662, 'plain': 0.6251, 'lopsided': 0.424, 'midband_50_70': 0.6962}
+  var_scale=0.9: [14s]
+    pooled={'n': 8460, 'weighted': 0.5662, 'plain': 0.6263, 'lopsided': 0.4198, 'midband_50_70': 0.7028}
+    atp={'n': 4387, 'weighted': 0.567, 'plain': 0.627, 'lopsided': 0.4194, 'midband_50_70': 0.7071}
+    wta={'n': 4073, 'weighted': 0.5654, 'plain': 0.6256, 'lopsided': 0.4202, 'midband_50_70': 0.6982}
+  var_scale=0.85: [13s]
+    pooled={'n': 8460, 'weighted': 0.5659, 'plain': 0.6267, 'lopsided': 0.4178, 'midband_50_70': 0.704}
+    atp={'n': 4387, 'weighted': 0.5667, 'plain': 0.6274, 'lopsided': 0.4173, 'midband_50_70': 0.7083}
+    wta={'n': 4073, 'weighted': 0.565, 'plain': 0.6259, 'lopsided': 0.4183, 'midband_50_70': 0.6994}
+  var_scale=0.8: [14s]
+    pooled={'n': 8460, 'weighted': 0.5656, 'plain': 0.6271, 'lopsided': 0.4158, 'midband_50_70': 0.7054}
+    atp={'n': 4387, 'weighted': 0.5664, 'plain': 0.6278, 'lopsided': 0.4152, 'midband_50_70': 0.7097}
+    wta={'n': 4073, 'weighted': 0.5648, 'plain': 0.6264, 'lopsided': 0.4164, 'midband_50_70': 0.7007}
+  var_scale=0.75: [14s]
+    pooled={'n': 8460, 'weighted': 0.5655, 'plain': 0.6277, 'lopsided': 0.4138, 'midband_50_70': 0.7069}
+    atp={'n': 4387, 'weighted': 0.5662, 'plain': 0.6284, 'lopsided': 0.4131, 'midband_50_70': 0.7113}
+    wta={'n': 4073, 'weighted': 0.5647, 'plain': 0.627, 'lopsided': 0.4146, 'midband_50_70': 0.7022}
+  var_scale=0.7: [14s]
+    pooled={'n': 8460, 'weighted': 0.5654, 'plain': 0.6285, 'lopsided': 0.4119, 'midband_50_70': 0.7086}
+    atp={'n': 4387, 'weighted': 0.5661, 'plain': 0.6291, 'lopsided': 0.411, 'midband_50_70': 0.713}
+    wta={'n': 4073, 'weighted': 0.5648, 'plain': 0.6278, 'lopsided': 0.4128, 'midband_50_70': 0.7038}
+  var_scale=0.65: [13s]
+    pooled={'n': 8460, 'weighted': 0.5655, 'plain': 0.6294, 'lopsided': 0.41, 'midband_50_70': 0.7105}
+    atp={'n': 4387, 'weighted': 0.5661, 'plain': 0.6299, 'lopsided': 0.409, 'midband_50_70': 0.7149}
+    wta={'n': 4073, 'weighted': 0.5649, 'plain': 0.6288, 'lopsided': 0.4111, 'midband_50_70': 0.7057}
+  var_scale=0.6: [14s]
+    pooled={'n': 8460, 'weighted': 0.5658, 'plain': 0.6305, 'lopsided': 0.4083, 'midband_50_70': 0.7127}
+    atp={'n': 4387, 'weighted': 0.5663, 'plain': 0.631, 'lopsided': 0.407, 'midband_50_70': 0.7171}
+    wta={'n': 4073, 'weighted': 0.5654, 'plain': 0.63, 'lopsided': 0.4096, 'midband_50_70': 0.7079}
+
+done scanning in 110s
+wrote tune_scratch/mc_var_scale_scan.json

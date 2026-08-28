@@ -1,0 +1,33 @@
+=== fitting v25 on 2022-23 tuning window (once - var_scale only touches MC step) ===
+  fit vs_tune done in 39s
+  var_scale=1.0: [13s]
+    pooled={'n': 8460, 'weighted': 0.5671, 'plain': 0.6258, 'lopsided': 0.4238, 'midband_50_70': 0.7007}
+    atp={'n': 4387, 'weighted': 0.5679, 'plain': 0.6265, 'lopsided': 0.4236, 'midband_50_70': 0.7049}
+    wta={'n': 4073, 'weighted': 0.5662, 'plain': 0.6251, 'lopsided': 0.424, 'midband_50_70': 0.6962}
+  var_scale=0.75: [13s]
+    pooled={'n': 8460, 'weighted': 0.5655, 'plain': 0.6277, 'lopsided': 0.4138, 'midband_50_70': 0.7069}
+    atp={'n': 4387, 'weighted': 0.5662, 'plain': 0.6284, 'lopsided': 0.4131, 'midband_50_70': 0.7113}
+    wta={'n': 4073, 'weighted': 0.5647, 'plain': 0.627, 'lopsided': 0.4146, 'midband_50_70': 0.7022}
+  var_scale=0.5: [13s]
+    pooled={'n': 8460, 'weighted': 0.5671, 'plain': 0.6336, 'lopsided': 0.4051, 'midband_50_70': 0.718}
+    atp={'n': 4387, 'weighted': 0.5672, 'plain': 0.6338, 'lopsided': 0.4033, 'midband_50_70': 0.7223}
+    wta={'n': 4073, 'weighted': 0.567, 'plain': 0.6334, 'lopsided': 0.4071, 'midband_50_70': 0.7133}
+  var_scale=0.35: [13s]
+    pooled={'n': 8460, 'weighted': 0.572, 'plain': 0.6415, 'lopsided': 0.4026, 'midband_50_70': 0.7296}
+    atp={'n': 4387, 'weighted': 0.571, 'plain': 0.6408, 'lopsided': 0.3992, 'midband_50_70': 0.7333}
+    wta={'n': 4073, 'weighted': 0.5731, 'plain': 0.6424, 'lopsided': 0.4061, 'midband_50_70': 0.7257}
+  var_scale=0.25: [14s]
+    pooled={'n': 8460, 'weighted': 0.5789, 'plain': 0.6508, 'lopsided': 0.4038, 'midband_50_70': 0.7416}
+    atp={'n': 4387, 'weighted': 0.5764, 'plain': 0.6486, 'lopsided': 0.3986, 'midband_50_70': 0.7441}
+    wta={'n': 4073, 'weighted': 0.5816, 'plain': 0.6532, 'lopsided': 0.4092, 'midband_50_70': 0.739}
+  var_scale=0.15: [14s]
+    pooled={'n': 8460, 'weighted': 0.5917, 'plain': 0.6663, 'lopsided': 0.4101, 'midband_50_70': 0.7601}
+    atp={'n': 4387, 'weighted': 0.5863, 'plain': 0.6612, 'lopsided': 0.4017, 'midband_50_70': 0.7599}
+    wta={'n': 4073, 'weighted': 0.5976, 'plain': 0.6718, 'lopsided': 0.4189, 'midband_50_70': 0.7603}
+  var_scale=0.1: [13s]
+    pooled={'n': 8460, 'weighted': 0.6022, 'plain': 0.6782, 'lopsided': 0.4169, 'midband_50_70': 0.7736}
+    atp={'n': 4387, 'weighted': 0.5941, 'plain': 0.6706, 'lopsided': 0.4059, 'midband_50_70': 0.7709}
+    wta={'n': 4073, 'weighted': 0.6108, 'plain': 0.6864, 'lopsided': 0.4284, 'midband_50_70': 0.7765}
+
+done scanning in 94s
+wrote tune_scratch/mc_var_scale_scan.json

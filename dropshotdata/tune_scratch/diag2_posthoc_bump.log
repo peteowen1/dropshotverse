@@ -1,0 +1,21 @@
+n=10,678
+baseline (existing mc600 col, n=600): overall_ll=0.6186  elo_ll=0.6101
+rows with either_short_layoff=True: 8,981 / 10,678 (elite=3,843, non-elite=5,138)
+
+=== (A) global scope: any winner/loser 1-12wk gap ===
+  any_short_layoff (baseline, recomputed) bump=0.000  n_scoped= 8981  overall_ll=0.6189  overall_acc=0.6478
+  any_short_layoff                       bump=0.010  n_scoped= 8981  overall_ll=0.6186  overall_acc=0.6475
+  any_short_layoff                       bump=0.020  n_scoped= 8981  overall_ll=0.6183  overall_acc=0.6473
+  any_short_layoff                       bump=0.050  n_scoped= 8981  overall_ll=0.6179  overall_acc=0.6474
+
+=== (B) scope restricted to ELITE tourney_level only ===
+  elite_only + short_layoff              bump=0.050  n_scoped= 3843  overall_ll=0.6184  overall_acc=0.6478
+  elite_only + short_layoff              bump=0.150  n_scoped= 3843  overall_ll=0.6185  overall_acc=0.6478
+
+=== (C) scope restricted to NON-elite ===
+
+=== (C) scope restricted to NON-elite ===
+  non_elite + short_layoff               bump=0.050  n_scoped= 5138  overall_ll=0.6183  overall_acc=0.6474
+  non_elite + short_layoff               bump=0.150  n_scoped= 5138  overall_ll=0.6183  overall_acc=0.6474
+
+done.

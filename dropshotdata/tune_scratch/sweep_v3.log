@@ -1,0 +1,34 @@
+=== TUNING v3 (lopsided-weighted) on (2022, 2023) only ===
+metric: weight=3.0x for market-favourite > 0.8
+corruption gate: reject above 0.0201%
+baseline (ticket 18's overall-optimum config): {'tag': 'v3_baseline', 'n': 8460, 'weighted_logloss': 0.6045, 'plain_logloss': 0.6619, 'lopsided_logloss': 0.4644, 'corruption_pct': 0.01346, 'fit_s': 78.6}
+
+--- coordinate: DSV_MAX_SHIFT (holding others at {'DSV_RW_VAR_PER_WEEK': '0.008', 'DSV_SURFACE_VAR_SCALE': '2.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_MAX_SHIFT=0.3: weighted=0.617 plain=0.6762 lopsided=0.4727 corruption=0.01906% fit=70.6s
+    POPULATION GATE REJECTED v3_DSV_MAX_SHIFT_0p4: corruption=0.0258%
+    POPULATION GATE REJECTED v3_DSV_MAX_SHIFT_0p5: corruption=0.0303%
+    POPULATION GATE REJECTED v3_DSV_MAX_SHIFT_0p6: corruption=0.0381%
+
+--- coordinate: DSV_RW_VAR_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.008', 'DSV_SURFACE_VAR_SCALE': '2.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_RW_VAR_PER_WEEK=0.005: weighted=0.6021 plain=0.6634 lopsided=0.4529 corruption=0.00897% fit=74.0s
+    -> new best (DSV_RW_VAR_PER_WEEK=0.005)
+  DSV_RW_VAR_PER_WEEK=0.008: weighted=0.6045 plain=0.6619 lopsided=0.4644 corruption=0.01346% fit=71.5s
+    POPULATION GATE REJECTED v3_DSV_RW_VAR_PER_WEEK_0p012: corruption=0.0213%
+
+--- coordinate: DSV_OU_THETA_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '2.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_OU_THETA_PER_WEEK=0.0005: weighted=0.5988 plain=0.6608 lopsided=0.4479 corruption=0.01682% fit=79.9s
+    -> new best (DSV_OU_THETA_PER_WEEK=0.0005)
+  DSV_OU_THETA_PER_WEEK=0.0010: weighted=0.6021 plain=0.6634 lopsided=0.4529 corruption=0.00897% fit=76.1s
+  DSV_OU_THETA_PER_WEEK=0.0020: weighted=0.6077 plain=0.6678 lopsided=0.4613 corruption=0.00449% fit=66.0s
+
+--- coordinate: DSV_SURFACE_VAR_SCALE (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '2.0', 'DSV_OU_THETA_PER_WEEK': '0.0005', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_SURFACE_VAR_SCALE=1.0: weighted=0.5974 plain=0.6608 lopsided=0.4429 corruption=0.0157% fit=78.1s
+    -> new best (DSV_SURFACE_VAR_SCALE=1.0)
+  DSV_SURFACE_VAR_SCALE=2.0: weighted=0.5988 plain=0.6608 lopsided=0.4479 corruption=0.01682% fit=72.4s
+  DSV_SURFACE_VAR_SCALE=4.0: weighted=0.5996 plain=0.6609 lopsided=0.4502 corruption=0.01794% fit=82.4s
+
+=== SELECTED (lopsided-weighted metric, chosen using ONLY (2022, 2023)) ===
+{'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '1.0', 'DSV_OU_THETA_PER_WEEK': '0.0005', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}
+tuning-window weighted logloss: 0.5974 (baseline was 0.6045)
+
+wrote tune_scratch/selected_v3.json

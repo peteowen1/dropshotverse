@@ -1,0 +1,13 @@
+fit done in 29.0s
+tuning-window fit rows: 10,313
+odds-joined tuning rows: 8,459
+rows with either_short_layoff=True: 7,341 / 8,459
+
+=== eval-time bump scan on 2022-23 (v25 base, either_short_layoff scope) ===
+  bump=0.000  plain=0.6226  weighted=0.5643  lopsided=0.4222
+  bump=0.010  plain=0.6224  weighted=0.5644  lopsided=0.4233
+  bump=0.020  plain=0.6222  weighted=0.5646  lopsided=0.4244
+  bump=0.050  plain=0.6218  weighted=0.5653  lopsided=0.4277
+  bump=0.080  plain=0.6217  weighted=0.5662  lopsided=0.4310
+  bump=0.120  plain=0.6219  weighted=0.5676  lopsided=0.4353
+  bump=0.200  plain=0.6228  weighted=0.5707  lopsided=0.4437

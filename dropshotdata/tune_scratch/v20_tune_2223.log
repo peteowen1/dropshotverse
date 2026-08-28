@@ -1,0 +1,18 @@
+loading archive...
+
+=== COVERAGE ===
+  rows read              : 1,226,517
+  excluded, unparseable date            : 0
+  excluded, missing player id           : 0
+  excluded, retirement/walkover/no score: 37,345
+  kept                   : 1,189,172
+  regime A (point counts): 327,046 (27.5%)
+  regime B (scoreline)   : 862,126
+  ...200,000/1,189,172  (8s)
+  ...400,000/1,189,172  (16s)
+  ...600,000/1,189,172  (25s)
+  ...800,000/1,189,172  (35s)
+  ...1,000,000/1,189,172  (46s)
+fit complete: 1,189,172 matches in 60s, 10,313 eval predictions
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\v20_tune_preds_2223.parquet
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\v20_tune_state_2223.pkl

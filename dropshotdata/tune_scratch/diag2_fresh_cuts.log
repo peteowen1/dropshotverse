@@ -1,0 +1,57 @@
+=== (B) wall-proximity proxy: max(|d1_mean_nosurf|, |d2_mean_nosurf|) ===
+count    10678.000000
+mean         0.484122
+std          0.228907
+min          0.000000
+25%          0.301223
+50%          0.472353
+75%          0.648578
+max          1.464382
+Name: wall_proxy, dtype: float64
+               n  mean_wall_proxy  hier_ll  elo_ll     gap
+wall_proxy                                                
+Q1          2136           0.1836   0.6663  0.6484  0.0179
+Q2          2135           0.3334   0.6413  0.6333  0.0080
+Q3          2136           0.4725   0.6132  0.5996  0.0136
+Q4          2135           0.6133   0.6213  0.6193  0.0021
+Q5          2136           0.8178   0.5508  0.5497  0.0011
+
+correlation(wall_proxy, per-row hier logloss contribution - elo's): computed via bucket gap above
+rows with wall_proxy > 4.0 (at least one side plausibly near a MAX_STATE wall): 0
+
+=== (C) market-implied-probability-bucket calibration (Elo / Hier / Market) ===
+n with market odds: 8,594
+
+  --- bucketed by MARKET's own confidence (apples-to-apples slice for all three models) ---
+
+  Elo:
+               n  predicted  realised   error
+mkt_fav_p                                    
+(0.5, 0.6]  2625     0.5972    0.5097 -0.0875
+(0.6, 0.7]  2462     0.6501    0.6109 -0.0393
+(0.7, 0.8]  1820     0.7324    0.7247 -0.0076
+(0.8, 0.9]  1124     0.8121    0.8390  0.0269
+(0.9, 1.0]   545     0.8945    0.9303  0.0358
+
+  Hier:
+               n  predicted  realised   error
+mkt_fav_p                                    
+(0.5, 0.6]  2625     0.6126    0.5341 -0.0785
+(0.6, 0.7]  2462     0.6398    0.5975 -0.0424
+(0.7, 0.8]  1820     0.6837    0.6797 -0.0041
+(0.8, 0.9]  1124     0.7343    0.8336  0.0993
+(0.9, 1.0]   545     0.8174    0.9321  0.1147
+
+  Market:
+               n  predicted  realised   error
+mkt_fav_p                                    
+(0.5, 0.6]  2625     0.5536    0.5528 -0.0008
+(0.6, 0.7]  2462     0.6468    0.6422 -0.0046
+(0.7, 0.8]  1820     0.7473    0.7390 -0.0083
+(0.8, 0.9]  1124     0.8445    0.8461  0.0016
+(0.9, 1.0]   545     0.9376    0.9339 -0.0036
+
+  --- log-loss by market-bucket (own probabilities, not fav-only) ---
+  Elo: {Interval(0.5, 0.6, closed='right'): np.float64(0.723), Interval(0.6, 0.7, closed='right'): np.float64(0.6684), Interval(0.7, 0.8, closed='right'): np.float64(0.5967), Interval(0.8, 0.9, closed='right'): np.float64(0.4508), Interval(0.9, 1.0, closed='right'): np.float64(0.2503)}
+  Hier: {Interval(0.5, 0.6, closed='right'): np.float64(0.7056), Interval(0.6, 0.7, closed='right'): np.float64(0.6725), Interval(0.7, 0.8, closed='right'): np.float64(0.6185), Interval(0.8, 0.9, closed='right'): np.float64(0.4706), Interval(0.9, 1.0, closed='right'): np.float64(0.3165)}
+  Market: {Interval(0.5, 0.6, closed='right'): np.float64(0.6871), Interval(0.6, 0.7, closed='right'): np.float64(0.6475), Interval(0.7, 0.8, closed='right'): np.float64(0.5726), Interval(0.8, 0.9, closed='right'): np.float64(0.4277), Interval(0.9, 1.0, closed='right'): np.float64(0.2342)}

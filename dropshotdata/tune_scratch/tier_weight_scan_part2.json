@@ -1,0 +1,24 @@
+[
+ {
+  "TIER_WEIGHT": "0.3",
+  "tag": "tierw_0p3",
+  "n": 8460,
+  "weighted_logloss": 0.5932,
+  "plain_logloss": 0.6569,
+  "lopsided_logloss": 0.4378,
+  "lopsided_conf": 0.7817,
+  "corruption_pct": 0.00224,
+  "fit_s": 86.7
+ },
+ {
+  "TIER_WEIGHT": "0.1",
+  "tag": "tierw_0p1",
+  "n": 8460,
+  "weighted_logloss": 0.5922,
+  "plain_logloss": 0.6559,
+  "lopsided_logloss": 0.437,
+  "lopsided_conf": 0.7811,
+  "corruption_pct": 0.00224,
+  "fit_s": 90.3
+ }
+]

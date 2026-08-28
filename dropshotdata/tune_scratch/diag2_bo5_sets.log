@@ -1,0 +1,15 @@
+Bo5 total n=993
+  overall: hier_ll=0.5661  elo_ll=0.5433  gap=+0.0228
+
+breakdown by number of sets actually played:
+  3-set matches  n= 425  hier_ll=0.4906  elo_ll=0.4364  gap=+0.0541  acc_hier=0.7741  acc_elo=0.7835
+  4-set matches  n= 344  hier_ll=0.5919  elo_ll=0.5684  gap=+0.0235  acc_hier=0.6570  acc_elo=0.6890
+  5-set matches  n= 224  hier_ll=0.6698  elo_ll=0.7073  gap=-0.0375  acc_hier=0.6250  acc_elo=0.5759
+
+'went the distance' (4-5 sets) vs straight-ish (3 sets) grouping:
+  straight 3 sets  n= 425  hier_ll=0.4906  elo_ll=0.4364  gap=+0.0541
+  went 4-5 sets    n= 568  hier_ll=0.6226  elo_ll=0.6232  gap=-0.0006
+
+for comparison, Bo3 matches split the same way (2 sets vs 3 sets):
+  straight 2 sets  n= 6285  hier_ll=0.5872  elo_ll=0.5724  gap=+0.0149
+  went 3 sets      n= 3400  hier_ll=0.6918  elo_ll=0.6993  gap=-0.0075

@@ -1,0 +1,9 @@
+=== SHORT_LAYOFF_BUMP scan (max_weeks=12.0 bound), v25 base config, (2022, 2023) tuning window ===
+  BUMP=0.0: weighted=0.5721 plain=0.6309 lopsided=0.4288 corruption=0.0% fit=30.9s [46s elapsed]
+  BUMP=0.01: weighted=0.577 plain=0.6313 lopsided=0.4447 corruption=0.0% fit=30.6s [90s elapsed]
+  BUMP=0.02: weighted=0.5814 plain=0.633 lopsided=0.4556 corruption=0.0% fit=29.9s [133s elapsed]
+  BUMP=0.05: weighted=0.5894 plain=0.6369 lopsided=0.4737 corruption=0.0% fit=29.2s [176s elapsed]
+  BUMP=0.08: weighted=0.5946 plain=0.6397 lopsided=0.4847 corruption=0.0% fit=30.1s [220s elapsed]
+  BUMP=0.12: weighted=0.6 plain=0.6427 lopsided=0.4962 corruption=0.0% fit=29.8s [262s elapsed]
+
+done in 262s, wrote tune_scratch/short_layoff_bump_scan.json

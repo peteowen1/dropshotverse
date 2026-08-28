@@ -1,0 +1,33 @@
+=== TUNING spread+injury on (2022, 2023) only (charter: issues/18) ===
+baseline (ticket 17 config): {'tag': 'spread_baseline', 'n': 8460, 'logloss': 0.6697, 'lopsided_n': 1736, 'lopsided_logloss': 0.5394, 'fit_s': 62.2}
+
+--- coordinate: DSV_OU_THETA_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '1.0', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_OU_THETA_PER_WEEK=0.0000: logloss=0.6664 lopsided_ll=0.5317 (n=1736) fit=106.9s
+    -> new best (DSV_OU_THETA_PER_WEEK=0.0000)
+  DSV_OU_THETA_PER_WEEK=0.0002: logloss=0.6674 lopsided_ll=0.534 (n=1736) fit=105.6s
+  DSV_OU_THETA_PER_WEEK=0.0005: logloss=0.6683 lopsided_ll=0.5363 (n=1736) fit=107.8s
+  DSV_OU_THETA_PER_WEEK=0.0010: logloss=0.6697 lopsided_ll=0.5394 (n=1736) fit=104.2s
+
+--- coordinate: DSV_MAX_SHIFT (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0000', 'DSV_MAX_SHIFT': '1.0', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_MAX_SHIFT=1.5: logloss=0.7012 lopsided_ll=0.7128 (n=1736) fit=83.8s
+  DSV_MAX_SHIFT=2.0: logloss=0.6932 lopsided_ll=0.6936 (n=1736) fit=67.0s
+    GATE REJECTED this candidate:
+
+
+--- coordinate: DSV_PHI_MAX (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0000', 'DSV_MAX_SHIFT': '1.0', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+    GATE REJECTED this candidate:
+
+    GATE REJECTED this candidate:
+
+
+--- coordinate: DSV_LAYOFF_C (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0000', 'DSV_MAX_SHIFT': '1.0', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+    GATE REJECTED this candidate:
+
+    GATE REJECTED this candidate:
+
+
+=== SELECTED (chosen using ONLY (2022, 2023)) ===
+{'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0000', 'DSV_MAX_SHIFT': '1.0', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}
+tuning-window logloss: 0.6664 (baseline was 0.6697)
+
+wrote tune_scratch/selected_spread.json

@@ -1,0 +1,44 @@
+=== (converged mc600) calibration by layoff bucket, ALL eval rows ===
+                  n  predicted  realised  hier_ll  elo_ll   error
+layoff_bucket                                                    
+<=1wk          4681     0.6648    0.6866   0.5929  0.5756  0.0218
+1-4wk          4973     0.6663    0.6220   0.6401  0.6349 -0.0443
+4-12wk          827     0.6622    0.6034   0.6473  0.6669 -0.0588
+>12wk           194     0.6410    0.6856   0.5647  0.5628  0.0446
+
+=== same, split by is_elite (calibration finding was diagnosed on ALL tour matches -
+    does it concentrate in elite (Slam/Masters/Finals/PM/Olympics) or non-elite tour matches?) ===
+
+  is_elite=False  n=5682
+                  n  predicted  realised   error
+layoff_bucket                                   
+<=1wk          2655     0.6618    0.6832  0.0215
+1-4wk          2392     0.6532    0.6012 -0.0520
+4-12wk          473     0.6563    0.5793 -0.0771
+>12wk           159     0.6434    0.7107  0.0673
+
+  is_elite=True  n=4996
+                  n  predicted  realised   error
+layoff_bucket                                   
+<=1wk          2026     0.6687    0.6910  0.0223
+1-4wk          2581     0.6784    0.6412 -0.0372
+4-12wk          354     0.6701    0.6356 -0.0345
+>12wk            35     0.6299    0.5714 -0.0585
+
+=== split by WHICH side had the short layoff (favorite's side vs underdog's side) ===
+  favorite had 1-12wk gap      n= 2745  predicted=0.6324  realised=0.0310  error=-0.6015  hier_ll=1.0225  elo_ll=0.9128
+  underdog had 1-12wk gap      n= 4695  predicted=0.6831  realised=0.9953  error=+0.3122  hier_ll=0.3973  elo_ll=0.4571
+  both had 1-12wk gap          n= 1541  predicted=0.6681  realised=0.6652  error=-0.0030  hier_ll=0.6011  elo_ll=0.5736
+  neither                      n= 1697  predicted=0.6635  realised=0.6830  error=+0.0194  hier_ll=0.5933  elo_ll=0.5767
+
+=== best_of split within the 1-12wk-gap bucket (does Bo5 concentrate the effect?) ===
+  best_of=3  n= 8268  predicted=0.6638  realised=0.6381  error=-0.0256  hier_ll=0.6291  elo_ll=0.6229
+  best_of=5  n=  632  predicted=0.6833  realised=0.7009  error=+0.0177  hier_ll=0.5632  elo_ll=0.5509
+
+=== established (n_prior on affected side) vs new-ish players, within 1-12wk-gap bucket ===
+               n  predicted  realised  hier_ll  elo_ll   error
+exp_bucket                                                    
+<20           26     0.6867    0.8462   0.4860  0.3708  0.1595
+20-50         71     0.6921    0.7746   0.5022  0.4210  0.0825
+50-150       592     0.6774    0.6841   0.5838  0.5491  0.0067
+150+        8211     0.6640    0.6378   0.6288  0.6252 -0.0262

@@ -1,0 +1,18 @@
+
+=== ATP, p_elo>0.9, n=351 ===
+  point-estimate mean=0.9409  elo mean=0.9400  pre-computed mc600 mean=0.8080
+  scale=1.00  mean_p=0.8086  logloss(vs own outcome)=0.2226  elo_logloss=0.0622
+  scale=0.50  mean_p=0.8574  logloss(vs own outcome)=0.1636  elo_logloss=0.0622
+  scale=0.25  mean_p=0.8927  logloss(vs own outcome)=0.1225  elo_logloss=0.0622
+  scale=0.10  mean_p=0.9199  logloss(vs own outcome)=0.0917  elo_logloss=0.0622
+  scale=0.00  mean_p=0.9409  logloss(vs own outcome)=0.0687  elo_logloss=0.0622
+  (n_samples=200, wall=163.6s)
+
+=== WTA, p_elo>0.9, n=243 ===
+  point-estimate mean=0.9606  elo mean=0.9331  pre-computed mc600 mean=0.8264
+  scale=1.00  mean_p=0.8278  logloss(vs own outcome)=0.1979  elo_logloss=0.0696
+  scale=0.50  mean_p=0.8793  logloss(vs own outcome)=0.1370  elo_logloss=0.0696
+  scale=0.25  mean_p=0.9152  logloss(vs own outcome)=0.0958  elo_logloss=0.0696
+  scale=0.10  mean_p=0.9415  logloss(vs own outcome)=0.0664  elo_logloss=0.0696
+  scale=0.00  mean_p=0.9606  logloss(vs own outcome)=0.0454  elo_logloss=0.0696
+  (n_samples=200, wall=115.8s)

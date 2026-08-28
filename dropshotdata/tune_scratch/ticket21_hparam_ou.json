@@ -1,0 +1,52 @@
+[
+ {
+  "DSV_OU_THETA_PER_WEEK": "0.0002",
+  "tag": "ou_0p0002",
+  "n": 8460,
+  "weighted_logloss": 0.589,
+  "plain_logloss": 0.6535,
+  "lopsided_logloss": 0.4317,
+  "corruption_pct": 0.0,
+  "fit_s": 95.0
+ },
+ {
+  "DSV_OU_THETA_PER_WEEK": "0.0005",
+  "tag": "ou_0p0005",
+  "n": 8460,
+  "weighted_logloss": 0.5903,
+  "plain_logloss": 0.6545,
+  "lopsided_logloss": 0.4336,
+  "corruption_pct": 0.0,
+  "fit_s": 98.4
+ },
+ {
+  "DSV_OU_THETA_PER_WEEK": "0.001",
+  "tag": "ou_0p001",
+  "n": 8460,
+  "weighted_logloss": 0.5924,
+  "plain_logloss": 0.6562,
+  "lopsided_logloss": 0.4368,
+  "corruption_pct": 0.0,
+  "fit_s": 97.0
+ },
+ {
+  "DSV_OU_THETA_PER_WEEK": "0.002",
+  "tag": "ou_0p002",
+  "n": 8460,
+  "weighted_logloss": 0.596,
+  "plain_logloss": 0.6591,
+  "lopsided_logloss": 0.4425,
+  "corruption_pct": 0.0,
+  "fit_s": 84.2
+ },
+ {
+  "DSV_OU_THETA_PER_WEEK": "0.005",
+  "tag": "ou_0p005",
+  "n": 8460,
+  "weighted_logloss": 0.6044,
+  "plain_logloss": 0.6656,
+  "lopsided_logloss": 0.455,
+  "corruption_pct": 0.0,
+  "fit_s": 60.4
+ }
+]

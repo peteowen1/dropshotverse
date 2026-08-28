@@ -1,0 +1,29 @@
+=== TUNING on (2022, 2023) only (charter: issues/17) ===
+baseline (ticket 10 defaults): {'tag': 'baseline', 'n': 8460, 'logloss': 0.6812, 'acc': 0.6078, 'fit_s': 64.0}
+
+--- coordinate: DSV_RW_VAR_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.010', 'DSV_SURFACE_VAR_SCALE': '1.0', 'DSV_OU_THETA_PER_WEEK': '0.0025'}) ---
+  DSV_RW_VAR_PER_WEEK=0.005: logloss=0.6753 acc=0.61 n=8460 fit=64.8s
+    -> new best (DSV_RW_VAR_PER_WEEK=0.005)
+  DSV_RW_VAR_PER_WEEK=0.010: logloss=0.6812 acc=0.6078 n=8460 fit=68.9s
+  DSV_RW_VAR_PER_WEEK=0.020: logloss=0.6866 acc=0.6058 n=8460 fit=73.3s
+  DSV_RW_VAR_PER_WEEK=0.040: logloss=0.7031 acc=0.5962 n=8460 fit=70.0s
+
+--- coordinate: DSV_SURFACE_VAR_SCALE (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '1.0', 'DSV_OU_THETA_PER_WEEK': '0.0025'}) ---
+  DSV_SURFACE_VAR_SCALE=0.5: logloss=0.6779 acc=0.6158 n=8460 fit=68.8s
+  DSV_SURFACE_VAR_SCALE=2.0: logloss=0.672 acc=0.6026 n=8460 fit=67.7s
+    -> new best (DSV_SURFACE_VAR_SCALE=2.0)
+  DSV_SURFACE_VAR_SCALE=4.0: logloss=0.6709 acc=0.5985 n=8460 fit=65.7s
+    -> new best (DSV_SURFACE_VAR_SCALE=4.0)
+
+--- coordinate: DSV_OU_THETA_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0025'}) ---
+  DSV_OU_THETA_PER_WEEK=0.0010: logloss=0.6697 acc=0.6002 n=8460 fit=68.9s
+    -> new best (DSV_OU_THETA_PER_WEEK=0.0010)
+  DSV_OU_THETA_PER_WEEK=0.0025: logloss=0.6709 acc=0.5985 n=8460 fit=78.0s
+  DSV_OU_THETA_PER_WEEK=0.0050: logloss=0.6719 acc=0.5963 n=8460 fit=81.3s
+  DSV_OU_THETA_PER_WEEK=0.0100: logloss=0.6711 acc=0.5966 n=8460 fit=89.7s
+
+=== SELECTED CONFIGURATION (chosen using ONLY (2022, 2023)) ===
+{'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0010'}
+tuning-window logloss: 0.6697 (baseline was 0.6812)
+
+wrote tune_scratch/selected.json

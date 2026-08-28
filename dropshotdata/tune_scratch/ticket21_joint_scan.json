@@ -1,0 +1,101 @@
+[
+ {
+  "MAX_SHIFT": "0.15",
+  "CLIP_REINFLATE_K": "1.5",
+  "tag": "joint_ms0p15_k1p5",
+  "n": 8460,
+  "weighted_logloss": 0.582,
+  "plain_logloss": 0.6371,
+  "lopsided_logloss": 0.4477,
+  "corruption_pct": 0.0,
+  "fit_s": 66.6
+ },
+ {
+  "MAX_SHIFT": "0.15",
+  "CLIP_REINFLATE_K": "2.0",
+  "tag": "joint_ms0p15_k2p0",
+  "n": 8460,
+  "weighted_logloss": 0.5874,
+  "plain_logloss": 0.6392,
+  "lopsided_logloss": 0.4613,
+  "corruption_pct": 0.0,
+  "fit_s": 47.9
+ },
+ {
+  "MAX_SHIFT": "0.15",
+  "CLIP_REINFLATE_K": "2.5",
+  "tag": "joint_ms0p15_k2p5",
+  "n": 8460,
+  "weighted_logloss": 0.5936,
+  "plain_logloss": 0.6417,
+  "lopsided_logloss": 0.4764,
+  "corruption_pct": 0.0,
+  "fit_s": 47.4
+ },
+ {
+  "MAX_SHIFT": "0.175",
+  "CLIP_REINFLATE_K": "1.5",
+  "tag": "joint_ms0p175_k1p5",
+  "n": 8460,
+  "weighted_logloss": 0.5821,
+  "plain_logloss": 0.641,
+  "lopsided_logloss": 0.4385,
+  "corruption_pct": 0.0,
+  "fit_s": 45.7
+ },
+ {
+  "MAX_SHIFT": "0.175",
+  "CLIP_REINFLATE_K": "2.0",
+  "tag": "joint_ms0p175_k2p0",
+  "n": 8460,
+  "weighted_logloss": 0.5849,
+  "plain_logloss": 0.6415,
+  "lopsided_logloss": 0.447,
+  "corruption_pct": 0.0,
+  "fit_s": 45.9
+ },
+ {
+  "MAX_SHIFT": "0.175",
+  "CLIP_REINFLATE_K": "2.5",
+  "tag": "joint_ms0p175_k2p5",
+  "n": 8460,
+  "weighted_logloss": 0.5883,
+  "plain_logloss": 0.6428,
+  "lopsided_logloss": 0.4556,
+  "corruption_pct": 0.0,
+  "fit_s": 54.2
+ },
+ {
+  "MAX_SHIFT": "0.2",
+  "CLIP_REINFLATE_K": "1.5",
+  "tag": "joint_ms0p2_k1p5",
+  "n": 8460,
+  "weighted_logloss": 0.5848,
+  "plain_logloss": 0.6463,
+  "lopsided_logloss": 0.4351,
+  "corruption_pct": 0.0,
+  "fit_s": 50.7
+ },
+ {
+  "MAX_SHIFT": "0.2",
+  "CLIP_REINFLATE_K": "2.0",
+  "tag": "joint_ms0p2_k2p0",
+  "n": 8460,
+  "weighted_logloss": 0.5856,
+  "plain_logloss": 0.6456,
+  "lopsided_logloss": 0.4394,
+  "corruption_pct": 0.0,
+  "fit_s": 47.6
+ },
+ {
+  "MAX_SHIFT": "0.2",
+  "CLIP_REINFLATE_K": "2.5",
+  "tag": "joint_ms0p2_k2p5",
+  "n": 8460,
+  "weighted_logloss": 0.5873,
+  "plain_logloss": 0.6456,
+  "lopsided_logloss": 0.4451,
+  "corruption_pct": 0.0,
+  "fit_s": 46.9
+ }
+]

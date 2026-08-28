@@ -1,0 +1,26 @@
+=== basic tour split, current v25 config (converged mc600) ===
+  tour=atp  n= 5495  hier_ll=0.6133  elo_ll=0.6150  gap=-0.0018  acc_hier=0.6528  acc_elo=0.6530
+  tour=wta  n= 5183  hier_ll=0.6242  elo_ll=0.6048  gap=+0.0194  acc_hier=0.6473  acc_elo=0.6629
+
+=== field-depth / churn measure: for each tour+year, top-16-players' share of TOTAL match-wins ===
+    (lower share = more churn/depth, wins spread across more players)
+tour     atp     wta
+year                
+2022  0.2613  0.2538
+2023  0.2718  0.2461
+2024  0.2551  0.2565
+2025  0.2556  0.2558
+
+distinct winners per year (higher = deeper/more churny field):
+tour    atp    wta
+year              
+2022  259.0  261.0
+2023  296.0  288.0
+2024  303.0  230.0
+2025  313.0  303.0
+
+=== hier vs Elo gap by tour, split further by whether the actual match WINNER is a
+    'new-ish' player in the archive (n_prior < 50) - the population most affected by churn ===
+  tour=atp  established winner (n_prior_w>=50)     n= 5396  hier_ll=0.6102  elo_ll=0.6057  gap=+0.0045
+  tour=atp  newer winner (n_prior_w<50)            n=   99  hier_ll=0.7805  elo_ll=1.1220  gap=-0.3415
+  tour=wta  established winner (n_prior_w>=50)     n= 5155  hier_ll=0.6237  elo_ll=0.6038  gap=+0.0199

@@ -1,0 +1,16 @@
+=== TUNING DSV_REGIME_B_N on (2022, 2023) only ===
+  REGIME_B_N=1.0: weighted=0.6006 plain=0.6632 lopsided=0.4481 conf=0.7837 corruption=0.01906% fit=87.8s
+    POPULATION GATE REJECTED regimeb_2p0: corruption=0.1166%
+  REGIME_B_N=2.0: REJECTED or failed
+    POPULATION GATE REJECTED regimeb_3p0: corruption=0.2198%
+  REGIME_B_N=3.0: REJECTED or failed
+    POPULATION GATE REJECTED regimeb_5p0: corruption=0.5271%
+  REGIME_B_N=5.0: REJECTED or failed
+    POPULATION GATE REJECTED regimeb_8p0: corruption=0.9891%
+  REGIME_B_N=8.0: REJECTED or failed
+
+=== RESULTS ===
+REGIME_B_N         tag    n  weighted_logloss  plain_logloss  lopsided_logloss  lopsided_conf  corruption_pct  fit_s
+       1.0 regimeb_1p0 8460            0.6006         0.6632            0.4481         0.7837         0.01906   87.8
+
+wrote tune_scratch/regime_b_scan.json

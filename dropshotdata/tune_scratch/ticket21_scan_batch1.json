@@ -1,0 +1,35 @@
+[
+ {
+  "REGIME_B_N": "1.0",
+  "tag": "t21_1p0",
+  "n": 8460,
+  "weighted_logloss": 0.5918,
+  "plain_logloss": 0.6562,
+  "lopsided_logloss": 0.4348,
+  "lopsided_conf": 0.7852,
+  "corruption_pct": 0.0,
+  "fit_s": 97.0
+ },
+ {
+  "REGIME_B_N": "0.5",
+  "tag": "t21_0p5",
+  "n": 8460,
+  "weighted_logloss": 0.5907,
+  "plain_logloss": 0.6551,
+  "lopsided_logloss": 0.4339,
+  "lopsided_conf": 0.7844,
+  "corruption_pct": 0.0,
+  "fit_s": 98.3
+ },
+ {
+  "REGIME_B_N": "0.25",
+  "tag": "t21_0p25",
+  "n": 8460,
+  "weighted_logloss": 0.5903,
+  "plain_logloss": 0.6545,
+  "lopsided_logloss": 0.4336,
+  "lopsided_conf": 0.7835,
+  "corruption_pct": 0.0,
+  "fit_s": 96.5
+ }
+]

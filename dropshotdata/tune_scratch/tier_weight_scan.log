@@ -1,0 +1,7 @@
+=== TUNING DSV_TIER_WEIGHT on (2022, 2023) only ===
+  TIER_WEIGHT=1.0: weighted=0.5974 plain=0.6608 lopsided=0.4429 conf=0.7837 corruption=0.0157% fit=89.8s
+  TIER_WEIGHT=0.7: weighted=0.5955 plain=0.6591 lopsided=0.4407 conf=0.7829 corruption=0.00897% fit=92.8s
+  TIER_WEIGHT=0.5: weighted=0.5943 plain=0.658 lopsided=0.4392 conf=0.7824 corruption=0.00449% fit=89.8s
+  TIER_WEIGHT=0.3: weighted=0.5932 plain=0.6569 lopsided=0.4378 conf=0.7817 corruption=0.00224% fit=86.7s
+  TIER_WEIGHT=0.1: weighted=0.5922 plain=0.6559 lopsided=0.437 conf=0.7811 corruption=0.00224% fit=90.3s
+  TIER_WEIGHT=0.0: weighted=0.5912 plain=0.6548 lopsided=0.4363 conf=0.7814 corruption=0.00673% fit=80.2s

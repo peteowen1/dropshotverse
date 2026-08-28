@@ -1,0 +1,16 @@
+=== fitting v25 on 2022-23 tuning window ===
+  fit iso_tune done in 39s
+
+=== in-sample check on 2022-23 tuning window (WTA only) - no Elo comparison, elo_eval_predictions.parquet only covers 2024-25 ===
+  WTA raw hier logloss: 0.6251
+  WTA cal hier logloss: 0.6190
+  WTA lopsided raw: hier=0.4240  n=845
+  WTA lopsided cal: hier=0.4307
+
+=== REVEAL on real 2024-25 holdout (join pattern from RESUME-beat-elo.md) ===
+  OVERALL: n=8594  elo=0.6152  hier_raw=0.6224 (gap +0.0071)  hier_calibrated=0.6221 (gap +0.0068)  mkt=0.5888
+  ATP: n=4358  elo=0.6204  hier_raw=0.6164 (gap -0.0040)  hier_calibrated=0.6164 (gap -0.0040)  mkt=0.5894
+  WTA: n=4236  elo=0.6099  hier_raw=0.6285 (gap +0.0185)  hier_calibrated=0.6279 (gap +0.0179)  mkt=0.5883
+
+  lopsided-overall: raw=0.4202 cal=0.4300 n=1669
+  lopsided-WTA: raw=0.4176 cal=0.4375 n=819

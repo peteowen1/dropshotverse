@@ -1,0 +1,7 @@
+*.parquet
+*.pkl
+dropshotdata/raw/
+dropshotdata/manifest/
+__pycache__/
+*.pyc
+.claude/scheduled_tasks.lock

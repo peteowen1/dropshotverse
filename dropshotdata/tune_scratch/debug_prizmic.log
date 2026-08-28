@@ -1,0 +1,192 @@
+loading archive...
+
+=== COVERAGE ===
+  rows read              : 1,226,517
+  excluded, unparseable date            : 0
+  excluded, missing player id           : 0
+  excluded, retirement/walkover/no score: 37,345
+  kept                   : 1,189,172
+  regime A (point counts): 327,046 (27.5%)
+  regime B (scoreline)   : 862,126
+  ...200,000/1,189,172  (8s)
+  ...400,000/1,189,172  (16s)
+  ...600,000/1,189,172  (24s)
+  ...800,000/1,189,172  (33s)
+  [DEBUG atp:209976] 2022-03-21 vs Denis Istomin (W, Clay): m_a=+0.179 v_a=0.9599 m_b=+0.179 v_b=0.9222 kappa[Clay]=+0.021 v=0.1367
+  [DEBUG atp:209976] 2022-03-21 vs Flavio Cobolli (L, Clay): m_a=+0.354 v_a=0.7157 m_b=+0.230 v_b=0.1853 kappa[Clay]=+0.046 v=0.1318
+  [DEBUG atp:209976] 2022-04-18 vs Andrea Arnaboldi (L, Clay): m_a=+0.185 v_a=0.4832 m_b=+0.208 v_b=0.1192 kappa[Clay]=+0.014 v=0.1309
+  ...1,000,000/1,189,172  (43s)
+  [DEBUG atp:209976] 2022-05-09 vs Nino Serdarusic (L, Clay): m_a=+0.341 v_a=0.2663 m_b=+0.108 v_b=0.0885 kappa[Clay]=+0.058 v=0.1217
+  [DEBUG atp:209976] 2023-01-02 vs Maxime Janvier (W, Hard): m_a=+0.503 v_a=0.4079 m_b=+0.260 v_b=0.2584 kappa[Hard]=+0.032 v=0.0959
+  [DEBUG atp:209976] 2023-01-02 vs August Holmgren (W, Hard): m_a=+0.665 v_a=0.2363 m_b=+0.266 v_b=0.1200 kappa[Hard]=+0.070 v=0.0864
+  [DEBUG atp:209976] 2023-01-02 vs Pierre Hugues Herbert (W, Hard): m_a=+0.725 v_a=0.1546 m_b=+0.389 v_b=0.0950 kappa[Hard]=+0.092 v=0.0755
+  [DEBUG atp:209976] 2023-01-02 vs Matteo Gigante (W, Hard): m_a=+0.693 v_a=0.1009 m_b=+0.402 v_b=0.0700 kappa[Hard]=+0.076 v=0.0627
+  [DEBUG atp:209976] 2023-01-02 vs Joris De Loore (L, Hard): m_a=+0.599 v_a=0.0664 m_b=+0.357 v_b=0.0515 kappa[Hard]=+0.018 v=0.0494
+  [DEBUG atp:209976] 2023-01-09 vs Clement Tabur (W, Hard): m_a=+0.513 v_a=0.0554 m_b=+0.325 v_b=0.0459 kappa[Hard]=-0.047 v=0.0451
+  [DEBUG atp:209976] 2023-01-09 vs Karl Friberg (W, Hard): m_a=+0.602 v_a=0.0456 m_b=+0.378 v_b=0.0390 kappa[Hard]=+0.025 v=0.0386
+  [DEBUG atp:209976] 2023-01-09 vs Sebastian Fanselow (W, Hard): m_a=+0.669 v_a=0.0357 m_b=+0.394 v_b=0.0306 kappa[Hard]=+0.082 v=0.0315
+  [DEBUG atp:209976] 2023-01-09 vs Ricardas Berankis (L, Hard): m_a=+0.637 v_a=0.0293 m_b=+0.328 v_b=0.0254 kappa[Hard]=+0.054 v=0.0265
+  [DEBUG atp:209976] 2023-03-20 vs Mirza Basic (W, Clay): m_a=+0.693 v_a=0.0623 m_b=+0.397 v_b=0.0669 kappa[Clay]=+0.160 v=0.0871
+  [DEBUG atp:209976] 2023-03-20 vs Jozef Kovalik (W, Clay): m_a=+0.739 v_a=0.0501 m_b=+0.431 v_b=0.0537 kappa[Clay]=+0.225 v=0.0632
+  [DEBUG atp:209976] 2023-03-20 vs Arthur Cazaux (L, Clay): m_a=+0.651 v_a=0.0445 m_b=+0.348 v_b=0.0477 kappa[Clay]=+0.113 v=0.0543
+  [DEBUG atp:209976] 2023-04-10 vs Santiago Fa Rodriguez Taverna (W, Clay): m_a=+0.696 v_a=0.0448 m_b=+0.436 v_b=0.0530 kappa[Clay]=+0.167 v=0.0494
+  [DEBUG atp:209976] 2023-04-10 vs Arthur Cazaux (W, Clay): m_a=+0.725 v_a=0.0355 m_b=+0.414 v_b=0.0419 kappa[Clay]=+0.198 v=0.0381
+  [DEBUG atp:209976] 2023-04-10 vs Christopher Oconnell (L, Clay): m_a=+0.632 v_a=0.0283 m_b=+0.431 v_b=0.0332 kappa[Clay]=+0.099 v=0.0298
+  [DEBUG atp:209976] 2023-04-17 vs Richard Gasquet (L, Clay): m_a=+0.549 v_a=0.0280 m_b=+0.358 v_b=0.0318 kappa[Clay]=+0.012 v=0.0290
+  [DEBUG atp:209976] 2023-04-17 vs Mattia Bellucci (W, Clay): m_a=+0.637 v_a=0.0253 m_b=+0.443 v_b=0.0283 kappa[Clay]=+0.103 v=0.0261
+  [DEBUG atp:209976] 2023-04-17 vs Liam Broady (W, Clay): m_a=+0.608 v_a=0.0225 m_b=+0.473 v_b=0.0244 kappa[Clay]=+0.073 v=0.0231
+  [DEBUG atp:209976] 2023-05-08 vs Miljan Zekic (W, Clay): m_a=+0.535 v_a=0.0292 m_b=+0.411 v_b=0.0311 kappa[Clay]=+0.000 v=0.0295
+  [DEBUG atp:209976] 2023-05-08 vs Dominic Thiem (L, Clay): m_a=+0.499 v_a=0.0246 m_b=+0.406 v_b=0.0256 kappa[Clay]=-0.036 v=0.0249
+  [DEBUG atp:209976] 2023-05-22 vs Kalin Ivanovski (W, Clay): m_a=+0.506 v_a=0.0312 m_b=+0.389 v_b=0.0331 kappa[Clay]=-0.029 v=0.0314
+  [DEBUG atp:209976] 2023-05-22 vs Evgeny Donskoy (L, Clay): m_a=+0.516 v_a=0.0268 m_b=+0.304 v_b=0.0284 kappa[Clay]=-0.018 v=0.0270
+  [DEBUG atp:209976] 2023-06-12 vs Illya Marchenko (L, Clay): m_a=+0.454 v_a=0.0335 m_b=+0.264 v_b=0.0350 kappa[Clay]=-0.080 v=0.0336
+  [DEBUG atp:209976] 2023-07-17 vs Marc Polmans (W, Clay): m_a=+0.552 v_a=0.0494 m_b=+0.332 v_b=0.0467 kappa[Clay]=+0.020 v=0.0494
+  [DEBUG atp:209976] 2023-07-17 vs Francesco Passaro (L, Clay): m_a=+0.484 v_a=0.0365 m_b=+0.269 v_b=0.0361 kappa[Clay]=-0.049 v=0.0365
+  [DEBUG atp:209976] 2023-07-24 vs Alexei Popyrin (L, Clay): m_a=+0.583 v_a=0.0327 m_b=+0.311 v_b=0.0328 kappa[Clay]=+0.051 v=0.0327
+  [DEBUG atp:209976] 2023-07-24 vs Zsombor Piros (W, Clay): m_a=+0.683 v_a=0.0279 m_b=+0.368 v_b=0.0268 kappa[Clay]=+0.151 v=0.0279
+  [DEBUG atp:209976] 2023-07-24 vs Duje Ajdukovic (W, Clay): m_a=+0.753 v_a=0.0239 m_b=+0.379 v_b=0.0230 kappa[Clay]=+0.221 v=0.0239
+  [DEBUG atp:209976] 2023-07-31 vs Kirill Kivattsev (W, Clay): m_a=+0.725 v_a=0.0252 m_b=+0.330 v_b=0.0244 kappa[Clay]=+0.193 v=0.0252
+  [DEBUG atp:209976] 2023-07-31 vs Lukas Klein (W, Clay): m_a=+0.730 v_a=0.0213 m_b=+0.375 v_b=0.0207 kappa[Clay]=+0.198 v=0.0213
+  [DEBUG atp:209976] 2023-07-31 vs Francisco Comesana (L, Clay): m_a=+0.633 v_a=0.0174 m_b=+0.402 v_b=0.0173 kappa[Clay]=+0.101 v=0.0174
+  [DEBUG atp:209976] 2023-08-07 vs Alex Molcan (W, Clay): m_a=+0.700 v_a=0.0193 m_b=+0.468 v_b=0.0188 kappa[Clay]=+0.169 v=0.0193
+  [DEBUG atp:209976] 2023-08-07 vs Damir Dzumhur (W, Clay): m_a=+0.711 v_a=0.0168 m_b=+0.492 v_b=0.0164 kappa[Clay]=+0.179 v=0.0168
+  [DEBUG atp:209976] 2023-08-07 vs Kimmer Coppejans (W, Clay): m_a=+0.672 v_a=0.0145 m_b=+0.586 v_b=0.0144 kappa[Clay]=+0.141 v=0.0145
+  [DEBUG atp:209976] 2023-09-04 vs Louis Wessels (W, Hard): m_a=+0.705 v_a=0.0307 m_b=+0.533 v_b=0.0308 kappa[Hard]=+0.152 v=0.0679
+  [DEBUG atp:209976] 2023-09-04 vs Blaise Bicknell (W, Hard): m_a=+0.655 v_a=0.0266 m_b=+0.518 v_b=0.0264 kappa[Hard]=+0.041 v=0.0479
+  [DEBUG atp:209976] 2023-09-04 vs Damir Dzumhur (L, Hard): m_a=+0.654 v_a=0.0220 m_b=+0.514 v_b=0.0218 kappa[Hard]=+0.040 v=0.0328
+  [DEBUG atp:209976] 2023-09-13 vs Mackenzie Mcdonald (L, Hard): m_a=+0.631 v_a=0.0243 m_b=+0.458 v_b=0.0246 kappa[Hard]=+0.009 v=0.0314
+  [DEBUG atp:209976] 2023-09-15 vs Otto Virtanen (L, Hard): m_a=+0.663 v_a=0.0219 m_b=+0.520 v_b=0.0221 kappa[Hard]=+0.050 v=0.0266
+  [DEBUG atp:209976] 2023-09-25 vs Hugo Gaston (L, Hard): m_a=+0.631 v_a=0.0243 m_b=+0.500 v_b=0.0244 kappa[Hard]=+0.012 v=0.0273
+  [DEBUG atp:209976] 2023-10-02 vs Dan Added (W, Hard): m_a=+0.639 v_a=0.0257 m_b=+0.595 v_b=0.0260 kappa[Hard]=+0.022 v=0.0280
+  [DEBUG atp:209976] 2023-10-02 vs Jack Draper (L, Hard): m_a=+0.705 v_a=0.0205 m_b=+0.629 v_b=0.0211 kappa[Hard]=+0.094 v=0.0218
+  [DEBUG atp:209976] 2023-10-09 vs Lukas Klein (L, Hard): m_a=+0.634 v_a=0.0224 m_b=+0.531 v_b=0.0232 kappa[Hard]=+0.019 v=0.0234
+  [DEBUG atp:209976] 2023-10-16 vs Elias Ymer (L, Hard): m_a=+0.542 v_a=0.0223 m_b=+0.519 v_b=0.0231 kappa[Hard]=-0.075 v=0.0229
+  [DEBUG atp:209976] 2023-10-16 vs Jiri Lehecka (W, Hard): m_a=+0.641 v_a=0.0197 m_b=+0.545 v_b=0.0200 kappa[Hard]=+0.026 v=0.0202
+  [DEBUG atp:209976] 2023-10-16 vs Timofey Skatov (W, Hard): m_a=+0.691 v_a=0.0181 m_b=+0.636 v_b=0.0185 kappa[Hard]=+0.078 v=0.0185
+  [DEBUG atp:209976] 2023-10-16 vs Tomas Machac (W, Hard): m_a=+0.755 v_a=0.0150 m_b=+0.648 v_b=0.0153 kappa[Hard]=+0.143 v=0.0152
+  [DEBUG atp:209976] 2023-10-23 vs Albert Ramos (L, Hard): m_a=+0.714 v_a=0.0174 m_b=+0.548 v_b=0.0180 kappa[Hard]=+0.101 v=0.0176
+  [DEBUG atp:209976] 2024-01-01 vs Brandon Nakashima (L, Hard): m_a=+0.610 v_a=0.0585 m_b=+0.514 v_b=0.0521 kappa[Hard]=+0.001 v=0.0586
+  [DEBUG atp:209976] 2024-01-01 vs Radu Albot (W, Hard): m_a=+0.710 v_a=0.0507 m_b=+0.524 v_b=0.0410 kappa[Hard]=+0.101 v=0.0508
+  [DEBUG atp:209976] 2024-01-15 vs Novak Djokovic (L, Hard): m_a=+0.724 v_a=0.0447 m_b=+0.588 v_b=0.0386 kappa[Hard]=+0.115 v=0.0447
+  [DEBUG atp:209976] 2024-01-15 vs Mariano Navone (W, Hard): m_a=+0.693 v_a=0.0380 m_b=+0.563 v_b=0.0333 kappa[Hard]=+0.084 v=0.0380
+  [DEBUG atp:209976] 2024-01-15 vs Duje Ajdukovic (W, Hard): m_a=+0.793 v_a=0.0329 m_b=+0.590 v_b=0.0281 kappa[Hard]=+0.184 v=0.0329
+  [DEBUG atp:209976] 2024-01-15 vs Aziz Dougaz (W, Hard): m_a=+0.860 v_a=0.0282 m_b=+0.590 v_b=0.0238 kappa[Hard]=+0.251 v=0.0282
+  [DEBUG atp:209976] 2024-02-12 vs David Goffin (L, Hard): m_a=+0.758 v_a=0.0380 m_b=+0.568 v_b=0.0320 kappa[Hard]=+0.150 v=0.0380
+  [DEBUG atp:209976] 2024-02-19 vs Leandro Riedi (L, Hard): m_a=+0.718 v_a=0.0324 m_b=+0.561 v_b=0.0286 kappa[Hard]=+0.111 v=0.0324
+  [DEBUG atp:209976] 2024-02-19 vs Antoine Escoffier (W, Hard): m_a=+0.721 v_a=0.0266 m_b=+0.486 v_b=0.0240 kappa[Hard]=+0.114 v=0.0266
+  [DEBUG atp:209976] 2024-02-19 vs Lloyd Harris (W, Hard): m_a=+0.689 v_a=0.0227 m_b=+0.559 v_b=0.0209 kappa[Hard]=+0.082 v=0.0227
+  [DEBUG atp:209976] 2024-02-26 vs Gijs Brouwer (L, Hard): m_a=+0.631 v_a=0.0236 m_b=+0.459 v_b=0.0228 kappa[Hard]=+0.024 v=0.0236
+  [DEBUG atp:209976] 2024-03-18 vs Jonas Forejtek (L, Clay): m_a=+0.610 v_a=0.0335 m_b=+0.455 v_b=0.0326 kappa[Clay]=+0.066 v=0.0732
+  [DEBUG atp:209976] 2024-03-18 vs Michael Vrbensky (W, Clay): m_a=+0.616 v_a=0.0304 m_b=+0.452 v_b=0.0297 kappa[Clay]=+0.079 v=0.0581
+  [DEBUG atp:209976] 2024-05-27 vs Stefano Napolitano (L, Clay): m_a=+0.555 v_a=0.0589 m_b=+0.363 v_b=0.0727 kappa[Clay]=+0.001 v=0.0693
+  [DEBUG atp:209976] 2024-06-03 vs Dmitry Popko (L, Clay): m_a=+0.462 v_a=0.0531 m_b=+0.275 v_b=0.0666 kappa[Clay]=-0.107 v=0.0597
+  [DEBUG atp:209976] 2024-06-03 vs Aziz Dougaz (W, Clay): m_a=+0.474 v_a=0.0399 m_b=+0.314 v_b=0.0490 kappa[Clay]=-0.093 v=0.0429
+  [DEBUG atp:209976] 2024-07-01 vs Clement Tabur (W, Grass): m_a=+0.516 v_a=0.0542 m_b=+0.284 v_b=0.0614 kappa[Grass]=+0.157 v=0.1434
+  [DEBUG atp:209976] 2024-07-01 vs Hugo Gaston (L, Grass): m_a=+0.461 v_a=0.0480 m_b=+0.253 v_b=0.0503 kappa[Grass]=+0.012 v=0.1003
+  [DEBUG atp:209976] 2024-07-01 vs Juan Pablo Varillas (L, Clay): m_a=+0.432 v_a=0.0383 m_b=+0.173 v_b=0.0459 kappa[Clay]=-0.131 v=0.0462
+  [DEBUG atp:209976] 2024-08-26 vs Duje Ajdukovic (L, Hard): m_a=+0.343 v_a=0.0644 m_b=+0.228 v_b=0.0653 kappa[Hard]=-0.088 v=0.0774
+  [DEBUG atp:209976] 2024-08-26 vs Carlos Taberner (L, Clay): m_a=+0.428 v_a=0.0531 m_b=+0.265 v_b=0.0484 kappa[Clay]=-0.016 v=0.0659
+  [DEBUG atp:209976] 2024-08-26 vs Gastao Elias (W, Clay): m_a=+0.427 v_a=0.0413 m_b=+0.311 v_b=0.0381 kappa[Clay]=-0.017 v=0.0477
+  [DEBUG atp:209976] 2024-09-02 vs Damir Dzumhur (L, Hard): m_a=+0.401 v_a=0.0383 m_b=+0.286 v_b=0.0360 kappa[Hard]=-0.135 v=0.0570
+  [DEBUG atp:209976] 2024-09-02 vs Cem Ilkel (W, Hard): m_a=+0.371 v_a=0.0337 m_b=+0.287 v_b=0.0318 kappa[Hard]=-0.179 v=0.0470
+  [DEBUG atp:209976] 2024-09-30 vs Quentin Halys (L, Hard): m_a=+0.333 v_a=0.0420 m_b=+0.197 v_b=0.0447 kappa[Hard]=-0.225 v=0.0488
+  [DEBUG atp:209976] 2024-09-30 vs Sascha Gueymard Wayenburg (W, Hard): m_a=+0.426 v_a=0.0372 m_b=+0.129 v_b=0.0357 kappa[Hard]=-0.118 v=0.0422
+  [DEBUG atp:209976] 2024-09-30 vs Richard Gasquet (W, Hard): m_a=+0.519 v_a=0.0323 m_b=+0.223 v_b=0.0303 kappa[Hard]=-0.012 v=0.0360
+  [DEBUG atp:209976] 2024-09-30 vs Lucas Poullain (W, Hard): m_a=+0.513 v_a=0.0261 m_b=+0.281 v_b=0.0246 kappa[Hard]=-0.018 v=0.0283
+  [DEBUG atp:209976] 2024-10-14 vs Benjamin Bonzi (L, Hard): m_a=+0.488 v_a=0.0289 m_b=+0.353 v_b=0.0272 kappa[Hard]=-0.044 v=0.0301
+  [DEBUG atp:209976] 2024-10-28 vs Raphael Collignon (L, Hard): m_a=+0.475 v_a=0.0309 m_b=+0.322 v_b=0.0296 kappa[Hard]=-0.058 v=0.0317
+  [DEBUG atp:209976] 2024-10-28 vs Jacob Fearnley (W, Hard): m_a=+0.561 v_a=0.0245 m_b=+0.380 v_b=0.0233 kappa[Hard]=+0.030 v=0.0250
+  [DEBUG atp:209976] 2024-10-28 vs Stan Wawrinka (W, Hard): m_a=+0.647 v_a=0.0208 m_b=+0.452 v_b=0.0195 kappa[Hard]=+0.118 v=0.0211
+  [DEBUG atp:209976] 2024-10-28 vs Luca Nardi (W, Hard): m_a=+0.691 v_a=0.0188 m_b=+0.394 v_b=0.0175 kappa[Hard]=+0.163 v=0.0191
+  [DEBUG atp:209976] 2024-11-11 vs Harold Mayot (L, Hard): m_a=+0.606 v_a=0.0242 m_b=+0.337 v_b=0.0229 kappa[Hard]=+0.078 v=0.0244
+  [DEBUG atp:209976] 2024-11-18 vs Francesco Maestrelli (L, Hard): m_a=+0.540 v_a=0.0243 m_b=+0.288 v_b=0.0237 kappa[Hard]=+0.011 v=0.0244
+  [DEBUG atp:209976] 2024-11-18 vs Borna Coric (W, Hard): m_a=+0.566 v_a=0.0202 m_b=+0.336 v_b=0.0202 kappa[Hard]=+0.038 v=0.0203
+  [DEBUG atp:209976] 2024-11-18 vs Vitaliy Sachko (W, Hard): m_a=+0.549 v_a=0.0177 m_b=+0.401 v_b=0.0178 kappa[Hard]=+0.021 v=0.0177
+  [DEBUG atp:209976] 2025-01-06 vs Anton Matusevich (L, Hard): m_a=+0.483 v_a=0.0434 m_b=+0.299 v_b=0.0445 kappa[Hard]=-0.044 v=0.0434
+  [DEBUG atp:209976] 2025-01-06 vs Kalin Ivanovski (W, Hard): m_a=+0.567 v_a=0.0376 m_b=+0.282 v_b=0.0384 kappa[Hard]=+0.040 v=0.0377
+  [DEBUG atp:209976] 2025-01-13 vs Mackenzie Mcdonald (L, Hard): m_a=+0.467 v_a=0.0351 m_b=+0.312 v_b=0.0333 kappa[Hard]=-0.060 v=0.0351
+  [DEBUG atp:209976] 2025-02-17 vs Evgeny Karlovskiy (L, Hard): m_a=+0.387 v_a=0.0492 m_b=+0.235 v_b=0.0449 kappa[Hard]=-0.160 v=0.0495
+  [DEBUG atp:209976] 2025-02-17 vs Florent Bax (W, Hard): m_a=+0.487 v_a=0.0458 m_b=+0.296 v_b=0.0376 kappa[Hard]=-0.060 v=0.0461
+  [DEBUG atp:209976] 2025-02-24 vs Borna Coric (L, Hard): m_a=+0.507 v_a=0.0410 m_b=+0.231 v_b=0.0356 kappa[Hard]=-0.039 v=0.0412
+  [DEBUG atp:209976] 2025-02-24 vs Vilius Gaubas (W, Hard): m_a=+0.607 v_a=0.0359 m_b=+0.258 v_b=0.0297 kappa[Hard]=+0.061 v=0.0360
+  [DEBUG atp:209976] 2025-02-24 vs Alexander Blockx (W, Hard): m_a=+0.644 v_a=0.0296 m_b=+0.317 v_b=0.0249 kappa[Hard]=+0.098 v=0.0297
+  [DEBUG atp:209976] 2025-02-24 vs Jakub Paul (W, Hard): m_a=+0.744 v_a=0.0259 m_b=+0.362 v_b=0.0211 kappa[Hard]=+0.198 v=0.0260
+  [DEBUG atp:209976] 2025-02-24 vs Giovanni Fonio (W, Hard): m_a=+0.719 v_a=0.0223 m_b=+0.369 v_b=0.0185 kappa[Hard]=+0.173 v=0.0223
+  [DEBUG atp:209976] 2025-02-24 vs Gianluca Mager (W, Hard): m_a=+0.697 v_a=0.0204 m_b=+0.365 v_b=0.0169 kappa[Hard]=+0.151 v=0.0205
+  [DEBUG atp:209976] 2025-03-03 vs Aslan Karatsev (L, Hard): m_a=+0.596 v_a=0.0217 m_b=+0.286 v_b=0.0189 kappa[Hard]=+0.051 v=0.0217
+  [DEBUG atp:209976] 2025-03-17 vs Valentin Royer (L, Clay): m_a=+0.564 v_a=0.0280 m_b=+0.297 v_b=0.0258 kappa[Clay]=-0.159 v=0.0674
+  [DEBUG atp:209976] 2025-03-17 vs Elias Ymer (W, Clay): m_a=+0.581 v_a=0.0259 m_b=+0.342 v_b=0.0239 kappa[Clay]=-0.118 v=0.0555
+  [DEBUG atp:209976] 2025-03-31 vs Maxime Janvier (L, Clay): m_a=+0.509 v_a=0.0311 m_b=+0.272 v_b=0.0295 kappa[Clay]=-0.247 v=0.0494
+  [DEBUG atp:209976] 2025-03-31 vs Federico Iannaccone (W, Clay): m_a=+0.511 v_a=0.0294 m_b=+0.280 v_b=0.0280 kappa[Clay]=-0.244 v=0.0451
+  [DEBUG atp:209976] 2025-03-31 vs Franco Agamenone (W, Clay): m_a=+0.540 v_a=0.0247 m_b=+0.267 v_b=0.0239 kappa[Clay]=-0.200 v=0.0340
+  [DEBUG atp:209976] 2025-05-12 vs Marco Trungelliti (W, Clay): m_a=+0.631 v_a=0.0436 m_b=+0.227 v_b=0.0395 kappa[Clay]=-0.091 v=0.0488
+  [DEBUG atp:209976] 2025-05-12 vs Jerome Kym (W, Clay): m_a=+0.703 v_a=0.0358 m_b=+0.245 v_b=0.0332 kappa[Clay]=-0.010 v=0.0390
+  [DEBUG atp:209976] 2025-05-12 vs Kyrian Jacquet (W, Clay): m_a=+0.633 v_a=0.0304 m_b=+0.274 v_b=0.0286 kappa[Clay]=-0.087 v=0.0326
+  [DEBUG atp:209976] 2025-05-12 vs Mirza Basic (W, Clay): m_a=+0.677 v_a=0.0280 m_b=+0.304 v_b=0.0263 kappa[Clay]=-0.039 v=0.0299
+  [DEBUG atp:209976] 2025-06-09 vs Valentin Royer (W, Clay): m_a=+0.760 v_a=0.0372 m_b=+0.205 v_b=0.0395 kappa[Clay]=+0.048 v=0.0382
+  [DEBUG atp:209976] 2025-06-09 vs Cristian Garin (W, Clay): m_a=+0.800 v_a=0.0307 m_b=+0.304 v_b=0.0331 kappa[Clay]=+0.090 v=0.0313
+  [DEBUG atp:209976] 2025-06-09 vs Henrique Rocha (W, Clay): m_a=+0.802 v_a=0.0255 m_b=+0.378 v_b=0.0277 kappa[Clay]=+0.091 v=0.0259
+  [DEBUG atp:209976] 2025-06-09 vs Milos Karol (W, Clay): m_a=+0.814 v_a=0.0226 m_b=+0.338 v_b=0.0238 kappa[Clay]=+0.104 v=0.0229
+  [DEBUG atp:209976] 2025-06-09 vs Jurij Rodionov (W, Clay): m_a=+0.809 v_a=0.0198 m_b=+0.371 v_b=0.0207 kappa[Clay]=+0.099 v=0.0201
+  [DEBUG atp:209976] 2025-06-23 vs Marco Cecchinato (L, Clay): m_a=+0.709 v_a=0.0264 m_b=+0.271 v_b=0.0267 kappa[Clay]=-0.002 v=0.0266
+  [DEBUG atp:209976] 2025-06-23 vs Rafael Jodar (W, Clay): m_a=+0.666 v_a=0.0240 m_b=+0.278 v_b=0.0244 kappa[Clay]=-0.045 v=0.0242
+  [DEBUG atp:209976] 2025-06-23 vs Christoph Negritu (W, Clay): m_a=+0.604 v_a=0.0210 m_b=+0.296 v_b=0.0216 kappa[Clay]=-0.107 v=0.0211
+  [DEBUG atp:209976] 2025-06-23 vs Jacopo Berrettini (W, Clay): m_a=+0.609 v_a=0.0191 m_b=+0.354 v_b=0.0196 kappa[Clay]=-0.102 v=0.0191
+  [DEBUG atp:209976] 2025-06-23 vs Gabriele Piraino (W, Clay): m_a=+0.646 v_a=0.0175 m_b=+0.317 v_b=0.0180 kappa[Clay]=-0.065 v=0.0176
+  [DEBUG atp:209976] 2025-07-14 vs Lukas Klein (L, Clay): m_a=+0.637 v_a=0.0273 m_b=+0.228 v_b=0.0274 kappa[Clay]=-0.073 v=0.0274
+  [DEBUG atp:209976] 2025-07-14 vs Thiago Agustin Tirante (W, Clay): m_a=+0.708 v_a=0.0222 m_b=+0.327 v_b=0.0223 kappa[Clay]=-0.002 v=0.0223
+  [DEBUG atp:209976] 2025-07-14 vs Justin Engel (W, Clay): m_a=+0.642 v_a=0.0200 m_b=+0.382 v_b=0.0199 kappa[Clay]=-0.068 v=0.0200
+  [DEBUG atp:209976] 2025-07-14 vs Oleg Prihodko (W, Clay): m_a=+0.707 v_a=0.0181 m_b=+0.329 v_b=0.0177 kappa[Clay]=-0.003 v=0.0182
+  [DEBUG atp:209976] 2025-07-14 vs Alvaro Guillen Meza (W, Clay): m_a=+0.753 v_a=0.0166 m_b=+0.257 v_b=0.0161 kappa[Clay]=+0.043 v=0.0166
+  [DEBUG atp:209976] 2025-07-20 vs Luciano Darderi (L, Clay): m_a=+0.707 v_a=0.0176 m_b=+0.341 v_b=0.0173 kappa[Clay]=-0.003 v=0.0176
+  [DEBUG atp:209976] 2025-07-20 vs Nikoloz Basilashvili (W, Clay): m_a=+0.726 v_a=0.0156 m_b=+0.281 v_b=0.0153 kappa[Clay]=+0.016 v=0.0156
+  [DEBUG atp:209976] 2025-07-20 vs Elmer Moller (W, Clay): m_a=+0.719 v_a=0.0138 m_b=+0.314 v_b=0.0135 kappa[Clay]=+0.009 v=0.0138
+  [DEBUG atp:209976] 2025-08-04 vs Kamil Majchrzak (L, Hard): m_a=+0.691 v_a=0.0226 m_b=+0.274 v_b=0.0227 kappa[Hard]=-0.060 v=0.0681
+  [DEBUG atp:209976] 2025-08-04 vs Harold Mayot (W, Hard): m_a=+0.709 v_a=0.0209 m_b=+0.302 v_b=0.0209 kappa[Hard]=-0.006 v=0.0523
+  [DEBUG atp:209976] 2025-08-04 vs Francesco Maestrelli (W, Hard): m_a=+0.736 v_a=0.0188 m_b=+0.351 v_b=0.0187 kappa[Hard]=+0.062 v=0.0394
+  [DEBUG atp:209976] 2025-08-04 vs Olaf Pieczkowski (W, Hard): m_a=+0.701 v_a=0.0173 m_b=+0.379 v_b=0.0170 kappa[Hard]=-0.011 v=0.0325
+  [DEBUG atp:209976] 2025-08-04 vs Gauthier Onclin (W, Hard): m_a=+0.711 v_a=0.0161 m_b=+0.378 v_b=0.0159 kappa[Hard]=+0.007 v=0.0284
+  [DEBUG atp:209976] 2025-08-25 vs Andrey Rublev (L, Hard): m_a=+0.757 v_a=0.0259 m_b=+0.319 v_b=0.0259 kappa[Hard]=+0.073 v=0.0334
+  [DEBUG atp:209976] 2025-08-25 vs Alexis Galarneau (W, Hard): m_a=+0.765 v_a=0.0222 m_b=+0.394 v_b=0.0221 kappa[Hard]=+0.084 v=0.0273
+  [DEBUG atp:209976] 2025-08-25 vs Murphy Cassone (W, Hard): m_a=+0.762 v_a=0.0195 m_b=+0.369 v_b=0.0196 kappa[Hard]=+0.079 v=0.0231
+  [DEBUG atp:209976] 2025-08-25 vs Jason Kubler (W, Hard): m_a=+0.772 v_a=0.0178 m_b=+0.415 v_b=0.0181 kappa[Hard]=+0.091 v=0.0208
+  [DEBUG atp:209976] 2025-09-17 vs Lorenzo Musetti (L, Hard): m_a=+0.746 v_a=0.0269 m_b=+0.333 v_b=0.0282 kappa[Hard]=+0.081 v=0.0286
+  [DEBUG atp:209976] 2025-09-17 vs Terence Atmane (W, Hard): m_a=+0.774 v_a=0.0237 m_b=+0.350 v_b=0.0245 kappa[Hard]=+0.111 v=0.0251
+  [DEBUG atp:209976] 2025-12-17 vs Alexander Blockx (L, Hard): m_a=+0.670 v_a=0.0738 m_b=+0.318 v_b=0.0634 kappa[Hard]=+0.010 v=0.0747
+  [DEBUG atp:209976] 2025-12-17 vs Nishesh Basavareddy (L, Hard): m_a=+0.669 v_a=0.0552 m_b=+0.219 v_b=0.0499 kappa[Hard]=+0.009 v=0.0557
+  [DEBUG atp:209976] 2025-12-17 vs Justin Engel (W, Hard): m_a=+0.622 v_a=0.0432 m_b=+0.252 v_b=0.0393 kappa[Hard]=-0.038 v=0.0435
+  [DEBUG atp:209976] 2026-01-19 vs James Duckworth (L, Hard): m_a=+0.604 v_a=0.0468 m_b=+0.351 v_b=0.0450 kappa[Hard]=-0.055 v=0.0469
+  [DEBUG atp:209976] 2026-01-19 vs Genaro Alberto Olivieri (W, Hard): m_a=+0.680 v_a=0.0410 m_b=+0.289 v_b=0.0390 kappa[Hard]=+0.021 v=0.0410
+  [DEBUG atp:209976] 2026-01-19 vs Gustavo Heide (W, Hard): m_a=+0.669 v_a=0.0343 m_b=+0.328 v_b=0.0324 kappa[Hard]=+0.010 v=0.0344
+  [DEBUG atp:209976] 2026-01-19 vs Arthur Fery (L, Hard): m_a=+0.628 v_a=0.0280 m_b=+0.269 v_b=0.0272 kappa[Hard]=-0.031 v=0.0281
+  [DEBUG atp:209976] 2026-02-16 vs Francesco Passaro (L, Clay): m_a=+0.607 v_a=0.0418 m_b=+0.248 v_b=0.0401 kappa[Clay]=-0.140 v=0.0921
+  [DEBUG atp:209976] 2026-02-16 vs Tomas Barrios Vera (W, Clay): m_a=+0.662 v_a=0.0354 m_b=+0.240 v_b=0.0335 kappa[Clay]=-0.018 v=0.0609
+  [DEBUG atp:209976] 2026-02-16 vs Daniel Elahi Galan (W, Clay): m_a=+0.684 v_a=0.0314 m_b=+0.304 v_b=0.0301 kappa[Clay]=+0.019 v=0.0491
+  [DEBUG atp:209976] 2026-02-23 vs Vilius Gaubas (L, Clay): m_a=+0.673 v_a=0.0291 m_b=+0.222 v_b=0.0285 kappa[Clay]=+0.004 v=0.0381
+  [DEBUG atp:209976] 2026-02-23 vs Nicolas Jarry (W, Clay): m_a=+0.660 v_a=0.0261 m_b=+0.236 v_b=0.0255 kappa[Clay]=-0.013 v=0.0328
+  [DEBUG atp:209976] 2026-02-23 vs Hugo Dellien (W, Clay): m_a=+0.703 v_a=0.0222 m_b=+0.216 v_b=0.0216 kappa[Clay]=+0.040 v=0.0266
+  [DEBUG atp:209976] 2026-02-23 vs Gustavo Heide (W, Clay): m_a=+0.712 v_a=0.0200 m_b=+0.248 v_b=0.0195 kappa[Clay]=+0.052 v=0.0235
+  [DEBUG atp:209976] 2026-03-04 vs Tristan Schoolkate (W, Hard): m_a=+0.755 v_a=0.0229 m_b=+0.187 v_b=0.0238 kappa[Hard]=+0.066 v=0.0418
+  [DEBUG atp:209976] 2026-03-04 vs Aleksandar Vukic (W, Hard): m_a=+0.735 v_a=0.0208 m_b=+0.197 v_b=0.0212 kappa[Hard]=+0.030 v=0.0349
+  [DEBUG atp:209976] 2026-03-04 vs Darwin Blanch (W, Hard): m_a=+0.767 v_a=0.0189 m_b=+0.211 v_b=0.0191 kappa[Hard]=+0.084 v=0.0294
+  [DEBUG atp:209976] 2026-03-30 vs Daniel Altmaier (L, Clay): m_a=+0.778 v_a=0.0296 m_b=+0.178 v_b=0.0298 kappa[Clay]=+0.068 v=0.0354
+  [DEBUG atp:209976] 2026-03-30 vs Nikoloz Basilashvili (W, Clay): m_a=+0.843 v_a=0.0272 m_b=+0.229 v_b=0.0267 kappa[Clay]=+0.146 v=0.0319
+  [DEBUG atp:209976] 2026-04-06 vs Raphael Collignon (L, Clay): m_a=+0.825 v_a=0.0287 m_b=+0.172 v_b=0.0285 kappa[Clay]=+0.125 v=0.0323
+  [DEBUG atp:209976] 2026-04-06 vs Mattia Bellucci (W, Clay): m_a=+0.802 v_a=0.0254 m_b=+0.182 v_b=0.0249 kappa[Clay]=+0.099 v=0.0282
+  [DEBUG atp:209976] 2026-04-06 vs Valentin Royer (W, Clay): m_a=+0.872 v_a=0.0230 m_b=+0.193 v_b=0.0222 kappa[Clay]=+0.177 v=0.0252
+  [DEBUG atp:209976] 2026-04-06 vs Billy Harris (W, Clay): m_a=+0.872 v_a=0.0211 m_b=+0.194 v_b=0.0200 kappa[Clay]=+0.177 v=0.0229
+  [DEBUG atp:209976] 2026-04-06 vs Pietro Fellin (W, Clay): m_a=+0.857 v_a=0.0198 m_b=+0.208 v_b=0.0187 kappa[Clay]=+0.161 v=0.0213
+  [DEBUG atp:209976] 2026-04-22 vs Tomas Martin Etcheverry (L, Clay): m_a=+0.776 v_a=0.0254 m_b=+0.190 v_b=0.0249 kappa[Clay]=+0.077 v=0.0263
+  [DEBUG atp:209976] 2026-04-22 vs Ben Shelton (W, Clay): m_a=+0.774 v_a=0.0211 m_b=+0.229 v_b=0.0207 kappa[Clay]=+0.074 v=0.0218
+  [DEBUG atp:209976] 2026-04-22 vs Matteo Berrettini (W, Clay): m_a=+0.794 v_a=0.0190 m_b=+0.238 v_b=0.0184 kappa[Clay]=+0.095 v=0.0195
+  [DEBUG atp:209976] 2026-04-22 vs Zsombor Piros (W, Clay): m_a=+0.800 v_a=0.0171 m_b=+0.243 v_b=0.0165 kappa[Clay]=+0.101 v=0.0175
+  [DEBUG atp:209976] 2026-04-22 vs Christopher Oconnell (W, Clay): m_a=+0.821 v_a=0.0155 m_b=+0.186 v_b=0.0148 kappa[Clay]=+0.123 v=0.0158
+  [DEBUG atp:209976] 2026-05-06 vs Karen Khachanov (L, Clay): m_a=+0.736 v_a=0.0221 m_b=+0.207 v_b=0.0213 kappa[Clay]=+0.037 v=0.0223
+  [DEBUG atp:209976] 2026-05-06 vs Ugo Humbert (W, Clay): m_a=+0.798 v_a=0.0201 m_b=+0.212 v_b=0.0193 kappa[Clay]=+0.100 v=0.0203
+  [DEBUG atp:209976] 2026-05-06 vs Novak Djokovic (W, Clay): m_a=+0.812 v_a=0.0188 m_b=+0.216 v_b=0.0182 kappa[Clay]=+0.114 v=0.0190
+  [DEBUG atp:209976] 2026-05-06 vs Marton Fucsovics (W, Clay): m_a=+0.753 v_a=0.0172 m_b=+0.248 v_b=0.0167 kappa[Clay]=+0.055 v=0.0174
+  [DEBUG atp:209976] 2026-05-06 vs Federico Bondioli (W, Clay): m_a=+0.775 v_a=0.0159 m_b=+0.241 v_b=0.0153 kappa[Clay]=+0.077 v=0.0160
+  [DEBUG atp:209976] 2026-05-06 vs Chris Rodesch (W, Clay): m_a=+0.787 v_a=0.0148 m_b=+0.264 v_b=0.0142 kappa[Clay]=+0.089 v=0.0149
+fit complete: 1,189,172 matches in 59s, 10,680 eval predictions
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\debug_prizmic_preds.parquet
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\debug_prizmic_state.pkl

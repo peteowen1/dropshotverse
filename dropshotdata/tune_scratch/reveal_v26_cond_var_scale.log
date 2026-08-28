@@ -1,0 +1,25 @@
+=== fitting v25 config on full history, evaluating on 2024-25 holdout ===
+  fit done in 30s
+holdout preds n=10680
+=== MC-averaging: baseline (var_scale=1.0, no-op) and candidate (threshold=0.85, scale=0.7), N=60 ===
+  baseline mc_average done in 30s
+  candidate mc_average done in 31s
+=== joining to Elo + market odds (exact RESUME-beat-elo.md pattern) ===
+joined holdout n=8594
+
+--- OVERALL (n=8594) ---
+  Elo                                    acc=0.6534  logloss=0.6152  lopsided=0.3853  midband=0.6965
+  Hier v25 (baseline)                    acc=0.6453  logloss=0.6266  lopsided=0.4240  midband=0.6928
+  Hier v25+cond_var_scale(t=0.85,s=0.7)  acc=0.6453  logloss=0.6291  lopsided=0.4148  midband=0.6976
+
+--- ATP (n=4358) ---
+  Elo                                    acc=0.6496  logloss=0.6204  lopsided=0.4007  midband=0.6954
+  Hier v25 (baseline)                    acc=0.6425  logloss=0.6212  lopsided=0.4247  midband=0.6835
+  Hier v25+cond_var_scale(t=0.85,s=0.7)  acc=0.6425  logloss=0.6221  lopsided=0.4152  midband=0.6860
+
+--- WTA (n=4236) ---
+  Elo                                    acc=0.6572  logloss=0.6099  lopsided=0.3694  midband=0.6977
+  Hier v25 (baseline)                    acc=0.6483  logloss=0.6322  lopsided=0.4234  midband=0.7026
+  Hier v25+cond_var_scale(t=0.85,s=0.7)  acc=0.6483  logloss=0.6364  lopsided=0.4144  midband=0.7098
+
+done.

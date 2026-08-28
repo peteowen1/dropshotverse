@@ -1,0 +1,13 @@
+[
+ {
+  "REGIME_B_N": "1.0",
+  "tag": "regimeb_1p0",
+  "n": 8460,
+  "weighted_logloss": 0.6006,
+  "plain_logloss": 0.6632,
+  "lopsided_logloss": 0.4481,
+  "lopsided_conf": 0.7837,
+  "corruption_pct": 0.01906,
+  "fit_s": 87.8
+ }
+]

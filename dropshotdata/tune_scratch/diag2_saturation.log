@@ -1,0 +1,51 @@
+archive rows: 1,189,172
+
+long (per-player-appearance) rows with a defined gap: 2,333,757
+
+=== how common is each gap bucket, across EVERY match in the 50-year archive ===
+weeks
+<1day(same-day/RR)     49.9%
+1day-1wk               21.3%
+1-4wk                  16.6%
+4-12wk                  7.1%
+12-26wk                 2.5%
+>26wk(LAYOFF_WEEKS)     2.6%
+Name: proportion, dtype: str
+
+fraction of ALL player-appearances with weeks>=1 (SHORT_LAYOFF_BUMP triggers): 48.9%
+-> this is NOT a rare '1-12wk gap' event; it fires on the vast majority of a player's
+   matches, since back-to-back same-week matches (same tournament, weeks<1) are the
+   minority case, not the norm, across a 50-year multi-tour archive.
+
+=== cumulative bump-eligible event count by the time a player reaches n_prior matches ===
+  at match #  10 (n_prior=10): median cum bump-events so far = 6, p25=5, p75=7  (n=16651)
+  at match #  25 (n_prior=25): median cum bump-events so far = 14, p25=11, p75=16  (n=11836)
+  at match #  50 (n_prior=50): median cum bump-events so far = 25, p25=21, p75=29  (n=8785)
+  at match # 100 (n_prior=100): median cum bump-events so far = 47, p25=41, p75=53  (n=6041)
+  at match # 200 (n_prior=200): median cum bump-events so far = 91, p25=82, p75=100  (n=3668)
+  at match # 400 (n_prior=400): median cum bump-events so far = 177, p25=163, p75=188  (n=1582)
+
+=== back-of-envelope: additive variance from bump alone (ignoring ADF shrinkage), vs MAX_VAR ceiling ===
+MAX_VAR=4.0, baseline RW_VAR_PER_WEEK contribution per week ~0.005 (much smaller,
+and only accrues per elapsed week, not per event) -- compare to a per-EVENT flat SHORT_LAYOFF_BUMP:
+  BUMP=0.005  by match #  50: median cum bump-events=25 -> additive var (ignoring shrinkage) = 0.12  
+  BUMP=0.005  by match # 100: median cum bump-events=47 -> additive var (ignoring shrinkage) = 0.24  
+  BUMP=0.005  by match # 200: median cum bump-events=91 -> additive var (ignoring shrinkage) = 0.46  
+  BUMP=0.010  by match #  50: median cum bump-events=25 -> additive var (ignoring shrinkage) = 0.25  
+  BUMP=0.010  by match # 100: median cum bump-events=47 -> additive var (ignoring shrinkage) = 0.47  
+  BUMP=0.010  by match # 200: median cum bump-events=91 -> additive var (ignoring shrinkage) = 0.91  
+  BUMP=0.020  by match #  50: median cum bump-events=25 -> additive var (ignoring shrinkage) = 0.50  
+  BUMP=0.020  by match # 100: median cum bump-events=47 -> additive var (ignoring shrinkage) = 0.94  
+  BUMP=0.020  by match # 200: median cum bump-events=91 -> additive var (ignoring shrinkage) = 1.82  
+  BUMP=0.040  by match #  50: median cum bump-events=25 -> additive var (ignoring shrinkage) = 1.00  
+  BUMP=0.040  by match # 100: median cum bump-events=47 -> additive var (ignoring shrinkage) = 1.88  
+  BUMP=0.040  by match # 200: median cum bump-events=91 -> additive var (ignoring shrinkage) = 3.64  
+  BUMP=0.060  by match #  50: median cum bump-events=25 -> additive var (ignoring shrinkage) = 1.50  
+  BUMP=0.060  by match # 100: median cum bump-events=47 -> additive var (ignoring shrinkage) = 2.82  
+  BUMP=0.060  by match # 200: median cum bump-events=91 -> additive var (ignoring shrinkage) = 5.46  >= MAX_VAR (SATURATES)
+
+=== how many DISTINCT players ever reach n_prior=100+ (i.e. actually accumulate this) ===
+  players with >= 10 matches: 16,649 / 33,525 total players
+  players with >= 50 matches: 8,785 / 33,525 total players
+  players with >= 100 matches: 6,041 / 33,525 total players
+  players with >= 200 matches: 3,668 / 33,525 total players

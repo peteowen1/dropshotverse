@@ -1,0 +1,33 @@
+=== TUNING v2 on (2022, 2023) only ===
+corruption gate: reject any candidate above 0.0201%
+baseline (ticket 18 fixed defaults): {'tag': 'v2_baseline', 'n': 8460, 'logloss': 0.6765, 'corruption_pct': 0.00673, 'fit_s': 73.4}
+
+--- coordinate: DSV_MAX_SHIFT (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.3', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_MAX_SHIFT=0.2: logloss=0.6637 corruption=0.01121% fit=71.9s
+    -> new best (DSV_MAX_SHIFT=0.2)
+  DSV_MAX_SHIFT=0.3: logloss=0.6765 corruption=0.00673% fit=72.5s
+  DSV_MAX_SHIFT=0.4: logloss=0.6822 corruption=0.01009% fit=72.8s
+  DSV_MAX_SHIFT=0.5: logloss=0.6879 corruption=0.0157% fit=71.5s
+    POPULATION GATE REJECTED DSV_MAX_SHIFT_0p7: corruption=0.0213% (limit 0.0201%)
+
+--- coordinate: DSV_RW_VAR_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.005', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_RW_VAR_PER_WEEK=0.003: logloss=0.6638 corruption=0.00449% fit=71.9s
+  DSV_RW_VAR_PER_WEEK=0.008: logloss=0.6623 corruption=0.01346% fit=72.2s
+    -> new best (DSV_RW_VAR_PER_WEEK=0.008)
+    POPULATION GATE REJECTED DSV_RW_VAR_PER_WEEK_0p012: corruption=0.0224% (limit 0.0201%)
+
+--- coordinate: DSV_OU_THETA_PER_WEEK (holding others at {'DSV_RW_VAR_PER_WEEK': '0.008', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+    POPULATION GATE REJECTED DSV_OU_THETA_PER_WEEK_0p0005: corruption=0.0258% (limit 0.0201%)
+  DSV_OU_THETA_PER_WEEK=0.0020: logloss=0.6667 corruption=0.00897% fit=72.2s
+
+--- coordinate: DSV_SURFACE_VAR_SCALE (holding others at {'DSV_RW_VAR_PER_WEEK': '0.008', 'DSV_SURFACE_VAR_SCALE': '4.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}) ---
+  DSV_SURFACE_VAR_SCALE=2.0: logloss=0.6619 corruption=0.01346% fit=72.2s
+    -> new best (DSV_SURFACE_VAR_SCALE=2.0)
+  DSV_SURFACE_VAR_SCALE=4.0: logloss=0.6623 corruption=0.01346% fit=73.1s
+  DSV_SURFACE_VAR_SCALE=6.0: logloss=0.6624 corruption=0.01458% fit=72.5s
+
+=== SELECTED (chosen using ONLY (2022, 2023), corruption-gated) ===
+{'DSV_RW_VAR_PER_WEEK': '0.008', 'DSV_SURFACE_VAR_SCALE': '2.0', 'DSV_OU_THETA_PER_WEEK': '0.0010', 'DSV_MAX_SHIFT': '0.2', 'DSV_PHI_MAX': '4.0', 'DSV_LAYOFF_C': '0.06'}
+tuning-window logloss: 0.6619 (baseline was 0.6765)
+
+wrote tune_scratch/selected_v2.json

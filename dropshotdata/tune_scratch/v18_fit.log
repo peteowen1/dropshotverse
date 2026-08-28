@@ -1,0 +1,18 @@
+loading archive...
+
+=== COVERAGE ===
+  rows read              : 1,226,517
+  excluded, unparseable date            : 0
+  excluded, missing player id           : 0
+  excluded, retirement/walkover/no score: 37,345
+  kept                   : 1,189,172
+  regime A (point counts): 327,046 (27.5%)
+  regime B (scoreline)   : 862,126
+  ...200,000/1,189,172  (7s)
+  ...400,000/1,189,172  (15s)
+  ...600,000/1,189,172  (23s)
+  ...800,000/1,189,172  (31s)
+  ...1,000,000/1,189,172  (45s)
+fit complete: 1,189,172 matches in 73s, 10,680 eval predictions
+wrote C:\dev\dropshotverse\dropshotdata\hier_v18_eval_predictions.parquet
+wrote C:\dev\dropshotverse\dropshotdata\hier_v18_final_state.pkl

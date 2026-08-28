@@ -1,0 +1,31 @@
+=== DSV_RW_VAR_PER_WEEK scan (by-tour), v25 base config, (2022, 2023) tuning window ===
+  DSV_RW_VAR_PER_WEEK=0.0001: corruption=0.0% fit=39.4s [54s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5401, 'plain': 0.6094, 'lopsided': 0.3712}
+    atp={'n': 4387, 'weighted': 0.5308, 'plain': 0.602, 'lopsided': 0.3556}
+    wta={'n': 4073, 'weighted': 0.55, 'plain': 0.6173, 'lopsided': 0.3877}
+  DSV_RW_VAR_PER_WEEK=0.0003: corruption=0.0% fit=39.1s [106s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5514, 'plain': 0.6212, 'lopsided': 0.3813}
+    atp={'n': 4387, 'weighted': 0.5432, 'plain': 0.6146, 'lopsided': 0.3675}
+    wta={'n': 4073, 'weighted': 0.5601, 'plain': 0.6283, 'lopsided': 0.3958}
+  DSV_RW_VAR_PER_WEEK=0.0005: corruption=0.0% fit=30.0s [149s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5581, 'plain': 0.6278, 'lopsided': 0.3882}
+    atp={'n': 4387, 'weighted': 0.5513, 'plain': 0.6223, 'lopsided': 0.3766}
+    wta={'n': 4073, 'weighted': 0.5653, 'plain': 0.6337, 'lopsided': 0.4004}
+  DSV_RW_VAR_PER_WEEK=0.0008: corruption=0.0% fit=39.2s [202s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5627, 'plain': 0.6317, 'lopsided': 0.3944}
+    atp={'n': 4387, 'weighted': 0.5579, 'plain': 0.628, 'lopsided': 0.3853}
+    wta={'n': 4073, 'weighted': 0.5677, 'plain': 0.6357, 'lopsided': 0.4039}
+  DSV_RW_VAR_PER_WEEK=0.001: corruption=0.0% fit=39.2s [254s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5641, 'plain': 0.6325, 'lopsided': 0.3976}
+    atp={'n': 4387, 'weighted': 0.5604, 'plain': 0.6297, 'lopsided': 0.3898}
+    wta={'n': 4073, 'weighted': 0.5681, 'plain': 0.6354, 'lopsided': 0.4058}
+  DSV_RW_VAR_PER_WEEK=0.0015: corruption=0.0% fit=39.9s [307s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5663, 'plain': 0.6328, 'lopsided': 0.4044}
+    atp={'n': 4387, 'weighted': 0.5647, 'plain': 0.6319, 'lopsided': 0.3994}
+    wta={'n': 4073, 'weighted': 0.568, 'plain': 0.6337, 'lopsided': 0.4097}
+  DSV_RW_VAR_PER_WEEK=0.002: corruption=0.0% fit=40.1s [360s elapsed]
+    pooled={'n': 8460, 'weighted': 0.5676, 'plain': 0.6325, 'lopsided': 0.4095}
+    atp={'n': 4387, 'weighted': 0.567, 'plain': 0.6326, 'lopsided': 0.4057}
+    wta={'n': 4073, 'weighted': 0.5683, 'plain': 0.6325, 'lopsided': 0.4135}
+
+done in 360s, wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\bytour_rw_var_per_week_scan.json

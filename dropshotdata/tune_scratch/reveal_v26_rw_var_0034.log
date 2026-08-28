@@ -1,0 +1,59 @@
+=== gate check on holdout config ===
+  [PASS] layoff variance bounded: v_a=4.000 (cap 4.0)
+  [PASS] single post-layoff win bounded: raw shift after 15y gap = 1.277
+  [PASS] six-cycle comeback-loss compounding bounded: after 6 long-layoff-loss cycles: m_a=-1.509 m_b=-1.509 (cap 3.0)
+  [PASS] isolated pool bounded over 300 matches/6yrs: max|m_a|=0.512
+  [PASS] kappa bounded over 200 same-surface wins: kappa[Hard]=0.070 after 200 matches (cap 3.0)
+  [PASS] variance inflates enough after 1yr layoff (from tight prior): v_a=0.4826 after 1yr gap from v=0.03 start (floor 0.3, cap 4.0)
+  [PASS] variance inflates enough after 3yr layoff (from tight prior): v_a=2.1516 after 3yr gap from v=0.03 start (floor 2.0, cap 4.0)
+  [PASS] variance inflates enough after 5yr layoff (from tight prior): v_a=3.5660 after 5yr gap from v=0.03 start (floor 3.5, cap 4.0)
+  [PASS] 3yr-layoff return match not overconfident vs an average opponent: MC-averaged p(returner wins)=0.6760 (ceiling 0.95) after 3yr layoff from tight prior
+
+ALL PASS
+
+=== fitting v26 candidate on full history, eval 2024-2025 ===
+loading archive...
+
+=== COVERAGE ===
+  rows read              : 1,226,517
+  excluded, unparseable date            : 0
+  excluded, missing player id           : 0
+  excluded, retirement/walkover/no score: 37,345
+  kept                   : 1,189,172
+  regime A (point counts): 327,046 (27.5%)
+  regime B (scoreline)   : 862,126
+  regime B games-parsed  : 858,820/862,126 (99.6%) - ticket 21
+  ...200,000/1,189,172  (3s)
+  ...400,000/1,189,172  (6s)
+  ...600,000/1,189,172  (10s)
+  ...800,000/1,189,172  (14s)
+  ...1,000,000/1,189,172  (18s)
+fit complete: 1,189,172 matches in 27s, 10,680 eval predictions
+wrote C:\dev\dropshotverse\dropshotdata\hier_v26cand_eval_predictions.parquet
+wrote C:\dev\dropshotverse\dropshotdata\hier_v26cand_final_state.pkl
+
+fit done in 30.1s
+corruption on full-history fit: 0.00000% (gate: 0.0201%)
+=== MC-averaging (parallel, N=60) ===
+mc_average done in 32.0s, 10680 rows
+=== join to Elo + market odds, score pooled and by tour ===
+
+-- OVERALL (n=8594) --
+  Elo             acc=0.6534  logloss=0.6152
+  Hierarchical    acc=0.6461  logloss=0.6275
+  gap (hier - elo) = +0.0123
+
+-- ATP (n=4358) --
+  Elo             acc=0.6496  logloss=0.6204
+  Hierarchical    acc=0.6448  logloss=0.6216
+  gap (hier - elo) = +0.0013
+
+-- WTA (n=4236) --
+  Elo             acc=0.6572  logloss=0.6099
+  Hierarchical    acc=0.6475  logloss=0.6336
+  gap (hier - elo) = +0.0237
+
+-- LOPSIDED (mkt_fav>0.80) (n=1669) --
+  Elo             acc=0.8688  logloss=0.3853
+  Hierarchical    acc=0.8604  logloss=0.4153
+  gap (hier - elo) = +0.0300
