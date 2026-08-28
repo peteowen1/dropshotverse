@@ -2,6 +2,75 @@
 
 **Pete's instruction (still active): keep working autonomously, don't check back in until this is achieved, or you hit a genuine blocker.**
 
+## UPDATE 2026-08-28 (XGBoost on Elo + hierarchical raw state + engineered features — BEATS ELO, per Pete's own direction — first candidate all session to clear the bar)
+
+**Ten rounds of tuning the hierarchical filter directly never beat Elo. Stepping
+outside that architecture, per Pete's instruction ("elo + rating + features + some
+other stuff into xgb.cv might be the best play"), does.** Full detail, all numbers,
+feature list, and the leakage bug found and fixed along the way:
+`issues/27-xgboost-feature-model.md`.
+
+1. **A real leakage bug was found and fixed first** (not in `hierarchical_model.py`
+   or `elo_baseline.py` — both untouched this task). `tune_scratch/diag_layoff.parquet`
+   (a read-only diagnostic from an earlier round) was STALE - built from the
+   `prepared_matches_cache.pkl` that predated round 9's causal-ordering fix, so its
+   `weeks_since_last_w/l` features had the exact same qual/round-ordering defect
+   round 9 fixed elsewhere. A first `xgb.cv` run scored an implausible 0.193
+   tune-window log-loss; per-feature isolation traced it to this one stale
+   artifact (`weeks_since_last_diff` alone gave log-loss 0.323, more predictive
+   than Elo itself - not plausible). Fixed by re-running the pre-existing
+   `diag_layoff_features.py` diagnostic against the current (post-fix) cache - a
+   read-only rerun, no edit to either forbidden file. Confirmed fixed via a traced
+   example and a round-by-round symmetry check (winner/loser `weeks_since_last==0`
+   rates went from a wildly asymmetric 97%/8% at R32 to near-identical at QF/SF/F,
+   as bracket structure predicts). **Lesson for next time**: any `tune_scratch/
+   diag*.parquet` derived from `prepared_matches_cache.pkl` needs its mtime
+   checked against the cache's after any `hierarchical_model.py` ordering change -
+   the same trap round 9's own section of this file already flagged for the cache
+   itself, now confirmed to propagate to its downstream diagnostic consumers too.
+2. **Feature set**: Elo overall + surface rating diffs (raw, not blended - a new
+   read-only copy of `elo_baseline.py`'s logic, `elo_raw_ratings_for_xgb.py`,
+   verified to reproduce the frozen `elo_eval_predictions.parquet` to float
+   precision), the hierarchical model's raw posterior state (`d1_mean`/`d1_var`/
+   `d2_mean`/`d2_var` from `hier_v25_eval_predictions.parquet`/`v25_tune_preds
+   .parquet` - NOT its calibrated probability), as-of head-to-head (a fresh
+   chronological pass, strictly-prior meetings only), experience/layoff, and
+   round/surface/tier/best_of as categorical context. Symmetric side-A/B
+   construction (outcome-blind hash of date+uid-pair) - label balance verified
+   ~49-50% on both windows. Market odds explicitly excluded as a feature (would be
+   circular against the project's actual goal).
+3. **`xgb.cv` (5-fold, early-stopping only, no hyperparameter search) on 2022-23**
+   selected `num_boost_round=36` at sensible defaults (`max_depth=5, eta=0.08,
+   subsample=0.8, colsample_bytree=0.8`). One final fit, scored ONCE on the
+   market-odds-joined 2024-25 holdout (n=8,593, same population as every other
+   candidate this session):
+
+   | | XGBoost | Elo (0.6120 basis) | Hierarchical (v25) |
+   |---|---|---|---|
+   | ALL log-loss | **0.6025** | 0.6121 | 0.6267 |
+   | ATP log-loss | **0.6023** | 0.6174 | 0.6213 |
+   | WTA log-loss | **0.6027** | 0.6067 | 0.6322 |
+
+   **Beats Elo by −0.0096 overall, in BOTH tours independently** (ATP −0.0151, WTA
+   −0.0040) - the first candidate all session to clear the bar in both splits, not
+   just aggregate. Sanity-checked per `model-validation`: cv (0.599) and holdout
+   (0.6025) log-loss are close (no overfitting gap), predictions range 0.05-0.93
+   (no degenerate near-0/1 overconfidence), and calibration by decile tracks
+   closely across the whole range.
+4. **Feature importance (gain)**: `elo_overall_diff` dominates (total_gain 8194,
+   ~2.4x the runner-up), `hier_dmean_diff` a clear second (3487) - Elo and the
+   hierarchical model's raw state are both genuinely, non-redundantly useful to
+   XGBoost. Surface Elo, tier, layoff, and H2H are real but much smaller
+   contributors; `best_of`/`is_elite` are nearly unused.
+5. **This changes the project's actual best model** - XGBoost (this section), not
+   the hierarchical filter, is now the best-performing candidate on the frozen
+   2024-25 holdout. Recommended next step per issue 27: since Elo's own raw rating
+   is still the dominant single input even inside XGBoost, further improving Elo
+   itself (tier/round-weighted K, margin-of-victory - both open in issue 25) is
+   likely higher-leverage than continuing to tune the hierarchical filter
+   architecture, which XGBoost is already extracting most of the useful signal
+   from on top of Elo.
+
 ## UPDATE 2026-08-28 (UTS-style K-factor tested as a bundled alternative to our Sackmann-style K — REJECTED, small but real net loss — Elo's frozen number stays 0.6120, gap to hierarchical stays ≈0.0155
 
 **This section is about `elo_baseline.py` again, a follow-up to the section directly below** (ticket 25's ordering fix + decay=0.3, which set Elo's current-best number at 0.6120). That section explicitly scoped OUT tournament-tier/round-weighted K as a separate, larger change — this is that change, tested properly. Full detail: `issues/26-uts-style-k-factor-bundle-vs-sackmann-k.md`.
