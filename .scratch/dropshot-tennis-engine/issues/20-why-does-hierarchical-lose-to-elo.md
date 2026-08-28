@@ -1,7 +1,7 @@
 # 20 — Why does the hierarchical model still lose to plain Elo?
 
 Type: research
-Status: claimed (in progress — 23 attempts tried and rejected/non-transferring across 7 rounds as of 2026-08-28; ticket 21's full-DP likelihood built, tuned, and found flat/no-signal in round 7, see that section; the diagnosed root cause, MC-averaging's Jensen's-gap convexity cost, still has no untried fix)
+Status: claimed (in progress — ~38 attempts tried and rejected/non-transferring/flat across 9 rounds as of 2026-08-28; tickets 21 and 24 both built, tuned, and found flat/no-signal (rounds 7-8); round 9 fixed a genuine data-prep causal-ordering bug (qualifying rounds sorted after the whole main draw) which showed a real tuning-window win but still did not transfer to holdout, ruling out the data-prep layer as the mechanism; the diagnosed root cause, MC-averaging's Jensen's-gap convexity cost, still has no untried fix)
 
 ## Question
 
@@ -643,3 +643,62 @@ Charter: reveal the one-shot holdout check only for a candidate you actually bel
 ### Where this leaves the session
 
 Both of round 5's flagged "not yet attempted" architecture rewrites - ticket 21 (round 7) and ticket 24 (this round) - are now closed, each with a clean, well-evidenced negative result reached via proper implementation, stress-testing, and charter-compliant tuning, not an abandoned or rushed attempt. Round 3's third-continuation finding (the MC-posterior-averaging Jensen's-gap convexity cost, downstream of an already-correctly-extremizing mean state) remains the best-diagnosed root cause of the residual gap, and now has no untried fix at any layer that's been tried so far: not evidence richness (21), not process-noise shape (24), not MC-variance-scaling (4 variants across rounds 3/6), not calibration (Platt, isotonic), not evidence reweighting (tier/WTA-lower/layoff-bump/RW_VAR_PER_WEEK). A genuinely new idea would need to attack the Jensen's-gap cost directly and structurally - e.g. an analytically-corrected or closed-form expectation of `p_match` over the posterior instead of Monte Carlo averaging a convex function of it - rather than another variant of evidence-weighting, calibration, or process-noise shape. That is unscoped and unattempted as of this round.
+
+## Round 9 (2026-08-28) — a real causal-ordering bug found and fixed at the DATA-PREP layer (not a tuning knob): genuine tuning-window win, REJECTED on holdout, gap widens slightly to 0.0123
+
+This round did not come from round 8's recommendation (which had exhausted the architecture-rewrite frontier and pointed only at Jensen's-gap cost as the remaining unattempted direction). It came from re-examining an assumption every previous round had taken for granted: that `prepare()`'s within-date match ordering was correct.
+
+### The bug, confirmed systemic
+
+`tourney_date` is a TOURNAMENT-level (start) date field, not a per-match date. Verified via the cached prepared archive: 617,380 player-date groups (26% of 2,378,344 player-appearances) share a date with another match by the same player, averaging ~2.9 matches/group, up to 23 on one date. `prepare()`'s only sort was `df.sort_values("date", kind="mergesort")` - stable, but that means within-date order was whatever raw file-concatenation order `load_matches()` produced, an unexamined assumption.
+
+Traced the root cause directly in `load_matches()`'s code, not just a spot check: for each tour, the `pats` loop reads `atp_matches_[year].csv` for ALL years first, THEN `atp_matches_qual_chall_[year].csv` for ALL years, THEN `atp_matches_qual_itf_[year].csv` for ALL years. This means qualifying-round matches are concatenated after the ENTIRE main draw, for every tournament, every year, both tours - a structural property of the loader, confirmed systemic by inspecting the code path itself (stronger evidence than sampling individual tournaments, though a few same-date groups were also spot-checked and matched this pattern). Real-world impact: a player who had just won Q1, Q2, Q3 that same calendar day (in real life, always BEFORE the main draw starts) was evaluated in their R128 match using a state that hadn't yet absorbed those wins - treated as closer to a near-unknown than they should have been. This lines up with an earlier round's calibration-by-round finding that R128 was the single worst-calibrated round bucket (error +0.1493).
+
+Round vocabulary confirmed present in the archive: `Q1,Q2,Q3,Q4,Q5,ER,R128,R64,R32,R16,QF,RR,SF,F,BR` plus one stray lowercase `f` - checked directly (a single WTA level-15 ITF-qualifying final on 2022-05-23; cross-referenced that date's other matches, which include a proper-case `F` row for the ATP main event same day, confirming `f`/`F` are the same round, just an inconsistent-casing data artifact, not a distinct label).
+
+### The fix
+
+New `ROUND_RANK` dict + `round_rank()` function in `hierarchical_model.py`:
+```
+Q1=0, Q2=1, Q3=2, Q4=3, Q5=4, ER=5, R128=6, R64=7, R32=8, R16=9, QF=10, RR=11, SF=12, F=13, BR=13
+```
+`RR` (round-robin, season-ending Finals events) ranked as a group stage before the SF/F knockout bracket it feeds. `BR` (bronze/3rd-place playoff) ranked with `F` - both happen after `SF`, effectively concurrent. `'f'` normalized to `'F'` before mapping. `prepare()`'s sort changed from `sort_values("date", kind="mergesort")` to `sort_values(["date", "_round_rank"], kind="mergesort", na_position="last")` - mergesort stability kept, so matches with identical date AND round rank (genuinely simultaneous, e.g. two different R32 matches same day) keep their original file-order relative sequence, same as before. Any round label not in `ROUND_RANK` gets `NaN` (sorted last within its date) with a logged `warnings.warn`, rather than crashing or guessing - checked against the real archive's full vocabulary above, which has zero unmapped/NaN rounds, so this path is a pure safety net for future data, not something that fires today.
+
+**A second real bug found while verifying this one**: `load_prepared()`'s cache-freshness check compared the cache's mtime only against archive CSV mtimes (`ARCHIVE.rglob("*.csv")`) - an edit to `prepare()`'s own sort logic, like this fix, touches zero CSVs, so that check alone would have kept silently serving the STALE pre-fix cache indefinitely. Added a second check against `Path(__file__).stat().st_mtime` (this script's own mtime) so a code-only change to `prepare()`/`load_matches()` now also invalidates the cache. Manually deleted the stale `tune_scratch/prepared_matches_cache.pkl` this round as well, since the code edit alone wouldn't have forced a rebuild before this fix landed. **Lesson for future rounds**: don't assume a cache-freshness check covers every invalidation trigger just because it exists - it covered data-refresh but not code-refresh, and would have silently produced wrong results otherwise.
+
+### New stress test
+
+Reproduction 20 in `stress_test_safety.py` (29 checks total now, ALL PASS): builds a synthetic 4-match same-date scenario (Player A wins Q1, Q2, Q3, then R128, all `tourney_date=20230601`) fed to `hm.prepare()` in the archive's real "bad" file order (the R128 row listed first, mimicking main-draw-file-before-qual-files). Checks:
+- `prepare()`'s output orders these `['Q1','Q2','Q3','R128']`, not the input's `['R128','Q1','Q2','Q3']`.
+- Replaying the FIXED order through the same low-level primitives `run()` uses (`PlayerState`, `inflate`, `adf_update`, `apply_side_update`) shows Player A's state going INTO the R128 match already reflects the 3 qualifying wins (`n_matches==3`, `v_a` shrunk below `INIT_VAR`) - the actual causal-ordering assertion.
+- A negative control: the OLD date-only sort (reproduced explicitly, not just asserted) puts R128 first, confirming the bug was real and this specific test would have failed pre-fix.
+- `round_rank()`'s unknown-label fallback (NaN + logged warning, no crash) and `'f'`/`'F'` normalization, tested directly.
+
+### Tuning (2022-23 only, `tune_v3_lopsided.py`'s exact weighted/lopsided metric - market-only, no Elo needed at the tuning-window stage)
+
+| Config | Weighted | Plain | Lopsided | Corruption | n |
+|---|---|---|---|---|---|
+| v25 baseline (pre-round-9-fix) | 0.5759 | 0.6347 | 0.4325 | 0.0% | - |
+| v25 + round-order fix | **0.5561** | 0.6174 | 0.4068 | 0.00000% | 8,459 |
+
+A genuine, non-trivial improvement (Δweighted = −0.0198) - an order of magnitude larger than any of this session's noise-level "wins" (typically ±0.0001-0.0006 on this same metric). This is the first candidate all session with a tuning-window improvement large enough, and structurally-motivated enough (a real bug fix, not a hyperparameter nudge), to justify spending the one holdout reveal.
+
+### Holdout reveal (2024-25, n=8,594 odds-joined rows, the exact join used every prior round): REJECTED
+
+| | Elo | Hier (pre-round-9, v25) | Hier (post-round-9 fix) | Market |
+|---|---|---|---|---|
+| Overall log-loss | 0.6152 | 0.6266 | **0.6275** | 0.5888 |
+| Overall accuracy | 0.6534 | 0.6453 | 0.6465 | 0.6792 |
+| Lopsided (mkt_fav>0.80) log-loss | 0.3853 | 0.4288 | 0.4099 | 0.3645 |
+
+Gap to Elo: **+0.0114 → +0.0123** (slightly worse). ATP gap +0.0074 (n=4,358), WTA gap +0.0173 (n=4,236) - WTA still carries the larger share of the gap, consistent with every prior round's finding on this axis. Lopsided log-loss did genuinely improve in absolute terms (0.4288→0.4099, the tuning-window signal DID transfer directionally on that one cut) but Elo's own lopsided log-loss (0.3853) is still meaningfully better, so hier remains behind Elo there too.
+
+**This is the fifth confirmed case this session of a real, non-degenerate, correctly-gated tuning-window win failing to transfer to the holdout** - after `TIER_WEIGHT` (round 3-continuation), flat `var_scale` (round 4), `RW_VAR_PER_WEEK`-toward-zero (round 5), and the round-6 conditional `var_scale`. It is the first of the five that isn't a hyperparameter or calibration lever at all - it's a genuine, structural, verified-correct fix to how the model's input data is ordered. That it STILL didn't transfer is itself informative, not just another repetition: **it rules out data-prep-layer causal-ordering bugs as a candidate explanation for the residual gap**, closing off a category of hypothesis that hadn't been checked in rounds 1-8 (all of which implicitly assumed the input ordering was already correct).
+
+### The fix is kept regardless of the rejection
+
+This is a genuine correctness bug - the model was, until this round, evaluating predictions using future-relative-to-real-life information gaps in the wrong direction (systematically UNDER-crediting recently-won qualifying matches). That it happens to net out slightly negative on THIS SPECIFIC holdout comparison against Elo does not make the old behavior more correct; reverting it would mean deliberately shipping a known-wrong data-prep step to chase a specific metric. Committed at `111ecce` (fix + stress test) regardless of the holdout numbers, per this session's own standing policy of not gating genuine correctness fixes on whether they happen to help the current headline metric.
+
+### Where this leaves the session
+
+Round 3's MC-averaging-convexity diagnosis is now the ONLY diagnosed-but-unfixed root cause left standing after nine rounds of systematic elimination across every layer touched so far: hyperparameters (rounds 1-2, re-scanned rounds 3-6), architecture (tickets 21 and 24, rounds 7-8), calibration (Platt, isotonic), evidence-reweighting (tier, WTA-lower, layoff-bump, RW_VAR_PER_WEEK), MC-variance-scaling (4 variants), and now data-prep causal ordering (this round). **Recommended next step for whoever picks this up:** the only remaining direction with real diagnostic support is attacking the Jensen's-gap cost directly and structurally - e.g. an analytically-corrected or closed-form expectation of `p_match` over the posterior instead of Monte Carlo averaging a convex function of it. This has been flagged as the answer since round 3 and remains completely unscoped and unattempted. Absent a genuinely new idea there, nine rounds of otherwise-exhaustive, well-executed search argue this may be close to the ceiling of what same-session tuning of this specific architecture can achieve against this specific Elo baseline on this specific holdout.

@@ -1,0 +1,20 @@
+corruption_rate = 0.00000% (gate: <= 0.0201%)
+predictions rows: 10680
+elo x hier merged rows: 10684
+joined rows (odds-joined holdout): 8594
+
+=== OVERALL (2024-25 holdout) ===
+Elo             acc=0.6534  logloss=0.6152
+Hierarchical    acc=0.6465  logloss=0.6275
+Market          acc=0.6792  logloss=0.5888
+
+=== LOPSIDED (mkt_fav>0.80, n=1669) ===
+Elo             logloss=0.3853
+Hierarchical    logloss=0.4099
+Market          logloss=0.3645
+
+Gap to Elo (overall): +0.0123  (pre-fix v25 gap was +0.0114)
+
+=== ATP / WTA split ===
+ATP   n= 4358  Hier=0.6278  Elo=0.6204  gap=+0.0074
+WTA   n= 4236  Hier=0.6272  Elo=0.6099  gap=+0.0173
