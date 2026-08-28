@@ -41,6 +41,8 @@ MATCH_FEEDS = {
 
 DELAY = 0.7          # seconds between requests — we are a guest here
 POLL_EVERY = 45      # seconds between live-score checks
+ONCE_BUDGET_S = 240  # `once` runs every 5min (scheduled task) - stay well under
+                     # that even if every feed stalls, so runs never overlap
 
 
 def log(msg: str) -> None:
@@ -55,7 +57,7 @@ def fetch(path: str, tries: int = 3) -> bytes | None:
     for attempt in range(tries):
         try:
             req = Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-            with urlopen(req, timeout=30) as r:
+            with urlopen(req, timeout=10) as r:
                 return r.read()
         except HTTPError as e:
             if e.code == 404:
@@ -251,7 +253,12 @@ def once() -> None:
         return
 
     log(f"{len(matches)} match(es) on the live feed")
-    for m in matches:
+    deadline = time.monotonic() + ONCE_BUDGET_S
+    for i, m in enumerate(matches):
+        if time.monotonic() > deadline:
+            log(f"  budget exceeded, stopping after {i}/{len(matches)} matches "
+                f"(the scheduler will pick up the rest next run)")
+            break
         mid = str(m.get("match_id", ""))
         if mid:
             capture_match(mid, tag=f" [{m.get('status')}]")
