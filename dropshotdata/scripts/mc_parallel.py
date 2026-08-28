@@ -110,6 +110,101 @@ def mc_average(df: pd.DataFrame, n_samples: int = N_SAMPLES_DEFAULT,
     return np.concatenate(results)
 
 
+# --------------------------------------------------- analytic delta-method correction
+# Issue 20: an ALTERNATIVE to mc_average() above, not a replacement. mc_average()
+# is untouched by this section (not called from it, not modified by it) and
+# remains the in-use path everywhere else.
+#
+# Round 9's diagnosis (issue 20, round 3 third-continuation, reconfirmed every
+# round since) is that the whole holdout gap-to-Elo is introduced downstream of
+# an already-correctly-extremizing point estimate, by MC-averaging's Jensen's-
+# gap convexity cost: p_winner_hier_mc = E[p_match(sigmoid(d1), sigmoid(d2))]
+# over d1~N(d1_mean,d1_var), d2~N(d2_mean,d2_var), and p_match is convex/concave
+# enough near 0/1 that the MC average sits systematically below the point
+# estimate. mc_average() ESTIMATES that expectation by sampling; this section
+# APPROXIMATES it analytically via a second-order (delta-method) Taylor
+# expansion around the point estimate instead - same target quantity, a
+# different (cheaper, exact-in-expectation-up-to-O(v^2)) way of computing it:
+#
+#   E[f(d1,d2)] ~= f(m1,m2) + 0.5*f_11(m1,m2)*v1 + 0.5*f_22(m1,m2)*v2
+#
+# where f(d1,d2) = p_match(sigmoid(d1), sigmoid(d2), best_of), (m1,m2) =
+# (d1_mean, d2_mean), (v1,v2) = (d1_var, d2_var). d1 and d2 are independent in
+# this model (separate players' composite-strength posteriors), so the cross
+# term f_12*cov(d1,d2) is exactly 0 and is not computed. f_11/f_22 (the second
+# partials of p_match's Bo3/Bo5-over-sets-over-games DP recursion) have no
+# closed form, so they're estimated via a central finite difference:
+#   f_11 ~= [f(m1+h,m2) - 2*f(m1,m2) + f(m1-h,m2)] / h**2
+# This costs 5 p_match calls per row (1 center + 2 per side), vs
+# n_samples (60-2000) calls for mc_average() - the speed win this section
+# reports is a direct consequence of that, not a separate optimization.
+#
+# h is a NUMERICAL-APPROXIMATION-QUALITY step size, not a modeling
+# hyperparameter - per the task charter, it must be picked for finite-
+# difference stability (roundoff vs truncation error), not grid-searched
+# against the log-loss metric. See tune_scratch/analytic_h_stability.py for
+# the stability check that justifies the h=0.01 default.
+
+H_DEFAULT = 0.01
+
+
+def _analytic_chunk(args):
+    rows, h = args
+    out = np.empty(len(rows))
+    for i, (d1_mean, d1_var, d2_mean, d2_var, best_of) in enumerate(rows):
+        bo = int(best_of)
+        f0 = p_match(sigmoid(d1_mean), sigmoid(d2_mean), bo)
+        f1p = p_match(sigmoid(d1_mean + h), sigmoid(d2_mean), bo)
+        f1m = p_match(sigmoid(d1_mean - h), sigmoid(d2_mean), bo)
+        f2p = p_match(sigmoid(d1_mean), sigmoid(d2_mean + h), bo)
+        f2m = p_match(sigmoid(d1_mean), sigmoid(d2_mean - h), bo)
+        f11 = (f1p - 2.0 * f0 + f1m) / (h * h)
+        f22 = (f2p - 2.0 * f0 + f2m) / (h * h)
+        v1 = max(float(d1_var), 0.0)
+        v2 = max(float(d2_var), 0.0)
+        corrected = f0 + 0.5 * f11 * v1 + 0.5 * f22 * v2
+        # Safety clip only - a second-order Taylor expansion is a LOCAL
+        # approximation and can overshoot [0,1] under large variance /
+        # high curvature (see validation report - this is documented, not
+        # silently patched over). Never let it produce an invalid probability.
+        out[i] = min(1.0, max(0.0, corrected))
+    return out
+
+
+def analytic_correction(df: pd.DataFrame, h: float = H_DEFAULT,
+                        n_workers: int | None = None,
+                        d1_mean_col: str = "d1_mean", d1_var_col: str = "d1_var",
+                        d2_mean_col: str = "d2_mean", d2_var_col: str = "d2_var"
+                        ) -> np.ndarray:
+    """Delta-method (second-order Taylor) alternative to mc_average(). Same
+    contract: takes a DataFrame with d1_mean/d1_var/d2_mean/d2_var/best_of
+    columns (names overridable, matching mc_average()'s signature), returns
+    an np.ndarray of corrected win probabilities aligned to df's row order.
+    Deterministic (no RNG, no seed) - unlike mc_average(), calling this twice
+    on the same input gives bit-identical output.
+
+    Embarrassingly parallel across rows exactly like mc_average(), reusing
+    the same chunk/Pool pattern. Do not run this concurrently with a
+    mc_average() Pool in the same process tree - see mc_average()'s
+    docstring / RESUME-beat-elo.md's memory-safety note."""
+    rows = list(zip(df[d1_mean_col].values, df[d1_var_col].values,
+                    df[d2_mean_col].values, df[d2_var_col].values,
+                    df["best_of"].values))
+    n = len(rows)
+    if n == 0:
+        return np.empty(0)
+    n_workers = n_workers or min(12, mp.cpu_count() - 2, n)
+    n_workers = max(1, n_workers)
+    if n_workers == 1:
+        return _analytic_chunk((rows, h))
+
+    chunk_size = -(-n // n_workers)   # ceil div
+    chunks = [(rows[i:i + chunk_size], h) for i in range(0, n, chunk_size)]
+    with mp.Pool(n_workers) as pool:
+        results = pool.map(_analytic_chunk, chunks)
+    return np.concatenate(results)
+
+
 if __name__ == "__main__":
     import sys
     import time
