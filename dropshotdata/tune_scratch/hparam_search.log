@@ -1,0 +1,49 @@
+DEFAULT (current shipped params): cv_logloss=0.59674 +/- 0.00898  round=44
+  {'max_depth': 5, 'eta': 0.08, 'subsample': 0.8, 'colsample_bytree': 0.8, 'min_child_weight': 1, 'gamma': 0.0, 'reg_alpha': 0.0, 'reg_lambda': 1.0}
+[ 0] cv_logloss=0.59980 +/- 0.00976  round=  41  {'max_depth': 7, 'eta': 0.08, 'subsample': 0.8, 'colsample_bytree': 0.6, 'min_child_weight': 3.0, 'gamma': 0.0, 'reg_alpha': 0.0, 'reg_lambda': 0.5}
+[ 1] cv_logloss=0.59467 +/- 0.01003  round=  56  {'max_depth': 3, 'eta': 0.1, 'subsample': 0.9, 'colsample_bytree': 1.0, 'min_child_weight': 10.0, 'gamma': 1.0, 'reg_alpha': 2.0, 'reg_lambda': 5.0}
+[ 2] cv_logloss=0.59971 +/- 0.00985  round=  34  {'max_depth': 6, 'eta': 0.08, 'subsample': 0.8, 'colsample_bytree': 1.0, 'min_child_weight': 3.0, 'gamma': 2.0, 'reg_alpha': 1.0, 'reg_lambda': 0.5}
+[ 3] cv_logloss=0.59562 +/- 0.00944  round=  27  {'max_depth': 4, 'eta': 0.15, 'subsample': 0.8, 'colsample_bytree': 0.5, 'min_child_weight': 20.0, 'gamma': 1.0, 'reg_alpha': 2.0, 'reg_lambda': 0.5}
+[ 4] cv_logloss=0.59473 +/- 0.01058  round=  37  {'max_depth': 3, 'eta': 0.15, 'subsample': 0.6, 'colsample_bytree': 0.8, 'min_child_weight': 1.0, 'gamma': 0.1, 'reg_alpha': 0.5, 'reg_lambda': 2.0}
+[ 5] cv_logloss=0.59510 +/- 0.01031  round= 229  {'max_depth': 5, 'eta': 0.02, 'subsample': 0.6, 'colsample_bytree': 0.5, 'min_child_weight': 1.0, 'gamma': 1.0, 'reg_alpha': 0.5, 'reg_lambda': 5.0}
+[ 6] cv_logloss=0.59489 +/- 0.00988  round=  76  {'max_depth': 4, 'eta': 0.08, 'subsample': 0.9, 'colsample_bytree': 0.7, 'min_child_weight': 5.0, 'gamma': 2.0, 'reg_alpha': 2.0, 'reg_lambda': 10.0}
+[ 7] cv_logloss=0.59594 +/- 0.00998  round=  55  {'max_depth': 4, 'eta': 0.1, 'subsample': 1.0, 'colsample_bytree': 0.8, 'min_child_weight': 40.0, 'gamma': 1.0, 'reg_alpha': 1.0, 'reg_lambda': 1.0}
+[ 8] cv_logloss=0.59698 +/- 0.01020  round= 176  {'max_depth': 7, 'eta': 0.02, 'subsample': 0.8, 'colsample_bytree': 0.9, 'min_child_weight': 40.0, 'gamma': 0.5, 'reg_alpha': 0.1, 'reg_lambda': 1.0}
+[ 9] cv_logloss=0.59722 +/- 0.00987  round=  50  {'max_depth': 5, 'eta': 0.06, 'subsample': 0.9, 'colsample_bytree': 1.0, 'min_child_weight': 1.0, 'gamma': 2.0, 'reg_alpha': 0.5, 'reg_lambda': 1.0}
+[10] cv_logloss=0.59723 +/- 0.01048  round=  43  {'max_depth': 6, 'eta': 0.08, 'subsample': 0.7, 'colsample_bytree': 0.6, 'min_child_weight': 20.0, 'gamma': 0.5, 'reg_alpha': 0.5, 'reg_lambda': 1.0}
+[11] cv_logloss=0.59898 +/- 0.00945  round=  58  {'max_depth': 6, 'eta': 0.06, 'subsample': 0.7, 'colsample_bytree': 1.0, 'min_child_weight': 3.0, 'gamma': 0.1, 'reg_alpha': 1.0, 'reg_lambda': 5.0}
+[12] cv_logloss=0.59351 +/- 0.01029  round= 284  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.7, 'colsample_bytree': 0.9, 'min_child_weight': 5.0, 'gamma': 1.0, 'reg_alpha': 0.1, 'reg_lambda': 1.0}
+[13] cv_logloss=0.59835 +/- 0.01020  round=  19  {'max_depth': 6, 'eta': 0.15, 'subsample': 0.6, 'colsample_bytree': 0.5, 'min_child_weight': 20.0, 'gamma': 0.1, 'reg_alpha': 0.5, 'reg_lambda': 0.5}
+[14] cv_logloss=0.60073 +/- 0.01108  round=  58  {'max_depth': 7, 'eta': 0.06, 'subsample': 1.0, 'colsample_bytree': 0.9, 'min_child_weight': 20.0, 'gamma': 0.1, 'reg_alpha': 1.0, 'reg_lambda': 0.5}
+[15] cv_logloss=0.59690 +/- 0.00974  round=  77  {'max_depth': 5, 'eta': 0.06, 'subsample': 1.0, 'colsample_bytree': 0.6, 'min_child_weight': 40.0, 'gamma': 0.0, 'reg_alpha': 1.0, 'reg_lambda': 2.0}
+[16] cv_logloss=0.59828 +/- 0.00961  round= 111  {'max_depth': 7, 'eta': 0.04, 'subsample': 1.0, 'colsample_bytree': 0.9, 'min_child_weight': 40.0, 'gamma': 0.0, 'reg_alpha': 1.0, 'reg_lambda': 10.0}
+[17] cv_logloss=0.59406 +/- 0.01012  round= 123  {'max_depth': 3, 'eta': 0.06, 'subsample': 0.9, 'colsample_bytree': 0.5, 'min_child_weight': 10.0, 'gamma': 1.0, 'reg_alpha': 1.0, 'reg_lambda': 10.0}
+[18] cv_logloss=0.59659 +/- 0.01008  round=  54  {'max_depth': 5, 'eta': 0.06, 'subsample': 0.8, 'colsample_bytree': 1.0, 'min_child_weight': 3.0, 'gamma': 0.5, 'reg_alpha': 0.0, 'reg_lambda': 2.0}
+[19] cv_logloss=0.60066 +/- 0.01011  round=  38  {'max_depth': 7, 'eta': 0.08, 'subsample': 0.7, 'colsample_bytree': 1.0, 'min_child_weight': 10.0, 'gamma': 2.0, 'reg_alpha': 0.0, 'reg_lambda': 2.0}
+[20] cv_logloss=0.59956 +/- 0.00970  round=  34  {'max_depth': 7, 'eta': 0.1, 'subsample': 0.8, 'colsample_bytree': 0.7, 'min_child_weight': 5.0, 'gamma': 0.5, 'reg_alpha': 0.1, 'reg_lambda': 5.0}
+[21] cv_logloss=0.59450 +/- 0.00983  round= 116  {'max_depth': 3, 'eta': 0.06, 'subsample': 0.7, 'colsample_bytree': 0.9, 'min_child_weight': 20.0, 'gamma': 1.0, 'reg_alpha': 2.0, 'reg_lambda': 10.0}
+[22] cv_logloss=0.59483 +/- 0.00959  round= 272  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.6, 'colsample_bytree': 0.9, 'min_child_weight': 40.0, 'gamma': 2.0, 'reg_alpha': 1.0, 'reg_lambda': 10.0}
+[23] cv_logloss=0.59703 +/- 0.00967  round= 197  {'max_depth': 7, 'eta': 0.02, 'subsample': 0.6, 'colsample_bytree': 1.0, 'min_child_weight': 1.0, 'gamma': 2.0, 'reg_alpha': 2.0, 'reg_lambda': 10.0}
+[24] cv_logloss=0.59546 +/- 0.01016  round= 270  {'max_depth': 4, 'eta': 0.02, 'subsample': 0.8, 'colsample_bytree': 1.0, 'min_child_weight': 5.0, 'gamma': 2.0, 'reg_alpha': 0.1, 'reg_lambda': 10.0}
+[25] cv_logloss=0.59554 +/- 0.00977  round=  90  {'max_depth': 4, 'eta': 0.06, 'subsample': 0.7, 'colsample_bytree': 0.6, 'min_child_weight': 40.0, 'gamma': 2.0, 'reg_alpha': 0.0, 'reg_lambda': 10.0}
+[26] cv_logloss=0.59897 +/- 0.00994  round=  85  {'max_depth': 7, 'eta': 0.04, 'subsample': 0.8, 'colsample_bytree': 0.8, 'min_child_weight': 10.0, 'gamma': 0.5, 'reg_alpha': 0.0, 'reg_lambda': 10.0}
+[27] cv_logloss=0.59904 +/- 0.01101  round= 156  {'max_depth': 6, 'eta': 0.02, 'subsample': 1.0, 'colsample_bytree': 0.9, 'min_child_weight': 3.0, 'gamma': 1.0, 'reg_alpha': 0.5, 'reg_lambda': 0.5}
+[28] cv_logloss=0.60003 +/- 0.01058  round=  40  {'max_depth': 7, 'eta': 0.1, 'subsample': 0.7, 'colsample_bytree': 0.5, 'min_child_weight': 1.0, 'gamma': 1.0, 'reg_alpha': 0.0, 'reg_lambda': 2.0}
+[29] cv_logloss=0.60154 +/- 0.01032  round=  19  {'max_depth': 7, 'eta': 0.15, 'subsample': 0.7, 'colsample_bytree': 0.5, 'min_child_weight': 5.0, 'gamma': 2.0, 'reg_alpha': 1.0, 'reg_lambda': 0.5}
+[30] cv_logloss=0.59687 +/- 0.00986  round=  68  {'max_depth': 6, 'eta': 0.06, 'subsample': 0.7, 'colsample_bytree': 0.7, 'min_child_weight': 40.0, 'gamma': 2.0, 'reg_alpha': 0.0, 'reg_lambda': 2.0}
+[31] cv_logloss=0.59651 +/- 0.01007  round=  92  {'max_depth': 6, 'eta': 0.04, 'subsample': 0.7, 'colsample_bytree': 0.6, 'min_child_weight': 3.0, 'gamma': 2.0, 'reg_alpha': 0.1, 'reg_lambda': 1.0}
+[32] cv_logloss=0.59390 +/- 0.01025  round= 342  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.9, 'colsample_bytree': 0.6, 'min_child_weight': 20.0, 'gamma': 0.5, 'reg_alpha': 2.0, 'reg_lambda': 2.0}
+[33] cv_logloss=0.59859 +/- 0.00943  round=  36  {'max_depth': 6, 'eta': 0.1, 'subsample': 0.6, 'colsample_bytree': 0.8, 'min_child_weight': 5.0, 'gamma': 0.1, 'reg_alpha': 0.5, 'reg_lambda': 2.0}
+[34] cv_logloss=0.59779 +/- 0.00998  round=  37  {'max_depth': 5, 'eta': 0.1, 'subsample': 1.0, 'colsample_bytree': 0.8, 'min_child_weight': 20.0, 'gamma': 2.0, 'reg_alpha': 1.0, 'reg_lambda': 1.0}
+[35] cv_logloss=0.59393 +/- 0.00983  round=  74  {'max_depth': 3, 'eta': 0.08, 'subsample': 0.7, 'colsample_bytree': 0.8, 'min_child_weight': 1.0, 'gamma': 2.0, 'reg_alpha': 2.0, 'reg_lambda': 0.5}
+[36] cv_logloss=0.59680 +/- 0.00989  round=  67  {'max_depth': 7, 'eta': 0.06, 'subsample': 0.6, 'colsample_bytree': 1.0, 'min_child_weight': 40.0, 'gamma': 0.0, 'reg_alpha': 0.5, 'reg_lambda': 10.0}
+[37] cv_logloss=0.59881 +/- 0.01081  round=  48  {'max_depth': 6, 'eta': 0.06, 'subsample': 1.0, 'colsample_bytree': 0.9, 'min_child_weight': 1.0, 'gamma': 0.0, 'reg_alpha': 0.0, 'reg_lambda': 1.0}
+[38] cv_logloss=0.59399 +/- 0.01004  round= 338  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.7, 'colsample_bytree': 0.8, 'min_child_weight': 10.0, 'gamma': 0.1, 'reg_alpha': 2.0, 'reg_lambda': 5.0}
+[39] cv_logloss=0.59810 +/- 0.01007  round=  18  {'max_depth': 6, 'eta': 0.15, 'subsample': 0.9, 'colsample_bytree': 0.5, 'min_child_weight': 1.0, 'gamma': 2.0, 'reg_alpha': 0.5, 'reg_lambda': 0.5}
+
+=== TOP 5 ===
+cv_logloss=0.59351 +/- 0.01029  round= 284  delta_vs_default=-0.00323  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.7, 'colsample_bytree': 0.9, 'min_child_weight': 5.0, 'gamma': 1.0, 'reg_alpha': 0.1, 'reg_lambda': 1.0}
+cv_logloss=0.59390 +/- 0.01025  round= 342  delta_vs_default=-0.00284  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.9, 'colsample_bytree': 0.6, 'min_child_weight': 20.0, 'gamma': 0.5, 'reg_alpha': 2.0, 'reg_lambda': 2.0}
+cv_logloss=0.59393 +/- 0.00983  round=  74  delta_vs_default=-0.00281  {'max_depth': 3, 'eta': 0.08, 'subsample': 0.7, 'colsample_bytree': 0.8, 'min_child_weight': 1.0, 'gamma': 2.0, 'reg_alpha': 2.0, 'reg_lambda': 0.5}
+cv_logloss=0.59399 +/- 0.01004  round= 338  delta_vs_default=-0.00275  {'max_depth': 3, 'eta': 0.02, 'subsample': 0.7, 'colsample_bytree': 0.8, 'min_child_weight': 10.0, 'gamma': 0.1, 'reg_alpha': 2.0, 'reg_lambda': 5.0}
+cv_logloss=0.59406 +/- 0.01012  round= 123  delta_vs_default=-0.00268  {'max_depth': 3, 'eta': 0.06, 'subsample': 0.9, 'colsample_bytree': 0.5, 'min_child_weight': 10.0, 'gamma': 1.0, 'reg_alpha': 1.0, 'reg_lambda': 10.0}

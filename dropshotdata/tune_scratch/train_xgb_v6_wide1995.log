@@ -1,0 +1,38 @@
+train rows: 118,912  years 1995-2023
+cv round=1127  cv_logloss=0.58284
+holdout n=8,591
+
+--- ALL (n=8,591) ---
+  Arm E (wide+hier, 29yr) logloss=0.59817  acc=0.6701
+  Elo                    logloss=0.61225
+  Market                 logloss=0.58903
+
+--- ATP (n=4,357) ---
+  Arm E (wide+hier, 29yr) logloss=0.59810  acc=0.6732
+  Elo                    logloss=0.61740
+  Market                 logloss=0.58953
+
+--- WTA (n=4,234) ---
+  Arm E (wide+hier, 29yr) logloss=0.59825  acc=0.6670
+  Elo                    logloss=0.60695
+  Market                 logloss=0.58852
+
+(reference: v2=0.6017 (2yr), Arm C=0.59906 (9yr), Arm D=0.59845 (19yr))
+
+=== feature importance (gain) ===
+                  feature     total_gain
+0        elo_overall_diff  322774.906250
+3         hier_dmean_diff   80209.664062
+2       elo_logit_pwinner   49567.941406
+1        elo_surface_diff   14849.373047
+10               age_diff    9798.335938
+14          tourney_level    9054.720703
+6   weeks_since_last_diff    8519.010742
+5           hier_dvar_sum    4855.115234
+7            n_prior_diff    3637.515381
+8                h2h_diff    3537.249268
+4          hier_dvar_diff    2830.303467
+12                surface    2792.267334
+13                  round    2511.613037
+9                 best_of     305.360443
+11           fatigue_diff     219.194656

@@ -1,0 +1,21 @@
+n=8,591  min=0.00286  max=0.99475  mean=0.5005  (true rate should be ~0.5, symmetric hash): true_y_mean=0.4940
+near-degenerate (p<0.01 or p>0.99): 0.1979%
+
+calibration by decile:
+  decile 0: n= 859  mean_pred=0.1359  obs_rate=0.1187  err=+0.0171
+  decile 1: n= 859  mean_pred=0.2716  obs_rate=0.2619  err=+0.0097
+  decile 2: n= 859  mean_pred=0.3501  obs_rate=0.3539  err=-0.0038
+  decile 3: n= 859  mean_pred=0.4156  obs_rate=0.4168  err=-0.0011
+  decile 4: n= 859  mean_pred=0.4700  obs_rate=0.4563  err=+0.0137
+  decile 5: n= 859  mean_pred=0.5232  obs_rate=0.5076  err=+0.0156
+  decile 6: n= 859  mean_pred=0.5831  obs_rate=0.6019  err=-0.0188
+  decile 7: n= 859  mean_pred=0.6545  obs_rate=0.6228  err=+0.0317
+  decile 8: n= 859  mean_pred=0.7357  obs_rate=0.7148  err=+0.0209
+  decile 9: n= 860  mean_pred=0.8646  obs_rate=0.8849  err=-0.0203
+
+disagreements: 1,012 (11.78%)  XGBoost right: 0.4704  95%CI=[0.4396,0.5011]
+(round 7 v2: 0.4458, Arm E: 0.4532)
+  atp: n=536  xgb_right=0.4627
+  wta: n=476  xgb_right=0.4790
+
+saved model + predictions

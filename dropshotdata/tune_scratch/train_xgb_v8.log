@@ -1,0 +1,42 @@
+train rows: 118,912  years 1995-2023
+using pre-established cv round=3161 (cv_logloss=0.57325, from screen_tour_feature.py)
+holdout n=8,591
+
+--- ALL (n=8,591) ---
+  Arm G (+tour feature) logloss=0.58992  acc=0.6738
+  Elo                    logloss=0.61225
+  Market                 logloss=0.58903
+
+--- ATP (n=4,357) ---
+  Arm G (+tour feature) logloss=0.59207  acc=0.6759
+  Elo                    logloss=0.61740
+  Market                 logloss=0.58953
+
+--- WTA (n=4,234) ---
+  Arm G (+tour feature) logloss=0.58772  acc=0.6717
+  Elo                    logloss=0.60695
+  Market                 logloss=0.58852
+
+(reference: v2=0.6017, ..., Arm E=0.59817, Arm F=0.59017)
+
+=== feature importance (gain) ===
+                  feature     total_gain
+0        elo_overall_diff  337822.187500
+12     hier_logit_pwinner  123486.906250
+3         hier_dmean_diff   37946.656250
+2       elo_logit_pwinner   22348.025391
+1        elo_surface_diff   17816.468750
+15          tourney_level   17745.662109
+10               age_diff   13456.958984
+5           hier_dvar_sum   10516.588867
+6   weeks_since_last_diff   10190.520508
+7            n_prior_diff    7639.924805
+4          hier_dvar_diff    6926.734863
+14                  round    6740.304199
+13                surface    5952.246094
+8                h2h_diff    5155.199219
+16                   tour    1739.554688
+9                 best_of    1534.277832
+11           fatigue_diff     627.773376
+
+saved model + predictions

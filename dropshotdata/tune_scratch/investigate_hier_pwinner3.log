@@ -1,0 +1,2 @@
+BASE                       round=  943 (hit_cap=False) cv_logloss=0.58282  n=118912
+BASE+hier_logit_pwinner    round= 3085 (hit_cap=False) cv_logloss=0.57341  delta=-0.00941  n=118912

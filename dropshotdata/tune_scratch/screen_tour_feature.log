@@ -1,0 +1,2 @@
+BASE (no tour)          round= 3085(cap=False) cv_logloss=0.57341  n=118912
+BASE+tour               round= 3161(cap=False) cv_logloss=0.57325  delta=-0.00016  n=118912

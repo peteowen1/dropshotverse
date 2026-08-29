@@ -1,0 +1,9 @@
+C:\dev\dropshotverse\dropshotdata\tune_scratch\bag_v8.py:22: Pandas4Warning: Constructing a Categorical with a dtype and values containing non-null entries not in that dtype's categories is deprecated and will raise in a future version.
+  X[c] = pd.Categorical(df[c], categories=cat_levels[c])
+C:\dev\dropshotverse\dropshotdata\tune_scratch\bag_v8.py:22: Pandas4Warning: Constructing a Categorical with a dtype and values containing non-null entries not in that dtype's categories is deprecated and will raise in a future version.
+  X[c] = pd.Categorical(df[c], categories=cat_levels[c])
+seed 0 done
+seed 1 done
+seed 2 done
+seed 3 done
+seed 4 done

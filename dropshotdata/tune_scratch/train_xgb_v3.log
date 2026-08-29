@@ -1,0 +1,55 @@
+loading v2 tune-window features (2022-2023)...
+  tune rows: 9,711  columns: ['elo_overall_diff', 'elo_surface_diff', 'elo_logit_pwinner', 'hier_dmean_diff', 'hier_dvar_diff', 'hier_dvar_sum', 'weeks_since_last_diff', 'n_prior_diff', 'h2h_diff', 'best_of', 'age_diff', 'fatigue_diff', 'serve_form_diff', 'return_form_diff', 'surface', 'round', 'tourney_level', 'is_elite']
+
+running xgb.cv (nfold=5, early_stopping_rounds=50, cap=3000, tuned params)...
+  selected num_boost_round=252  (cv test-logloss=0.59912)
+
+fitting final model on ALL of tune (2022-23) with num_boost_round=252...
+
+restricting holdout-window features (2024-2025) to the market-odds-joined subset...
+  holdout rows after odds-join restriction: 8,294 (prior sessions' basis: n=8,593/8,594)
+  comparison coverage: elo notna=8,294, hier notna=8,294, mkt notna=8,294 / 8,294
+
+=== HOLDOUT RESULTS (2024-2025, market-odds-joined, n=8,294) ===
+
+  --- ALL (n=8,294) ---
+    XGBoost v3                 logloss=0.6057  acc=0.6681  brier=0.2097
+    Elo (post-fix)             logloss=0.6170  acc=0.6493  brier=0.2146
+    Hierarchical (v25/mc60)    logloss=0.6301  acc=0.6417  brier=0.2200
+    MARKET                     logloss=0.5935  acc=0.6770  brier=0.2046
+
+  --- ATP (n=4,209) ---
+    XGBoost v3                 logloss=0.6076  acc=0.6671  brier=0.2104
+    Elo (post-fix)             logloss=0.6214  acc=0.6436  brier=0.2163
+    Hierarchical (v25/mc60)    logloss=0.6248  acc=0.6382  brier=0.2181
+    MARKET                     logloss=0.5937  acc=0.6804  brier=0.2046
+
+  --- WTA (n=4,085) ---
+    XGBoost v3                 logloss=0.6038  acc=0.6690  brier=0.2090
+    Elo (post-fix)             logloss=0.6125  acc=0.6551  brier=0.2128
+    Hierarchical (v25/mc60)    logloss=0.6354  acc=0.6453  brier=0.2219
+    MARKET                     logloss=0.5933  acc=0.6734  brier=0.2046
+
+=== FEATURE IMPORTANCE (gain) ===
+                        avg_gain    total_gain  n_splits
+feature                                                 
+elo_overall_diff       61.578266  22783.958984     370.0
+hier_dmean_diff        32.184135   9429.952148     293.0
+elo_logit_pwinner      69.593971   2853.352783      41.0
+elo_surface_diff        8.768574   1376.666138     157.0
+serve_form_diff         9.270493   1121.729614     121.0
+age_diff                8.205235   1009.243958     123.0
+weeks_since_last_diff   8.093108    817.403931     101.0
+tourney_level           7.295220    685.750732      94.0
+round                   7.455470    588.982117      79.0
+return_form_diff        6.895692    579.238098      84.0
+hier_dvar_diff          6.438592    547.280334      85.0
+n_prior_diff            7.120223    320.410034      45.0
+h2h_diff                8.207945    320.109863      39.0
+hier_dvar_sum           5.692664    210.628555      37.0
+surface                 7.422444     29.689777       4.0
+best_of                 6.640019     13.280039       2.0
+fatigue_diff            8.335781      8.335781       1.0
+is_elite                1.386277      1.386277       1.0
+
+saved model, holdout predictions, and feature importance to tune_scratch\xgb_v2_*

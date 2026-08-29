@@ -1,0 +1,24 @@
+=== fitting v25 config (frozen hyperparameters, no retuning), eval years 2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023 -> v25_postfix_wide2005_preds.parquet ===
+exit=0  elapsed=78s
+STDOUT tail:
+loading archive...
+
+=== COVERAGE ===
+  rows read              : 1,226,517
+  excluded, unparseable date            : 0
+  excluded, missing player id           : 0
+  excluded, retirement/walkover/no score: 37,345
+  kept                   : 1,189,172
+  regime A (point counts): 327,046 (27.5%)
+  regime B (scoreline)   : 862,126
+  regime B games-parsed  : 858,820/862,126 (99.6%) - ticket 21
+  ...200,000/1,189,172  (3s)
+  ...400,000/1,189,172  (8s)
+  ...600,000/1,189,172  (22s)
+  ...800,000/1,189,172  (44s)
+  ...1,000,000/1,189,172  (64s)
+fit complete: 1,189,172 matches in 75s, 88,700 eval predictions
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\v25_postfix_wide2005_preds.parquet
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\v25_postfix_wide2005_state.pkl
+
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\v25_postfix_wide2005_preds.parquet

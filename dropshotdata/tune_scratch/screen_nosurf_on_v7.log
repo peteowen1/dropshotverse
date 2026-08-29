@@ -1,0 +1,4 @@
+coverage: {'hier_dmean_nosurf_diff': 1.0, 'surf_specialization_diff': 1.0}
+BASE+nosurf_state         n= 118912 round= 3052(cap=False) cv_logloss=0.57367  vs BASE-same-rows(round=3085,cap=False)=0.57341  delta=+0.00025
+BASE+surf_specialization  n= 118912 round= 3025(cap=False) cv_logloss=0.57356  vs BASE-same-rows(round=3085,cap=False)=0.57341  delta=+0.00015
+BASE+both                 n= 118912 round= 3199(cap=False) cv_logloss=0.57374  vs BASE-same-rows(round=3085,cap=False)=0.57341  delta=+0.00033

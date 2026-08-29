@@ -1,0 +1,3 @@
+['date', 'tour', 'surface', 'best_of', 'winner_uid', 'loser_uid', 'winner_name', 'loser_name', 'p_winner_hier', 'p1', 'p2', 'd1_mean', 'd1_var', 'd2_mean', 'd2_var', 'd1_mean_nosurf', 'd1_var_nosurf', 'd2_mean_nosurf', 'd2_var_nosurf']
+coverage: 1.0
+BASE+hier_logit_pwinner       n= 118912 round=2000 cv_logloss=0.57405  vs BASE-same-rows=0.58282  delta=-0.00877

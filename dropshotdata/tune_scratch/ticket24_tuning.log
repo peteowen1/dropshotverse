@@ -1,0 +1,15 @@
+=== Ticket 24: DSV_STUDENT_T_NU tuning on 2022-23 (weighted/lopsided metric) ===
+v25 baseline (HEAVY_TAILED_NOISE=0): {'tag': 't24_v25_baseline', 'n': 8460, 'weighted_logloss': 0.5759, 'plain_logloss': 0.6347, 'lopsided_logloss': 0.4325, 'corruption_pct': 0.0, 'fit_s': 42.3}
+heavy-tailed ON, nu=4.0 (default): {'tag': 't24_heavytail_on_default_nu', 'n': 8460, 'weighted_logloss': 0.5759, 'plain_logloss': 0.6347, 'lopsided_logloss': 0.4327, 'corruption_pct': 0.0, 'fit_s': 43.6}
+
+step1 delta (heavy-tailed - baseline) weighted_logloss = +0.0000
+  nu=2.0: weighted=0.576 plain=0.6347 lopsided=0.4329 corruption=0.0% fit=35.3s
+  nu=3.0: weighted=0.576 plain=0.6347 lopsided=0.4328 corruption=0.0% fit=43.2s
+  nu=6.0: weighted=0.5759 plain=0.6347 lopsided=0.4327 corruption=0.0% fit=42.6s
+  nu=10.0: weighted=0.5759 plain=0.6347 lopsided=0.4326 corruption=0.0% fit=31.5s
+  nu=20.0: weighted=0.5759 plain=0.6347 lopsided=0.4325 corruption=0.0% fit=30.8s
+  nu=30.0: weighted=0.5759 plain=0.6347 lopsided=0.4325 corruption=0.0% fit=31.2s
+
+=== SELECTED nu=4.0: weighted=0.5759 (baseline 0.5759, delta +0.0000) ===
+total time: 806s
+wrote tune_scratch/ticket24_tuning_result.json

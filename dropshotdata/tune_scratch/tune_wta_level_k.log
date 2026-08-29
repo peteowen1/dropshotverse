@@ -1,0 +1,30 @@
+dropped: {'unparseable date': 0, 'missing player id': 0, 'retirement/walkover/no score': 37345, '_diag_round_inversions_before': 75367441, '_diag_round_inversions_after': 0, '_total_in': 1226517, '_kept': 1189172}
+
+=== Step 1: WTA context-only vs sackmann, by tourney_level, tune window 2022-23 ===
+n: ctx=4093, base=4093
+  F     n=  45  sackmann_ll=0.6557  context_ll=0.6446  delta=-0.0112  current_mult=0.90
+  G     n= 876  sackmann_ll=0.5703  context_ll=0.5716  delta=+0.0012  current_mult=1.00
+  I     n=1505  sackmann_ll=0.6263  context_ll=0.6260  delta=-0.0002  current_mult=0.70
+  P     n=1288  sackmann_ll=0.6074  context_ll=0.6116  delta=+0.0042  current_mult=0.75
+  PM    n= 378  sackmann_ll=0.5993  context_ll=0.6026  delta=+0.0033  current_mult=0.85
+
+=== Step 2: grid-search WTA-specific level mults, tune window 2022-23 ONLY ===
+  WTA_uniform_mult=0.55  n=4093  tune_logloss=0.60997
+  WTA_uniform_mult=0.65  n=4093  tune_logloss=0.60873
+  WTA_uniform_mult=0.70  n=4093  tune_logloss=0.60828
+  WTA_uniform_mult=0.80  n=4093  tune_logloss=0.60768
+  WTA_uniform_mult=0.90  n=4093  tune_logloss=0.60738
+  WTA_uniform_mult=1.00  n=4093  tune_logloss=0.60733
+
+best WTA uniform mult on tune: 1.0 (logloss=0.60733)
+
+=== Step 3: ONE holdout reveal (2024-25) - sackmann vs context-only-default vs context-only-WTA-tuned ===
+  context-only [default (issue 26's as-ported mapping)] atp  n= 4358  holdout_logloss=0.61587
+  context-only [default (issue 26's as-ported mapping)] wta  n= 4240  holdout_logloss=0.61195
+  context-only [default (issue 26's as-ported mapping)] all  n= 8598  holdout_logloss=0.61394
+  context-only [WTA-tuned (uniform 1.0)] atp  n= 4358  holdout_logloss=0.61587
+  context-only [WTA-tuned (uniform 1.0)] wta  n= 4240  holdout_logloss=0.61011
+  context-only [WTA-tuned (uniform 1.0)] all  n= 8598  holdout_logloss=0.61303
+  sackmann (frozen 0.6120 basis)  atp  n= 4358  holdout_logloss=0.61727
+  sackmann (frozen 0.6120 basis)  wta  n= 4240  holdout_logloss=0.60651
+  sackmann (frozen 0.6120 basis)  all  n= 8598  holdout_logloss=0.61197

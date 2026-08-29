@@ -1,0 +1,13 @@
+holdout n=8,591
+Elo (post-fix) on this holdout: 0.61225
+Market on this holdout: 0.58903
+
+=== Arm A: Elo-only features, 2015-2023 (9yr, wide data) ===
+[Arm A: 9yr wide] n_train=45,841  cv round=464  cv_logloss=0.59210
+[Arm A: 9yr wide] HOLDOUT logloss=0.60424  acc=0.6627
+
+=== Arm B: Elo-only features, 2022-2023 ONLY (2yr, same feature set as A) ===
+[Arm B: 2yr narrow] n_train=10,839  cv round=239  cv_logloss=0.59618
+[Arm B: 2yr narrow] HOLDOUT logloss=0.60551  acc=0.6634
+
+(for reference: v2 - Elo+hier features, 2yr - reported holdout logloss 0.6017)

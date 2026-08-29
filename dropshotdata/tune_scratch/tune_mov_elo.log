@@ -1,0 +1,22 @@
+dropped: {'unparseable date': 0, 'missing player id': 0, 'retirement/walkover/no score': 37345, '_diag_round_inversions_before': 75367441, '_diag_round_inversions_after': 0, '_total_in': 1226517, '_kept': 1189172}
+no-op check (mov_scale=0): max |p_winner diff| vs frozen decay=0.3 arm = 0.00e+00 (OK structural no-op)
+
+=== no-op arm (should match Elo's frozen 0.6120 basis) ===
+  mov_scale=0.0 (no-op)                    n=8,598  logloss=0.61197  acc=0.6532
+
+=== MOV grid (decay=0.3 fixed) ===
+  mov_scale=0.3 damp_c=100.0               n=8,598  logloss=0.61202  acc=0.6545
+  mov_scale=0.3 damp_c=200.0               n=8,598  logloss=0.61204  acc=0.6546
+  mov_scale=0.3 damp_c=400.0               n=8,598  logloss=0.61206  acc=0.6547
+  mov_scale=0.6 damp_c=100.0               n=8,598  logloss=0.61216  acc=0.6547
+  mov_scale=0.6 damp_c=200.0               n=8,598  logloss=0.61223  acc=0.6550
+  mov_scale=0.6 damp_c=400.0               n=8,598  logloss=0.61231  acc=0.6552
+  mov_scale=1.0 damp_c=100.0               n=8,598  logloss=0.61245  acc=0.6557
+  mov_scale=1.0 damp_c=200.0               n=8,598  logloss=0.61263  acc=0.6555
+  mov_scale=1.0 damp_c=400.0               n=8,598  logloss=0.61283  acc=0.6554
+  mov_scale=1.5 damp_c=100.0               n=8,598  logloss=0.61294  acc=0.6555
+  mov_scale=1.5 damp_c=200.0               n=8,598  logloss=0.61331  acc=0.6560
+  mov_scale=1.5 damp_c=400.0               n=8,598  logloss=0.61372  acc=0.6567
+  mov_scale=2.0 damp_c=100.0               n=8,598  logloss=0.61352  acc=0.6562
+  mov_scale=2.0 damp_c=200.0               n=8,598  logloss=0.61415  acc=0.6568
+  mov_scale=2.0 damp_c=400.0               n=8,598  logloss=0.61476  acc=0.6575

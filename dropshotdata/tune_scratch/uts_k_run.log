@@ -1,0 +1,56 @@
+loading + preparing archive...
+
+=== STEP 0: correctness gate - refactored run_elo(), k_mode='sackmann' default ===
+  sackmann (blend=0.0, decay=0.3): n=8598 logloss=0.6120 (expect ~0.6120, per RESUME-beat-elo.md)
+  OK: matches the previously-committed number - refactor did not change the sackmann path
+
+=== STEP 1: sanity-check uts_kfunction() range on REAL archive ratings ===
+  overall ratings from the sackmann fit: n=44585 min=949.7 p1=1191.2 p50=1446.4 p99=2090.1 max=2733.8 (START=1500.0)
+  uts_kfunction() over these ratings: min=1.000 p1=1.027 p50=12.581 p99=18.417 max=18.958
+  reference checkpoints (expect ~10x/5.5x/1.64x/1.07x/1.008x):
+    rating=1500: kFunction=10.000
+    rating=1600: kFunction=5.495
+    rating=1800: kFunction=1.640
+    rating=2000: kFunction=1.073
+    rating=2200: kFunction=1.008
+  fraction of real ratings with kFunction>3.0 (still-provisional zone): 0.9073
+  fraction of real ratings outside [1000,2500] (far outside UTS's own typical range): 0.0007
+
+=== STEP 2: UTS-K variant, decay=0.3 (primary, apples-to-apples bundle test) ===
+  UTS-K (blend=0.0, decay=0.3): n=8598 logloss=0.6127 atp=0.6156 wta=0.6096
+
+=== ANCHOR CHECKS (UTS-K, decay=0.3) ===
+  ATP top 5 active: [('Jannik Sinner', 2681), ('Carlos Alcaraz', 2601), ('Novak Djokovic', 2466), ('Alexander Zverev', 2427), ('Rafael Nadal', 2327)]
+    anchor: {'Alcaraz', 'Sinner'} in top 5? -> {'Alcaraz', 'Sinner'} PASS
+  WTA top 5 active: [('Aryna Sabalenka', 2666), ('Elena Rybakina', 2610), ('Iga Swiatek', 2544), ('Coco Gauff', 2537), ('Jessica Pegula', 2530)]
+    anchor: {'Swiatek', 'Sabalenka'} in top 5? -> {'Swiatek', 'Sabalenka'} PASS
+  anchor: no <10-match player in top 20 -> PASS
+  ANCHORS (UTS-K, decay=0.3): 3/3 passed -> PASS
+
+=== STEP 3: UTS-K variant, decay=0.0 (sensitivity check) ===
+  UTS-K (blend=0.0, decay=0.0): n=8598 logloss=0.6139 atp=0.6164 wta=0.6113
+
+=== ANCHOR CHECKS (UTS-K, decay=0.0) ===
+  ATP top 5 active: [('Jannik Sinner', 2707), ('Carlos Alcaraz', 2626), ('Novak Djokovic', 2495), ('Alexander Zverev', 2448), ('Rafael Nadal', 2402)]
+    anchor: {'Alcaraz', 'Sinner'} in top 5? -> {'Alcaraz', 'Sinner'} PASS
+  WTA top 5 active: [('Aryna Sabalenka', 2709), ('Elena Rybakina', 2651), ('Iga Swiatek', 2586), ('Coco Gauff', 2578), ('Jessica Pegula', 2571)]
+    anchor: {'Swiatek', 'Sabalenka'} in top 5? -> {'Swiatek', 'Sabalenka'} PASS
+  anchor: no <10-match player in top 20 -> PASS
+  ANCHORS (UTS-K, decay=0.0): 3/3 passed -> PASS
+
+=== STEP 4 (diagnostic, secondary): which piece of the UTS bundle drives the ATP/WTA split? ===
+  (context-multiplier stack alone, kFunction fixed=1.0; and kFunction alone, context fixed=32)
+  uts_context_only (decay=0.3): logloss=0.6131 atp=0.6159 wta=0.6102
+  uts_kfunc_only   (decay=0.3): logloss=0.6143 atp=0.6186 wta=0.6099
+  (diagnostic only - not scored as a real candidate arm, not anchor-checked)
+
+=== FINAL COMPARISON TABLE (2024-25 market-odds-joined holdout) ===
+                                                             model  logloss      atp      wta
+         Elo (current best: Sackmann K, ordering-fixed, decay=0.3) 0.611965 0.617273 0.606510
+                                            Elo (UTS K, decay=0.3) 0.612652 0.615588 0.609634
+                                            Elo (UTS K, decay=0.0) 0.613887 0.616422 0.611282
+Hierarchical (v25+round9, NOT rerun this task - cited for context) 0.627500      NaN      NaN
+
+wrote tune_scratch/uts_k_comparison.csv
+
+anchors: UTS decay=0.3 -> PASS; UTS decay=0.0 -> PASS

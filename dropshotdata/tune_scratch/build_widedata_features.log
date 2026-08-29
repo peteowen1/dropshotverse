@@ -1,0 +1,17 @@
+loading raw archive for fatigue + age + hand, 2015-2023...
+loading elo_raw_ratings_full.parquet + diag_layoff.parquet (both already full-archive)...
+computing as-of h2h from the FULL archive (same method as build_xgb_features.py)...
+merging...
+46,152 rows -> 45,841 after dropping 311 missing-feature rows (0.6739%)
+
+saved 45,841 rows, years 2015-2023
+date
+2015    5350
+2016    5611
+2017    5515
+2018    5593
+2019    5168
+2020    2647
+2021    5118
+2022    5275
+2023    5564

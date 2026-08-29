@@ -1,0 +1,15 @@
+fold 0 done
+fold 1 done
+fold 2 done
+fold 3 done
+fold 4 done
+
+OOF (train, 5-fold) logloss: 0.57316
+
+ATP-only isotonic: fit n=78,884
+  raw       n=4,357 logloss=0.59207
+  recal     n=4,357 logloss=0.59187
+
+Global isotonic (all tours pooled): fit n=118,912
+  raw       n=8,591 logloss=0.58992
+  recal     n=8,591 logloss=0.58987

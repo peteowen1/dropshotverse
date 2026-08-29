@@ -1,0 +1,5 @@
+model,logloss,atp,wta
+"Elo (current best: Sackmann K, ordering-fixed, decay=0.3)",0.6119654626324411,0.6172732093121226,0.6065100003612022
+"Elo (UTS K, decay=0.3)",0.6126517408327685,0.6155876418661915,0.6096341331196418
+"Elo (UTS K, decay=0.0)",0.6138870098363179,0.6164218043139207,0.6112816715501403
+"Hierarchical (v25+round9, NOT rerun this task - cited for context)",0.6275,,
