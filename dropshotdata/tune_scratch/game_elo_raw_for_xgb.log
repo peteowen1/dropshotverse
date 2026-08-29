@@ -1,0 +1,7 @@
+loading prepared archive...
+  1,189,172 rows
+  ...300,000/1,189,172
+  ...600,000/1,189,172
+  ...900,000/1,189,172
+usable rows: 1,185,838/1,189,172 (99.7%)
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\game_elo_raw_ratings_full.parquet (1,189,172 rows)

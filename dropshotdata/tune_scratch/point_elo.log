@@ -1,0 +1,29 @@
+loading prepared archive...
+  1,189,172 rows total
+
+=== reference: match-level Elo (existing frozen model, not retrained) ===
+  ALL/tour-level locked config (blend=0.0, decay=0.3, k_mode=sackmann): 0.61200
+
+=== fitting point-level Elo ===
+  [point] usable rows: 327,046/1,189,172 (27.5%)
+    ALL: n=10,680  log-loss=0.66712
+    atp: n=5,497  log-loss=0.66910
+    wta: n=5,183  log-loss=0.66503
+
+=== fitting game-level Elo ===
+    [game] ...300,000/1,189,172  (used 299,315)
+    [game] ...600,000/1,189,172  (used 599,264)
+    [game] ...900,000/1,189,172  (used 898,645)
+  [game] usable rows: 1,185,838/1,189,172 (99.7%)
+    ALL: n=11,063  log-loss=0.64079
+    atp: n=5,770  log-loss=0.64641
+    wta: n=5,293  log-loss=0.63467
+
+=== fitting set-level Elo ===
+    [set] ...300,000/1,189,172  (used 290,146)
+    [set] ...600,000/1,189,172  (used 587,823)
+    [set] ...900,000/1,189,172  (used 886,532)
+  [set] usable rows: 1,161,865/1,189,172 (97.7%)
+    ALL: n=11,022  log-loss=0.60472
+    atp: n=5,735  log-loss=0.60791
+    wta: n=5,287  log-loss=0.60127

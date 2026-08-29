@@ -1,0 +1,25 @@
+loading tournament fields...
+building hier snapshots...
+loading prepared archive...
+replaying 1,189,172 matches, snapshotting 8 cutoff dates...
+  ...300,000/1,189,172  (7s)
+  ...600,000/1,189,172  (15s)
+  ...900,000/1,189,172  (24s)
+replay done: 32s, 16/16 tournaments snapshotted
+building elo snapshots...
+  [elo alpha=0.0] avg_logloss=0.2346  R64=0.6287  R32=0.4599  R16=0.2692  QF=0.1376  SF=0.0854  F=0.0391  W=0.0226
+  [elo alpha=0.5] avg_logloss=0.2346  R64=0.6287  R32=0.4599  R16=0.2688  QF=0.1381  SF=0.0854  F=0.0393  W=0.0223
+  [elo alpha=1.0] avg_logloss=0.2349  R64=0.6287  R32=0.4597  R16=0.2691  QF=0.1386  SF=0.0858  F=0.0397  W=0.0223
+  [elo alpha=1.5] avg_logloss=0.2351  R64=0.6287  R32=0.4596  R16=0.2696  QF=0.1392  SF=0.0861  F=0.0401  W=0.0226
+  [elo alpha=2.0] avg_logloss=0.2353  R64=0.6287  R32=0.4595  R16=0.2699  QF=0.1396  SF=0.0861  F=0.0405  W=0.0227
+  [hier alpha=0.0] avg_logloss=0.2941  R64=0.6825  R32=0.5819  R16=0.3683  QF=0.2276  SF=0.1091  F=0.0576  W=0.0317
+  [hier alpha=0.5] avg_logloss=0.2962  R64=0.6860  R32=0.5627  R16=0.3842  QF=0.2314  SF=0.1148  F=0.0606  W=0.0338
+  [hier alpha=1.0] avg_logloss=0.2978  R64=0.6811  R32=0.5744  R16=0.3869  QF=0.2232  SF=0.1181  F=0.0643  W=0.0369
+  [hier alpha=1.5] avg_logloss=0.2978  R64=0.6743  R32=0.5566  R16=0.3871  QF=0.2203  SF=0.1158  F=0.0839  W=0.0468
+  [hier alpha=2.0] avg_logloss=0.3027  R64=0.6812  R32=0.5525  R16=0.3840  QF=0.2393  SF=0.1198  F=0.0863  W=0.0562
+
+saved -> C:\dev\dropshotverse\dropshotdata\tune_scratch\hot_sweep_results.parquet
+
+=== best alpha per model (by avg_logloss across stages) ===
+  elo: best alpha=0.5  avg_logloss=0.2346  (alpha=0 avg_logloss=0.2346)
+  hier: best alpha=0.0  avg_logloss=0.2941  (alpha=0 avg_logloss=0.2941)

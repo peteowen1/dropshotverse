@@ -5,3 +5,11 @@ dropshotdata/manifest/
 __pycache__/
 *.pyc
 .claude/scheduled_tasks.lock
+
+# trained models and raw downloaded data stay out of git (piggyback/GitHub
+# Releases instead) - *.parquet/*.pkl above already cover most of this, but
+# xgb model caches save as .json and the tennismylife bridge pulls raw CSVs
+# directly into tune_scratch
+dropshotdata/tune_scratch/xgb_bagged_model_cache*/
+dropshotdata/tune_scratch/tml_2026_*.csv
+dropshotdata/tune_scratch/us_open_2026_predictions.json

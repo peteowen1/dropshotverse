@@ -1,0 +1,26 @@
+building shared base features...
+step 1: Elo + engineered features for 1995-2023...
+  162,629 rows
+step 2: hierarchical-model posterior state for 1995-2023 (frozen v25 config, ~60-90s regardless of year count)...
+  exit=0  elapsed=84s
+  162,629 -> 118,912 after hier merge (26.8814% missing, dropped)
+step 3b: serve/return-form features (full archive, EWM span=15)...
+  118,912 -> 112,062 after playstyle merge (5.7606% missing, dropped)
+  112,062 -> 112,062 after set-Elo merge (0.0000% missing, dropped)
+  112,062 -> 112,062 after game-Elo merge (0.0000% missing, dropped)
+  9,997 -> 9,997 after set-Elo merge (0.0000% missing, dropped)
+  9,997 -> 9,997 after game-Elo merge (0.0000% missing, dropped)
+
+=== training A_match_only ===
+  A_match_only: ALL log-loss=0.59322
+
+=== training D_match_set_game ===
+  D_match_set_game: ALL log-loss=0.59264
+
+=== paired comparison, n=8,294 ===
+  A (match only)    logloss=0.59322
+  D (match+set+game) logloss=0.59264
+  mean(D-A) = -0.00058
+  5000x row-level bootstrap CI on mean(D-A): [-0.00164, +0.00046]  unresolved (CI spans zero)
+  atp: mean(D-A)=+0.00051  CI [-0.00089, +0.00193]  unresolved (CI spans zero)
+  wta: mean(D-A)=-0.00170  CI [-0.00321, -0.00006]  D wins

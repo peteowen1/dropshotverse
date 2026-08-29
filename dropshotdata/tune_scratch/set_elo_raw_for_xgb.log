@@ -1,0 +1,7 @@
+loading prepared archive (reusing hierarchical_model's load_prepared - same has_points/total_games_w/l/score columns and round-order fix)...
+  1,189,172 rows
+  ...300,000/1,189,172
+  ...600,000/1,189,172
+  ...900,000/1,189,172
+usable (parseable score) rows: 1,161,865/1,189,172 (97.7%)
+wrote C:\dev\dropshotverse\dropshotdata\tune_scratch\set_elo_raw_ratings_full.parquet (1,189,172 rows)

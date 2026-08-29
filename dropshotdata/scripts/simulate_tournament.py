@@ -105,11 +105,12 @@ def simulate_frozen(bracket: list[str], ratings: dict[str, float], rng: np.rando
     return stage_reached
 
 
-def run_one_tournament(tour: str, tourney_id: str, year: int, n_sims: int = 2000, seed: int = 0,
-                        log=print) -> dict:
-    """Runs the full pipeline for one Slam instance. Returns a dict with
-    field_uids, real_stage, probs (per-uid per-stage reach probability),
-    ratings, and a top_seed_uid anchor for the caller to check/aggregate."""
+def load_tournament_field(tour: str, tourney_id: str, year: int) -> dict:
+    """Everything about one Slam instance that doesn't depend on which match
+    model predicts it: field, seeding, surface, start date, and the real
+    finishing stage of every entrant. Factored out of run_one_tournament()
+    so simulate_tournament_updating.py (hierarchical-model arms) can reuse
+    it instead of re-deriving field/ground-truth logic a second time."""
     raw = pd.read_csv(DD / "raw/github" / tour / f"{tour}_matches_{year}.csv", low_memory=False)
     tmatch = raw[raw["tourney_id"] == tourney_id].copy()
     tmatch["date"] = pd.to_datetime(tmatch["tourney_date"], format="%Y%m%d")
@@ -118,6 +119,7 @@ def run_one_tournament(tour: str, tourney_id: str, year: int, n_sims: int = 2000
     r128 = tmatch[tmatch["round"] == "R128"]
 
     date0 = tmatch["date"].iloc[0]
+    surface = str(tmatch["surface"].iloc[0]).strip().title()
     seed_map: dict[str, float] = {}
     field_uids: list[str] = []
     for row in r128.itertuples():
@@ -126,6 +128,42 @@ def run_one_tournament(tour: str, tourney_id: str, year: int, n_sims: int = 2000
             if pd.notna(seed_val):
                 seed_map[uid] = seed_val
     field_uids = sorted(set(field_uids))
+
+    real_depth: dict[str, int] = {uid: 0 for uid in field_uids}
+    champion_uid: str | None = None
+    for row in tmatch.itertuples():
+        r = row.round
+        if r not in STAGE_ORDER:
+            continue
+        idx = STAGE_ORDER.index(r)
+        for uid in (row.winner_uid, row.loser_uid):
+            if uid in real_depth:
+                real_depth[uid] = max(real_depth[uid], idx)
+        if r == "F":
+            champion_uid = row.winner_uid
+    real_stage = {uid: STAGE_ORDER[d] for uid, d in real_depth.items()}
+    if champion_uid in real_stage:
+        real_stage[champion_uid] = "W"
+
+    field = pd.DataFrame({"uid": field_uids, "seed": [seed_map.get(u, np.nan) for u in field_uids]})
+    top_seed_uid = field.loc[field["seed"] == field["seed"].min(), "uid"].iloc[0] if field["seed"].notna().any() \
+        else None
+
+    return {"field_uids": field_uids, "seed_map": seed_map, "field": field, "date0": date0,
+            "surface": surface, "real_stage": real_stage, "top_seed_uid": top_seed_uid}
+
+
+def run_one_tournament(tour: str, tourney_id: str, year: int, n_sims: int = 2000, seed: int = 0,
+                        log=print) -> dict:
+    """Runs the full pipeline for one Slam instance. Returns a dict with
+    field_uids, real_stage, probs (per-uid per-stage reach probability),
+    ratings, and a top_seed_uid anchor for the caller to check/aggregate."""
+    tf = load_tournament_field(tour, tourney_id, year)
+    field_uids = tf["field_uids"]
+    field = tf["field"]
+    date0 = tf["date0"]
+    real_stage = tf["real_stage"]
+    top_seed_uid = tf["top_seed_uid"]
 
     elo = pd.read_parquet(DD / "tune_scratch/elo_raw_ratings_full.parquet")
     elo = elo[(elo["tour"] == tour) & (elo["level_file"] == "tour") & (elo["date"] < date0)]
@@ -144,24 +182,6 @@ def run_one_tournament(tour: str, tourney_id: str, year: int, n_sims: int = 2000
         else:
             ratings[uid] = 1500.0
 
-    field = pd.DataFrame({"uid": field_uids, "seed": [seed_map.get(u, np.nan) for u in field_uids]})
-
-    real_depth: dict[str, int] = {uid: 0 for uid in field_uids}
-    champion_uid: str | None = None
-    for row in tmatch.itertuples():
-        r = row.round
-        if r not in STAGE_ORDER:
-            continue
-        idx = STAGE_ORDER.index(r)
-        for uid in (row.winner_uid, row.loser_uid):
-            if uid in real_depth:
-                real_depth[uid] = max(real_depth[uid], idx)
-        if r == "F":
-            champion_uid = row.winner_uid
-    real_stage = {uid: STAGE_ORDER[d] for uid, d in real_depth.items()}
-    if champion_uid in real_stage:
-        real_stage[champion_uid] = "W"
-
     rng = np.random.default_rng(seed)
     stage_counts = {uid: {s: 0 for s in STAGE_ORDER} for uid in field_uids}
     for _ in range(n_sims):
@@ -173,9 +193,6 @@ def run_one_tournament(tour: str, tourney_id: str, year: int, n_sims: int = 2000
                 stage_counts[uid][STAGE_ORDER[s_idx]] += 1
 
     probs = {uid: {s: stage_counts[uid][s] / n_sims for s in STAGE_ORDER} for uid in field_uids}
-
-    top_seed_uid = field.loc[field["seed"] == field["seed"].min(), "uid"].iloc[0] if field["seed"].notna().any() \
-        else None
 
     log(f"  [{tour} {tourney_id}] field={len(field_uids)} seeded={field['seed'].notna().sum()} "
         f"top_seed_rating={ratings.get(top_seed_uid, float('nan')):.1f}")

@@ -4,9 +4,14 @@ results, rather than drawing any conclusion from a single tournament's
 n=128. Reuses simulate_tournament.run_one_tournament() unchanged."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
+import pandas as pd
 
 from simulate_tournament import STAGE_ORDER, run_one_tournament
+
+SCRATCH = Path(r"C:\dev\dropshotverse\dropshotdata\tune_scratch")
 
 TOURNAMENTS = [
     (tour, f"{year}-{code}", year)
@@ -23,6 +28,7 @@ def main() -> None:
     all_y: dict[str, list[int]] = {s: [] for s in STAGE_ORDER[1:]}
     all_p: dict[str, list[float]] = {s: [] for s in STAGE_ORDER[1:]}
     per_tournament_top_seed_rank: list[tuple[str, str, int, int]] = []
+    rows_out = []   # per-tournament/per-stage y,p - same format as simulate_tournament_xgb.py's, for a joint CI
 
     for tour, tourney_id, year in TOURNAMENTS:
         result = run_one_tournament(tour, tourney_id, year, n_sims=2000, seed=hash(tourney_id + tour) % 100000,
@@ -43,6 +49,9 @@ def main() -> None:
             p = [probs[u][stage] for u in field_uids]
             all_y[stage].extend(y)
             all_p[stage].extend(p)
+            for u, yi, pi in zip(field_uids, y, p):
+                rows_out.append({"arm": "elo", "tour": tour, "tourney_id": tourney_id, "uid": u,
+                                "stage": stage, "y": yi, "p": pi})
 
     log("\n=== anchor: top seed's simulated title-probability rank, per tournament ===")
     for tour, tid, rank, n in per_tournament_top_seed_rank:
@@ -61,6 +70,10 @@ def main() -> None:
         log(f"  >= {stage:4s}  n={len(y):4d}  base_rate={y.mean():.3f}  "
             f"model_logloss={ll:.4f}  flat_logloss={base_ll:.4f}  "
             f"{'model wins' if ll < base_ll else 'FLAT WINS'}  (delta={ll - base_ll:+.4f})")
+
+    out_path = SCRATCH / "simulate_tournament_yp_elo.parquet"
+    pd.DataFrame(rows_out).to_parquet(out_path)
+    log(f"\nsaved {len(rows_out):,} per-tournament/per-stage rows -> {out_path}")
 
 
 if __name__ == "__main__":

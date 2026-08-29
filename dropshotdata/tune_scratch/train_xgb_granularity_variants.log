@@ -1,0 +1,28 @@
+building shared base features (elo/hier/playstyle)...
+step 1: Elo + engineered features for 1995-2023...
+  162,629 rows
+step 2: hierarchical-model posterior state for 1995-2023 (frozen v25 config, ~60-90s regardless of year count)...
+  exit=0  elapsed=67s
+  162,629 -> 118,912 after hier merge (26.8814% missing, dropped)
+step 3b: serve/return-form features (full archive, EWM span=15)...
+  118,912 -> 112,062 after playstyle merge (5.7606% missing, dropped)
+merging set-Elo + game-Elo into train...
+  112,062 -> 112,062 after set-Elo merge (0.0000% missing, dropped)
+  112,062 -> 112,062 after game-Elo merge (0.0000% missing, dropped)
+merging set-Elo + game-Elo into holdout...
+  9,997 -> 9,997 after set-Elo merge (0.0000% missing, dropped)
+  9,997 -> 9,997 after game-Elo merge (0.0000% missing, dropped)
+
+=== variant C_set_only: ['hier_dmean_diff', 'hier_dvar_diff', 'hier_dvar_sum', 'weeks_since_last_diff', 'n_prior_diff', 'h2h_diff', 'best_of', 'age_diff', 'fatigue_diff', 'hier_logit_pwinner', 'serve_form_diff_targeted', 'return_form_diff_targeted', 'set_elo_diff', 'set_elo_logit_pwinner'] ===
+  ALL  n=8,294  model=0.59392  market=0.59352
+  ATP  n=4,209  model=0.59691  market=0.59372
+  WTA  n=4,085  model=0.59084  market=0.59330
+
+=== variant D_match_set_game: ['elo_overall_diff', 'elo_surface_diff', 'elo_logit_pwinner', 'hier_dmean_diff', 'hier_dvar_diff', 'hier_dvar_sum', 'weeks_since_last_diff', 'n_prior_diff', 'h2h_diff', 'best_of', 'age_diff', 'fatigue_diff', 'hier_logit_pwinner', 'serve_form_diff_targeted', 'return_form_diff_targeted', 'set_elo_diff', 'set_elo_logit_pwinner', 'game_elo_diff', 'game_elo_logit_pwinner'] ===
+  ALL  n=8,294  model=0.59264  market=0.59352
+  ATP  n=4,209  model=0.59504  market=0.59372
+  WTA  n=4,085  model=0.59016  market=0.59330
+
+=== reference (already reported, not re-run here) ===
+A_match_only      ALL=0.59322  ATP=0.59454  WTA=0.59186  (market ALL=0.59352 ATP=0.59372 WTA=0.59330)
+B_match_plus_set  ALL=0.59268  ATP=0.59428  WTA=0.59103

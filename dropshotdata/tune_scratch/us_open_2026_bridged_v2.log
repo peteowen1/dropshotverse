@@ -1,0 +1,94 @@
+=== loading cached bagged XGBoost model (skip retrain) ===
+step 3b: serve/return-form features (full archive, EWM span=15)...
+loading age table (254 pool players)...
+building bridged archive (real archive + tennismylife 2026 gap-fill)...
+[atp] downloading tennismylife 2026 data...
+  765 rows after 2026-05-25
+  33 winner/loser slots resolved to a synthetic new-player id (genuinely absent from the archive under any spelling checked)
+[wta] downloading tennismylife 2026 data...
+  672 rows after 2026-05-25
+  27 winner/loser slots resolved to a synthetic new-player id (genuinely absent from the archive under any spelling checked)
+combined: 1,226,517 archive rows + 1,437 bridge rows = 1,227,954
+building hier snapshots (one bridged-archive replay, both tours' fields)...
+replaying 1,190,554 matches, snapshotting 1 cutoff dates...
+  ...300,000/1,190,554  (5s)
+  ...600,000/1,190,554  (11s)
+  ...900,000/1,190,554  (18s)
+  2 tournament(s) never reached their own cutoff date in this data (latest available: 2026-08-24) - snapshotting at end-of-data instead
+replay done: 25s, 2/2 tournaments snapshotted
+  [atp] 128 entrants, 32 seeded
+  [wta] 128 entrants, 32 seeded
+
+=== MEN'S SINGLES: top 15 by simulated P(title) ===
+   1. Carlos Alcaraz               (#2)   P(title)=0.276  P(F)=0.404  P(SF)=0.534  P(QF)=0.689
+   2. Arthur Fils                  (#10)  P(title)=0.169  P(F)=0.264  P(SF)=0.401  P(QF)=0.551
+   3. Alexander Zverev             (#1)   P(title)=0.095  P(F)=0.181  P(SF)=0.290  P(QF)=0.422
+   4. Rafael Jódar                 (#12)  P(title)=0.087  P(F)=0.175  P(SF)=0.314  P(QF)=0.503
+   5. Ben Shelton                  (#8)   P(title)=0.070  P(F)=0.125  P(SF)=0.226  P(QF)=0.418
+   6. Taylor Fritz                 (#9)   P(title)=0.049  P(F)=0.107  P(SF)=0.206  P(QF)=0.382
+   7. Frances Tiafoe               (#11)  P(title)=0.045  P(F)=0.110  P(SF)=0.242  P(QF)=0.442
+   8. Félix Auger-Aliassime        (#3)   P(title)=0.038  P(F)=0.090  P(SF)=0.209  P(QF)=0.379
+   9. Novak Djokovic               (#4)   P(title)=0.029  P(F)=0.076  P(SF)=0.168  P(QF)=0.311
+  10. Brandon Nakashima            (#16)  P(title)=0.025  P(F)=0.063  P(SF)=0.151  P(QF)=0.312
+  11. Lorenzo Musetti              (#13)  P(title)=0.025  P(F)=0.069  P(SF)=0.161  P(QF)=0.344
+  12. Flavio Cobolli               (#5)   P(title)=0.015  P(F)=0.046  P(SF)=0.115  P(QF)=0.271
+  13. Learner Tien                 (#14)  P(title)=0.014  P(F)=0.054  P(SF)=0.157  P(QF)=0.344
+  14. Daniil Medvedev              (#7)   P(title)=0.009  P(F)=0.036  P(SF)=0.106  P(QF)=0.264
+  15. Casper Ruud                  (#19)  P(title)=0.008  P(F)=0.028  P(SF)=0.077  P(QF)=0.177
+
+  top 15 by xgb-BT rating (scalar strength, not tied to this specific draw):
+   1. Carlos Alcaraz               BT=+3.213
+   2. Arthur Fils                  BT=+2.653
+   3. Rafael Jódar                 BT=+2.552
+   4. Frances Tiafoe               BT=+2.292
+   5. Ben Shelton                  BT=+2.151
+   6. Félix Auger-Aliassime        BT=+2.076
+   7. Taylor Fritz                 BT=+1.986
+   8. Learner Tien                 BT=+1.946
+   9. Lorenzo Musetti              BT=+1.903
+  10. Novak Djokovic               BT=+1.840
+  11. Alexander Zverev             BT=+1.832
+  12. Brandon Nakashima            BT=+1.788
+  13. Daniil Medvedev              BT=+1.688
+  14. Flavio Cobolli               BT=+1.528
+  15. Casper Ruud                  BT=+1.515
+
+  anchor: #1 seed (Alexander Zverev)'s own simulated title-prob rank: 3 of 128
+
+=== WOMEN'S SINGLES: top 15 by simulated P(title) ===
+   1. Aryna Sabalenka              (#1)   P(title)=0.211  P(F)=0.327  P(SF)=0.503  P(QF)=0.653
+   2. Coco Gauff                   (#4)   P(title)=0.171  P(F)=0.291  P(SF)=0.496  P(QF)=0.685
+   3. Elena Rybakina               (#2)   P(title)=0.148  P(F)=0.264  P(SF)=0.417  P(QF)=0.591
+   4. Iga Świątek                  (#8)   P(title)=0.139  P(F)=0.239  P(SF)=0.375  P(QF)=0.608
+   5. Jessica Pegula               (#3)   P(title)=0.092  P(F)=0.203  P(SF)=0.383  P(QF)=0.588
+   6. Elina Svitolina              (#9)   P(title)=0.042  P(F)=0.096  P(SF)=0.203  P(QF)=0.386
+   7. Mirra Andreeva               (#5)   P(title)=0.040  P(F)=0.093  P(SF)=0.196  P(QF)=0.416
+   8. Marta Kostyuk                (#11)  P(title)=0.030  P(F)=0.076  P(SF)=0.189  P(QF)=0.360
+   9. Linda Nosková                (#6)   P(title)=0.025  P(F)=0.060  P(SF)=0.151  P(QF)=0.311
+  10. Belinda Bencic               (#12)  P(title)=0.020  P(F)=0.063  P(SF)=0.150  P(QF)=0.303
+  11. Amanda Anisimova             (#10)  P(title)=0.019  P(F)=0.048  P(SF)=0.119  P(QF)=0.248
+  12. Naomi Osaka                  (#13)  P(title)=0.016  P(F)=0.045  P(SF)=0.106  P(QF)=0.244
+  13. Karolína Muchová             (#7)   P(title)=0.014  P(F)=0.042  P(SF)=0.118  P(QF)=0.309
+  14. Madison Keys                 (#22)  P(title)=0.009  P(F)=0.031  P(SF)=0.075  P(QF)=0.174
+  15. Sorana Cîrstea               (#16)  P(title)=0.004  P(F)=0.013  P(SF)=0.047  P(QF)=0.151
+
+  top 15 by xgb-BT rating (scalar strength, not tied to this specific draw):
+   1. Coco Gauff                   BT=+3.044
+   2. Aryna Sabalenka              BT=+2.836
+   3. Iga Świątek                  BT=+2.649
+   4. Jessica Pegula               BT=+2.583
+   5. Elena Rybakina               BT=+2.431
+   6. Elina Svitolina              BT=+2.286
+   7. Marta Kostyuk                BT=+2.077
+   8. Belinda Bencic               BT=+1.885
+   9. Mirra Andreeva               BT=+1.871
+  10. Karolína Muchová             BT=+1.768
+  11. Amanda Anisimova             BT=+1.574
+  12. Naomi Osaka                  BT=+1.436
+  13. Linda Nosková                BT=+1.384
+  14. Madison Keys                 BT=+1.342
+  15. Alexandra Eala               BT=+1.308
+
+  anchor: #1 seed (Aryna Sabalenka)'s own simulated title-prob rank: 1 of 128
+
+saved -> C:\dev\dropshotverse\dropshotdata\tune_scratch\us_open_2026_predictions.json

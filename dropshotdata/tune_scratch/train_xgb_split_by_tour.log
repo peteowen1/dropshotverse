@@ -1,0 +1,18 @@
+building features (same pipeline as train_best_model.py)...
+step 1: Elo + engineered features for 1995-2023...
+  162,629 rows
+step 2: hierarchical-model posterior state for 1995-2023 (frozen v25 config, ~60-90s regardless of year count)...
+  exit=0  elapsed=91s
+  162,629 -> 118,912 after hier merge (26.8814% missing, dropped)
+step 3b: serve/return-form features (full archive, EWM span=15)...
+  118,912 -> 112,062 after playstyle merge (5.7606% missing, dropped)
+
+=== training SPLIT (per-tour) models ===
+  [atp] train n=75,069  holdout n=4,209
+  [wta] train n=36,993  holdout n=4,085
+
+=== RESULTS: split vs combined (same holdout rows, same everything else) ===
+  ATP  n=4,209  split=0.59525  combined=0.59454  delta=+0.00071  combined wins
+  WTA  n=4,085  split=0.59094  combined=0.59186  delta=-0.00092  split wins
+
+saved per-row split predictions -> C:\dev\dropshotverse\dropshotdata\tune_scratch\xgb_split_by_tour_predictions.parquet (for a CI vs combined later if the point estimate warrants it)

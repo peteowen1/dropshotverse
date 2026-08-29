@@ -32,14 +32,16 @@ running 16 tournaments, 2000 sims each...
   wta 2025-580: top seed ranked #2 of 128 by simulated P(title)  [OK]
   wta 2025-520: top seed ranked #1 of 128 by simulated P(title)  [OK]
   wta 2025-540: top seed ranked #1 of 128 by simulated P(title)  [OK]
-  wta 2025-560: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2025-560: top seed ranked #2 of 128 by simulated P(title)  [OK]
   top seed in simulated top-3 by title chance: 16/16 tournaments
 
 === POOLED stage-reaching log-loss across all 16 tournaments ===
-  >= R64   n=2048  base_rate=0.500  model_logloss=0.6251  flat_logloss=0.6931  model wins  (delta=-0.0680)
-  >= R32   n=2048  base_rate=0.250  model_logloss=0.4588  flat_logloss=0.5623  model wins  (delta=-0.1035)
-  >= R16   n=2048  base_rate=0.125  model_logloss=0.2676  flat_logloss=0.3768  model wins  (delta=-0.1092)
-  >= QF    n=2048  base_rate=0.062  model_logloss=0.1381  flat_logloss=0.2338  model wins  (delta=-0.0957)
-  >= SF    n=2048  base_rate=0.031  model_logloss=0.0793  flat_logloss=0.1391  model wins  (delta=-0.0598)
-  >= F     n=2048  base_rate=0.016  model_logloss=0.0396  flat_logloss=0.0805  model wins  (delta=-0.0409)
-  >= W     n=2048  base_rate=0.008  model_logloss=0.0225  flat_logloss=0.0457  model wins  (delta=-0.0232)
+  >= R64   n=2048  base_rate=0.500  model_logloss=0.6256  flat_logloss=0.6931  model wins  (delta=-0.0676)
+  >= R32   n=2048  base_rate=0.250  model_logloss=0.4581  flat_logloss=0.5623  model wins  (delta=-0.1042)
+  >= R16   n=2048  base_rate=0.125  model_logloss=0.2679  flat_logloss=0.3768  model wins  (delta=-0.1089)
+  >= QF    n=2048  base_rate=0.062  model_logloss=0.1374  flat_logloss=0.2338  model wins  (delta=-0.0964)
+  >= SF    n=2048  base_rate=0.031  model_logloss=0.0785  flat_logloss=0.1391  model wins  (delta=-0.0606)
+  >= F     n=2048  base_rate=0.016  model_logloss=0.0399  flat_logloss=0.0805  model wins  (delta=-0.0406)
+  >= W     n=2048  base_rate=0.008  model_logloss=0.0230  flat_logloss=0.0457  model wins  (delta=-0.0227)
+
+saved 14,336 per-tournament/per-stage rows -> C:\dev\dropshotverse\dropshotdata\tune_scratch\simulate_tournament_yp_elo.parquet

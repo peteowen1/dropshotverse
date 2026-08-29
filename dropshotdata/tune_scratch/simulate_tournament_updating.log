@@ -1,0 +1,70 @@
+loading tournament fields...
+loading prepared archive...
+replaying 1,189,172 matches, snapshotting 8 cutoff dates...
+  ...300,000/1,189,172  (9s)
+  ...600,000/1,189,172  (19s)
+  ...900,000/1,189,172  (31s)
+replay done: 40s, 16/16 tournaments snapshotted
+  [atp:2024-580] field=128 missing_state=0 surface=Hard
+  [atp:2024-520] field=128 missing_state=0 surface=Clay
+  [atp:2024-540] field=128 missing_state=0 surface=Grass
+  [atp:2024-560] field=128 missing_state=1 surface=Hard
+  [atp:2025-580] field=128 missing_state=0 surface=Hard
+  [atp:2025-520] field=128 missing_state=0 surface=Clay
+  [atp:2025-540] field=128 missing_state=1 surface=Grass
+  [atp:2025-560] field=128 missing_state=0 surface=Hard
+  [wta:2024-580] field=128 missing_state=0 surface=Hard
+  [wta:2024-520] field=128 missing_state=0 surface=Clay
+  [wta:2024-540] field=128 missing_state=0 surface=Grass
+  [wta:2024-560] field=128 missing_state=0 surface=Hard
+  [wta:2025-580] field=128 missing_state=0 surface=Hard
+  [wta:2025-520] field=128 missing_state=0 surface=Clay
+  [wta:2025-540] field=128 missing_state=0 surface=Grass
+  [wta:2025-560] field=128 missing_state=0 surface=Hard
+
+=== anchor (frozen): top seed's simulated title-probability rank ===
+  atp 2024-580: rank #2 of 128  [OK]
+  atp 2024-520: rank #9 of 128  [check]
+  atp 2024-540: rank #1 of 128  [OK]
+  atp 2024-560: rank #1 of 128  [OK]
+  atp 2025-580: rank #1 of 128  [OK]
+  atp 2025-520: rank #2 of 128  [OK]
+  atp 2025-540: rank #3 of 128  [OK]
+  atp 2025-560: rank #1 of 128  [OK]
+  wta 2024-580: rank #1 of 128  [OK]
+  wta 2024-520: rank #1 of 128  [OK]
+  wta 2024-540: rank #1 of 128  [OK]
+  wta 2024-560: rank #2 of 128  [OK]
+  wta 2025-580: rank #5 of 128  [check]
+  wta 2025-520: rank #2 of 128  [OK]
+  wta 2025-540: rank #12 of 128  [check]
+  wta 2025-560: rank #4 of 128  [check]
+  top seed in top-3: 12/16
+
+=== anchor (updating): top seed's simulated title-probability rank ===
+  atp 2024-580: rank #4 of 128  [check]
+  atp 2024-520: rank #17 of 128  [check]
+  atp 2024-540: rank #1 of 128  [OK]
+  atp 2024-560: rank #1 of 128  [OK]
+  atp 2025-580: rank #1 of 128  [OK]
+  atp 2025-520: rank #2 of 128  [OK]
+  atp 2025-540: rank #5 of 128  [check]
+  atp 2025-560: rank #1 of 128  [OK]
+  wta 2024-580: rank #1 of 128  [OK]
+  wta 2024-520: rank #1 of 128  [OK]
+  wta 2024-540: rank #3 of 128  [OK]
+  wta 2024-560: rank #2 of 128  [OK]
+  wta 2025-580: rank #4 of 128  [check]
+  wta 2025-520: rank #2 of 128  [OK]
+  wta 2025-540: rank #18 of 128  [check]
+  wta 2025-560: rank #6 of 128  [check]
+  top seed in top-3: 10/16
+
+=== POOLED stage-reaching log-loss: frozen-hier vs updating-hier ===
+  >= R64   n=2048  base_rate=0.500  frozen_logloss=0.6626  updating_logloss=0.6634  delta(upd-frz)=+0.0008  frozen wins
+  >= R32   n=2048  base_rate=0.250  frozen_logloss=0.5317  updating_logloss=0.5397  delta(upd-frz)=+0.0081  frozen wins
+  >= R16   n=2048  base_rate=0.125  frozen_logloss=0.3273  updating_logloss=0.3219  delta(upd-frz)=-0.0054  updating wins
+  >= QF    n=2048  base_rate=0.062  frozen_logloss=0.1878  updating_logloss=0.1993  delta(upd-frz)=+0.0114  frozen wins
+  >= SF    n=2048  base_rate=0.031  frozen_logloss=0.0999  updating_logloss=0.1036  delta(upd-frz)=+0.0037  frozen wins
+  >= F     n=2048  base_rate=0.016  frozen_logloss=0.0568  updating_logloss=0.0464  delta(upd-frz)=-0.0104  updating wins
+  >= W     n=2048  base_rate=0.008  frozen_logloss=0.0316  updating_logloss=0.0331  delta(upd-frz)=+0.0015  frozen wins
