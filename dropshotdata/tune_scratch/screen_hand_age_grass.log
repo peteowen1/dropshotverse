@@ -1,0 +1,2 @@
+BASE+hand_atp_grass           n=112,062 round= 2766(cap=False) cv_logloss=0.57925  vs same-rows base=0.57928  delta=-0.00003
+BASE+age_atp_grass_extra      n=112,062 round= 2803(cap=False) cv_logloss=0.57932  vs same-rows base=0.57928  delta=+0.00004

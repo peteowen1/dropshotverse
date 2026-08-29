@@ -1,0 +1,4 @@
+coverage (global): 0.9802
+ATP-Grass rows: 8044  coverage there: 0.9244
+BASE+surf_layoff_diff_global    n=109,847 round= 2467(cap=False) cv_logloss=0.57908  vs same-rows base=0.57913  delta=-0.00006
+BASE+surf_layoff_diff_atp_grass n=111,454 round= 2271(cap=False) cv_logloss=0.57935  vs same-rows base=0.57932  delta=+0.00004

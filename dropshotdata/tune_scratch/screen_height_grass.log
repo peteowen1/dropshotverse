@@ -1,0 +1,4 @@
+ATP height missing: 0.0206  WTA height missing: 0.0941
+ATP-Grass rows: 8044  ht_diff coverage there: 0.9974
+BASE (same rows)          round= 2524(cap=False) cv_logloss=0.57903  n=112,041
+BASE+ht_diff_atp_grass    round= 2627(cap=False) cv_logloss=0.57905  delta=+0.00002  n=112,041

@@ -785,7 +785,48 @@ pull at all. **Rejected before the expensive full XGBoost retrain**: a
 standalone signal that gets worse in isolation isn't a promising downstream
 feature either.
 
-**Reading of these four nulls together, especially bagging's non-effect**:
+**Round 17 - drilled deeper into ATP-Grass itself before guessing more
+features.** Broke the n=508 segment down further: by `tourney_level`,
+`best_of`, `round`, and market-confidence bucket
+(`tune_scratch/diagnose_atp_grass_deeper.py`). **R128 alone (n=95, Slam
+first round - essentially Wimbledon's opening round) carries a gap of
++0.05103** - more than double any other segment measured all session. R128
+is the very first grass match of the season for most of the field, facing
+lower-ranked/qualifying opponents with thin history.
+
+Three quick feature tests, targeted-masked to ATP-Grass per round 15's
+pattern, all negligible: height (`screen_height_grass.py`, Δ+0.00002 -
+ATP's own height missingness is <1%, so this wasn't a coverage problem, the
+signal just isn't there once Elo/hier already encode career-long serve
+tendencies), lefty-handedness mismatch (`screen_hand_age_grass.py`,
+Δ−0.00003), and an ATP-grass-specific age effect (Δ+0.00004).
+
+Built an explicit "weeks since last match on THIS surface" feature
+(`tune_scratch/build_surface_layoff.py`) - distinct from the existing
+`weeks_since_last_diff` (overall layoff) - to directly signal season-opener
+staleness to the tree, rather than trying to fix the rating mechanism
+itself (round 16's rejected approach). **Caught a real bug before trusting
+it**: the first build sorted only by `date` (a TOURNAMENT start date,
+identical across every round of one event) with no round-rank tiebreak -
+exactly the causal-ordering bug class fixed repeatedly elsewhere in this
+project, which I'd simply forgotten to apply here. Fixed with the same
+`ROUND_RANK` table; median gap moved from an implausible 0.0 weeks to 0.9
+weeks, and the season-opener rate (>40 weeks) moved from 0% (holdout years
+weren't even loaded - a second bug, fixed alongside) to a plausible 19.2%.
+
+**Both the global and ATP-Grass-masked versions of the corrected feature
+came back negligible** (Δ−0.00006, Δ+0.00004). Sensible reading: `round`
+is already a categorical feature in the model, so the tree can already
+condition on "this is R128" directly - an explicit numeric staleness signal
+doesn't add anything beyond what the model can already infer from knowing
+the round. The residual R128 gap isn't about the model not knowing the
+situation; it's about being overconfident even knowing it, which points
+toward either a genuine calibration-under-thin-information problem (already
+tested and rejected, round 4/14) or opponent-quality information (who
+exactly the lower-ranked player is) this archive's features don't capture.
+
+**Reading of these nine ATP-Grass attempts together, especially bagging's
+non-effect**:
 grass's remaining gap looks like a systematic information deficit, not
 random noise. Bagging only reduces variance; it doing nothing for grass
 specifically suggests the model isn't just noisily wrong there, it's

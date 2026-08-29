@@ -392,16 +392,39 @@ up to a year with no corrective pull. Rejected before the expensive full
 XGBoost retrain - a standalone signal that gets worse in isolation isn't
 promising as a downstream feature either.
 
+## UPDATE 2026-08-29 (round 17 - found WHERE within ATP-Grass, five more
+attempts, all negative)
+
+Drilled into ATP-Grass's n=508 before guessing more features: **R128 alone
+(n=95, essentially Wimbledon's opening round) carries a gap of +0.05103** -
+more than double any other segment measured all session. R128 is the very
+first grass match of the season for most of the field, against
+lower-ranked/qualifying opponents with thin history.
+
+Five more targeted attempts, all negligible: height (ATP's own missingness
+is <1%, so not a coverage issue - the signal isn't there once Elo/hier
+already encode career-long serve tendencies), lefty-handedness mismatch,
+an ATP-grass-specific age effect, and an explicit "weeks since last match
+on THIS surface" feature (built to directly flag season-opener staleness -
+caught and fixed a real causal-ordering bug in its own construction along
+the way, same bug class this project has hit repeatedly, before trusting
+the null result). Sensible reading: `round` is already a categorical
+feature, so the tree can already condition on "this is R128" - staleness
+information doesn't add anything the model can't already infer from
+knowing the round. The residual gap is about being overconfident even
+knowing the situation, not about not knowing it.
+
 **Final state this session: ALL beats the market outright (0.59322 vs
 0.59352). WTA beats it comfortably (0.59186 vs 0.59330). ATP is within
 0.0008 of parity (0.59454 vs 0.59372), entirely concentrated in the Grass
-segment (n=508) after Hard and Clay were both brought to beating the
-market individually.** Cumulative gap closed from Elo's original 0.026 to
-essentially zero on the pooled number. Pete's literal goal ("both ATP and
-WTA beat the market") is very close but not fully met - four separate,
-mechanistically-motivated attempts at ATP-Grass specifically (nosurf state,
-bagging, rating rescaling, and now the decay-trigger mechanism itself) all
-came back negative, a genuinely thorough search of the levers this
+segment (n=508, and within that, R128 specifically) after Hard and Clay
+were both brought to beating the market individually.** Cumulative gap
+closed from Elo's original 0.026 to essentially zero on the pooled number.
+Pete's literal goal ("both ATP and WTA beat the market") is very close but
+not fully met - nine separate, mechanistically-motivated attempts at
+ATP-Grass specifically (nosurf state, bagging, rating rescaling, the
+decay-trigger mechanism, height, handedness, age, and surface-layoff twice)
+all came back negative, a genuinely thorough search of the levers this
 pipeline's data supports.
 
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
