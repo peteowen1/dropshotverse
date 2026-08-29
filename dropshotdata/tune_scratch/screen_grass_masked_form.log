@@ -1,0 +1,3 @@
+BASE (same rows)                  round= 2806(cap=False) cv_logloss=0.57939  n=112,062
+BASE+serve+return (unmasked)      round= 2513(cap=False) cv_logloss=0.57899  delta=-0.00040  n=112,062
+BASE+serve+return (grass-masked)  round= 2799(cap=False) cv_logloss=0.57908  delta=-0.00031  n=112,062

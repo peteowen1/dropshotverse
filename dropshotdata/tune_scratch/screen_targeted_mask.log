@@ -1,0 +1,2 @@
+BASE (same rows)      round= 2806(cap=False) cv_logloss=0.57939  n=112,062
+BASE+targeted-mask     round= 2528(cap=False) cv_logloss=0.57928  delta=-0.00011  n=112,062

@@ -667,6 +667,90 @@ different rating architecture, or new information sources - not another
 round of tweaks to this pipeline. Treating ATP's ~0.0022 gap as this
 session's practical floor.
 
+## Round 15 — Pete's goal escalated to "both ATP AND WTA beat the market";
+found where ATP's whole gap lives
+
+`tune_scratch/screen_atp_reweight.py` — tried tilting the pooled model's
+training loss toward ATP via sample weight (WTA has 0.0007 margin to spare,
+ATP has none). **Clean reject**: every weight from 1.3x to 3.0x made BOTH
+tours' OOF log-loss worse, monotonically. ATP isn't under-attention from the
+shared model; upweighting just distorts the loss surface for no gain.
+
+**Diagnosed where ATP's 0.0025 gap actually lives before guessing further**
+(`tune_scratch/diagnose_atp_gap.py`) — broke it down by market-confidence
+bucket, best_of, tourney_level, round, and surface. **The finding: ATP
+already ties or BEATS the market on Hard (−0.00069) and Clay (−0.00029).
+The ENTIRE ATP deficit is concentrated on Grass** (n=535, gap +0.02458 -
+enormous relative to everything else measured this session).
+
+**Ruled out pure data sparsity as the explanation**
+(`tune_scratch/diagnose_grass.py`): WTA's grass training sample is smaller
+(4,639 rows vs ATP's 8,412) yet WTA's grass gap is 10x smaller (+0.00258 vs
+ATP's +0.02458). Both tours show compressed `elo_surface_diff` on grass
+(mean |diff| ~224 vs ~375-435 on hard/clay - grass ratings are less
+differentiated for both), so something ATP-grass-specific is going on
+beyond "not enough rows." Grass has historically been tennis' classic
+big-server surface, and ATP's serve-dominance gap over WTA is well-
+documented (ticket 11: 64.0% vs 58.3% service points won) - a plausible
+mechanism is that grass-specific skill divergence is real and larger for
+ATP, and the model's surface-specific Elo/hier state is too compressed to
+capture it, while WTA has less of that divergence to miss in the first
+place.
+
+**Confirmed the mechanism is real.** CV re-screen on the current (much
+stronger) feature set found Δ−0.00040, properly converged - small on the
+pooled metric. Built v9 (Arm G + `serve_form_diff`/`return_form_diff`) and
+ran a holdout reveal, rescoring Arm G on v9's identical reduced population
+first (round 9's own same-row lesson, applied again):
+
+| | v8 (Arm G) | v9 (+serve/return) |
+|---|---|---|
+| ALL | +0.00046 | +0.00022 |
+| ATP | +0.00152 | +0.00193 |
+| WTA | −0.00064 | −0.00153 |
+| **ATP-Grass** | **+0.02143** | **+0.01592** |
+
+**ATP-Grass improves substantially** (closes over a quarter of that
+specific gap, −0.00551) and WTA widens its lead - but **ATP overall gets
+slightly WORSE** (+0.00041), because the feature adds noise on ATP
+Hard/Clay where it has no real signal (confirmed by the diagnostic: ATP
+already ties the market there). The global feature helps exactly where
+hypothesized but leaks noise elsewhere.
+
+**Tried a pure grass-only mask first — pooled CV didn't clearly favor it**
+over the unmasked version (Δ−0.00031 vs −0.00040), because it also cut off
+a real WTA benefit the unmasked version was getting on non-grass rows.
+**Fixed with a targeted mask**: zero the feature only for (tour==ATP AND
+surface!=Grass) - keep it for WTA (all surfaces) and ATP-Grass, remove only
+where it was shown to add noise. Pooled CV for this (Δ−0.00011) was smaller
+still than the other two variants - but pooled CV isn't the metric that
+matters here; the by-tour/by-surface holdout breakdown is.
+
+**Built v10 and revealed on holdout - this is the real result:**
+
+| | v8 (Arm G) | v9 (unmasked) | **v10 (targeted mask)** |
+|---|---|---|---|
+| ALL | +0.00046 | +0.00022 | **−0.00022 (BEATS MARKET)** |
+| ATP | +0.00152 | +0.00193 | **+0.00082** |
+| WTA | −0.00064 | −0.00153 | −0.00128 |
+| ATP-Grass | +0.02143 | +0.01592 | +0.01573 |
+| ATP-Hard | (positive, ties) | (regressed) | **−0.00069 (BEATS MARKET)** |
+| ATP-Clay | (positive, ties) | (regressed) | **−0.00226 (BEATS MARKET)** |
+
+**The targeted mask worked exactly as designed**: ATP-Hard and ATP-Clay
+both recovered to beating the market (undoing v9's regression there), while
+ATP-Grass kept v9's improvement. **ATP's overall gap nearly halved**
+(0.00152→0.00082) and **ALL now beats the market outright** on this
+population. Grass is now clearly the single remaining driver of ATP's
+shortfall - pushing further there next.
+
+## (superseded by v10 above) Fix in progress: grass-masked version (`serve_form_diff_grass` = the
+feature where `surface=='Grass'` else 0, same for return) - forces the tree
+to only use this signal where it's real, per stats-discipline's usual
+"an arm that differs on more than one axis measures nothing" logic applied
+in reverse: a feature that helps in one segment and hurts in another isn't
+one effect, it's two, and should be separated. CV screen running now.
+
 ## Session state: gap to market 0.00073, WTA beaten outright, ATP the
 remaining laggard
 

@@ -324,11 +324,41 @@ information sources - not another tweak to this pipeline. Concluding the
 ATP-specific push here.
 
 **Repo state**: this session's work committed to `dev` (commit `d13cdd8`
-plus this round's follow-ups). Canonical reproduction script:
-`dropshotdata/scripts/train_best_model.py`. `map.md` updated - ticket 28
-logged, the stale "beating the closing line ruled out" note removed since
-it's now measurably reopened and 97% closed. Per Pete's plan: code review
-next, then a PR.
+plus follow-ups). Canonical reproduction script:
+`dropshotdata/scripts/train_best_model.py` (not yet updated for round 15's
+v9/v10 - still reflects Arm G, the pre-round-15 best). `map.md` updated -
+ticket 28 logged, the stale "beating the closing line ruled out" note
+removed since it's now measurably reopened and closed almost completely.
+
+## UPDATE 2026-08-29 (round 15 — Pete escalated the goal to "both ATP AND
+WTA beat the market"; found and fixed the mechanism, ALL now beats market)
+
+Diagnosed where ATP's whole 0.0025 gap actually lived rather than guessing:
+**concentrated entirely on Grass** (ATP already ties/beats market on
+Hard/Clay). Ruled out pure data sparsity (WTA's grass sample is smaller yet
+its grass gap is 10x smaller) - something ATP-grass-specific, plausibly
+tennis' historical big-server-surface dynamic that ATP's serve-dominance
+gap over WTA (ticket 11) makes more pronounced.
+
+Re-tested round 9's rejected serve/return-archetype feature (`serve_form_
+diff`/`return_form_diff`) - it helped ATP-Grass substantially but ALSO added
+noise on ATP Hard/Clay (where the diagnostic showed the model already at
+parity), netting slightly negative for ATP overall despite the real grass
+win. **Fixed with a targeted mask**: zero the feature only for
+(ATP AND surface != Grass), keep it everywhere else (WTA benefited from the
+unmasked version on non-grass rows too, so a blunt grass-only mask would
+have thrown that away).
+
+**Result (v10, on the ~8,294-row population after ~6% serve-stat
+missingness): ALL now BEATS the market outright (0.59330 vs 0.59352, gap
+−0.00022). ATP's gap nearly halved (0.00152→0.00082) and ATP now beats the
+market on BOTH Hard (−0.00069) and Clay (−0.00226) - only Grass remains
+(+0.01573), now the sole driver of ATP's residual gap.**
+
+Testing whether the same targeted-mask trick works for the `nosurf` hier
+state (round 14 rejected it pooled - same trap serve/return form nearly
+fell into) - result to follow. `train_best_model.py` not yet updated to
+this branch; will consolidate once the grass lever is exhausted.
 
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
 

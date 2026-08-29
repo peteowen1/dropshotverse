@@ -1,0 +1,5 @@
+atp_weight=1.0  ATP_oof_ll=0.57932  WTA_oof_ll=0.56509  ALL_oof_ll=0.57453
+atp_weight=1.3  ATP_oof_ll=0.57949  WTA_oof_ll=0.56596  ALL_oof_ll=0.57494
+atp_weight=1.6  ATP_oof_ll=0.57956  WTA_oof_ll=0.56664  ALL_oof_ll=0.57521
+atp_weight=2.0  ATP_oof_ll=0.57956  WTA_oof_ll=0.56748  ALL_oof_ll=0.57550
+atp_weight=3.0  ATP_oof_ll=0.57988  WTA_oof_ll=0.56870  ALL_oof_ll=0.57611

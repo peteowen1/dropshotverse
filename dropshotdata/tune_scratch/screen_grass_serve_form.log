@@ -1,0 +1,4 @@
+grass rows: 13051, coverage on grass: {'serve_form_diff': 0.950961612137001, 'return_form_diff': 0.950961612137001}
+
+BASE (same rows)  n=112062 round=2806(cap=False) cv_logloss=0.57939
+BASE+serve+return n=112062 round=2513(cap=False) cv_logloss=0.57899  delta=-0.00040

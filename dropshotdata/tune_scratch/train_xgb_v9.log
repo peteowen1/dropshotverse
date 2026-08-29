@@ -1,0 +1,64 @@
+train rows: 112,062  years 1995-2023
+using pre-established cv round=2513 (cv_logloss=0.57899, from screen_grass_serve_form.py)
+holdout n=8,294
+
+--- ALL (n=8,294) ---
+  Arm H (v9, +serve/return form) logloss=0.59374  acc=0.6716
+  Elo                    logloss=0.61702
+  Market                 logloss=0.59352
+
+--- ATP (n=4,209) ---
+  Arm H (v9, +serve/return form) logloss=0.59565  acc=0.6719
+  Elo                    logloss=0.62138
+  Market                 logloss=0.59372
+
+--- WTA (n=4,085) ---
+  Arm H (v9, +serve/return form) logloss=0.59177  acc=0.6712
+  Elo                    logloss=0.61253
+  Market                 logloss=0.59330
+
+--- ATP-Grass (n=508) ---
+  Arm H (v9, +serve/return form) logloss=0.59879  acc=0.6713
+  Elo                    logloss=0.62786
+  Market                 logloss=0.58287
+
+--- ATP-Hard (n=2,444) ---
+  Arm H (v9, +serve/return form) logloss=0.59569  acc=0.6653
+  Elo                    logloss=0.61756
+  Market                 logloss=0.59491
+
+--- ATP-Clay (n=1,257) ---
+  Arm H (v9, +serve/return form) logloss=0.59430  acc=0.6850
+  Elo                    logloss=0.62620
+  Market                 logloss=0.59579
+
+--- WTA-Grass (n=511) ---
+  Arm H (v9, +serve/return form) logloss=0.61155  acc=0.6654
+  Elo                    logloss=0.63158
+  Market                 logloss=0.61740
+
+(reference: v2=0.6017, ..., Arm F=0.59017, Arm G=0.58992/0.58976-bagged)
+
+=== feature importance (gain) ===
+                  feature     total_gain
+0        elo_overall_diff  273592.187500
+12     hier_logit_pwinner  109289.203125
+2       elo_logit_pwinner   50929.632812
+3         hier_dmean_diff   26374.859375
+1        elo_surface_diff   15329.681641
+17          tourney_level   14130.751953
+10               age_diff   11000.664062
+13        serve_form_diff   10558.386719
+6   weeks_since_last_diff    9259.910156
+5           hier_dvar_sum    6669.670410
+7            n_prior_diff    5425.533691
+14       return_form_diff    5369.762695
+16                  round    5238.746094
+4          hier_dvar_diff    4958.961426
+15                surface    4874.428223
+8                h2h_diff    4467.462402
+18                   tour     993.165894
+11           fatigue_diff     534.055115
+9                 best_of     527.497620
+
+saved model + predictions
