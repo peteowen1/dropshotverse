@@ -1,0 +1,21 @@
+loading real field for atp 2025-540 (surface=Grass)...
+  R128 matches: 64
+  real field from raw R128 round: 128 (expect 128)
+  ratings resolved for all 128 field members (3 with no prior tour-level history, defaulted to START=1500)
+  field size: 128  (seeded: 32)
+  top seed uid=atp:206173  rating=2620.5  (sanity: should be well above 2000 for a Slam #1 seed)
+
+simulating 2000 frozen-rating brackets...
+
+top 5 by simulated P(title): [('atp:206173', '0.424'), ('atp:207989', '0.234'), ('atp:104925', '0.139'), ('atp:207733', '0.038'), ('atp:100644', '0.029')]
+top seed's own P(title) rank: 1 of 128
+
+=== stage-reaching log-loss (binary: did they reach >= this stage) ===
+               model  flat-base-rate
+  >= R64   n=128  base_rate=0.500  model_logloss=0.7195  flat_logloss=0.6931  FLAT WINS - check model
+  >= R32   n=128  base_rate=0.250  model_logloss=0.5688  flat_logloss=0.5623  FLAT WINS - check model
+  >= R16   n=128  base_rate=0.125  model_logloss=0.2971  flat_logloss=0.3768  model wins
+  >= QF    n=128  base_rate=0.062  model_logloss=0.1489  flat_logloss=0.2338  model wins
+  >= SF    n=128  base_rate=0.031  model_logloss=0.0493  flat_logloss=0.1391  model wins
+  >= F     n=128  base_rate=0.016  model_logloss=0.0185  flat_logloss=0.0805  model wins
+  >= W     n=128  base_rate=0.008  model_logloss=0.0115  flat_logloss=0.0457  model wins
