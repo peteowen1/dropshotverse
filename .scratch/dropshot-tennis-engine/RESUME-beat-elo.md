@@ -355,10 +355,30 @@ missingness): ALL now BEATS the market outright (0.59330 vs 0.59352, gap
 market on BOTH Hard (−0.00069) and Clay (−0.00226) - only Grass remains
 (+0.01573), now the sole driver of ATP's residual gap.**
 
-Testing whether the same targeted-mask trick works for the `nosurf` hier
-state (round 14 rejected it pooled - same trap serve/return form nearly
-fell into) - result to follow. `train_best_model.py` not yet updated to
-this branch; will consolidate once the grass lever is exhausted.
+Three further grass-specific attempts, all negligible: `nosurf` hier state
+grass-masked (Δ−0.00006), 5-seed bagging on v10 (ATP-Grass got very
+slightly WORSE, 0.59860→0.59877 - unlike v8, where bagging helped ATP a
+lot, v10's targeted-mask feature already absorbed that variance-reduction
+benefit), and rescaling `elo_surface_diff` on grass by 1.5-3.0x (negligible,
+expected since tree splits are largely invariant to monotonic per-feature
+rescaling). **Reading together, especially bagging's non-effect: grass's
+gap looks like a systematic information deficit, not random noise** -
+consistent with round 7's original disagreement-accuracy finding. Concluded
+the grass-specific push here.
+
+`train_best_model.py` updated to the v10 pipeline (playstyle feature build +
+targeted mask added as step 3b) and re-verified end to end: reproduced
+0.59322/0.59454/0.59186/0.59877/0.59413/0.59363 exactly.
+
+**Final state this session: ALL beats the market outright (0.59322 vs
+0.59352). WTA beats it comfortably (0.59186 vs 0.59330). ATP is within
+0.0008 of parity (0.59454 vs 0.59372), entirely concentrated in the Grass
+segment (n=508) after Hard and Clay were both brought to beating the
+market individually.** Cumulative gap closed from Elo's original 0.026 (and
+from the market's original 0.026 gap when this chase began) to essentially
+zero on the pooled number. Pete's literal goal ("both ATP and WTA beat the
+market") is very close but not fully met - ATP-Grass specifically resisted
+every lever this session had access to.
 
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
 

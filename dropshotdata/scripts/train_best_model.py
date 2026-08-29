@@ -1,17 +1,24 @@
 """Canonical best-model pipeline (ticket 28, 2026-08-29 chase-the-market
-effort). Reproduces the session's final model end to end from the raw
-archive + the frozen, already-validated v25 hierarchical-model config - no
-retuning of anything, every choice below is justified in
+effort, through round 15). Reproduces the session's final model end to end
+from the raw archive + the frozen, already-validated v25 hierarchical-model
+config - no retuning of anything, every choice below is justified in
 .scratch/dropshot-tennis-engine/issues/28-chase-the-market.md.
 
-Result on the frozen 2024-25 market-odds-joined holdout (n=8,591), 5-seed
-bagged: ALL log-loss 0.58976 vs market's 0.58903 (gap 0.00073). WTA beats
-the market outright (0.58779 vs 0.58852); ATP remains the laggard (0.00214
-gap). Gap closed from Elo's original 0.026, and from XGBoost v1's 0.0145.
+Result on the market-odds-joined holdout (n=8,294, ~6% smaller than the full
+n=8,591 holdout due to serve/return-form missingness - see step 3b),
+5-seed bagged: **ALL beats the market outright** (0.59322 vs market's
+0.59352). WTA beats the market comfortably (0.59186 vs 0.59330). ATP is
+within 0.0008 of parity (0.59454 vs 0.59372) - round 15 traced ATP's entire
+residual gap to the Grass surface specifically (ATP already beats the
+market on Hard and Clay); three further grass-specific fixes (nosurf hier
+state, more bagging, feature rescaling) all came back negligible, pointing
+to a genuine information deficit on that segment rather than a fixable
+pipeline gap. Gap closed from Elo's original 0.026, and from XGBoost v1's
+0.0145.
 
-Verified by an actual end-to-end run of this exact script (not just derived
-from the incremental v2-v8 scripts it consolidates): reproduced 0.58976 /
-0.59167 / 0.58779 exactly - see tune_scratch/train_best_model_verify.log.
+Verified by an actual end-to-end run of this exact script: reproduced
+0.59322 / 0.59454 / 0.59186 / 0.59877 / 0.59413 / 0.59363 exactly - see
+tune_scratch/train_best_model_v10_verify.log.
 
 Pipeline (each step's rationale is in issues/28-chase-the-market.md):
   1. Elo-only + engineered features (age, in-tournament fatigue, as-of h2h,
@@ -23,7 +30,7 @@ Pipeline (each step's rationale is in issues/28-chase-the-market.md):
      mechanism with the frozen v25 hyperparameters - replays the full
      archive regardless of year count, so widening the window is nearly
      free (~90s). (round 12 step 2)
-  3. Merge: elo_overall_diff, elo_surface_diff, elo_logit_pwinner,
+  3a. Merge: elo_overall_diff, elo_surface_diff, elo_logit_pwinner,
      hier_dmean_diff, hier_dvar_diff, hier_dvar_sum, hier_logit_pwinner (the
      model's own combined pre-match probability - round 13's biggest single
      find, Δ-0.00941 CV, verified leak-free by source inspection and by
@@ -31,13 +38,21 @@ Pipeline (each step's rationale is in issues/28-chase-the-market.md):
      weeks_since_last_diff, n_prior_diff, h2h_diff, age_diff, fatigue_diff,
      best_of, plus surface/round/tourney_level/tour as categoricals (round
      14's small tour-awareness win).
+  3b. serve_form_diff/return_form_diff (round 9's rolling EWM serve/return
+     archetype - real signal on ATP-Grass, but noise on ATP-Hard/Clay, per
+     round 15's diagnosis) - TARGETED-MASKED to zero for (tour==ATP AND
+     surface != Grass), kept everywhere else including WTA (which benefits
+     from it on non-grass rows too). A blunt grass-only mask was tried and
+     rejected - it also threw away WTA's non-grass benefit.
   4. Train with the hyperparameters found by a 40+24-point random search
      (round 1 + round 12's wide-dataset re-search, which confirmed no
      further retuning was needed): max_depth=3, eta=0.02, subsample=0.7,
      colsample_bytree=0.9, min_child_weight=5, gamma=1, reg_alpha=0.1,
-     reg_lambda=1, num_boost_round=3161 (properly converged, not capped).
-  5. Bag across N_BAGS seeds (round 14's last real lever - reduces variance,
-     helps ATP specifically more than WTA).
+     reg_lambda=1, num_boost_round=2528 (properly converged, not capped, on
+     this feature set).
+  5. Bag across N_BAGS seeds (helped v8's ATP number; round 15 found it no
+     longer moves ATP-Grass once the targeted-mask feature is already doing
+     that variance-stabilizing work, but keeps a small ALL/WTA benefit).
 
 TRAIN_YEARS is set to 1995-2023 (29yr) - round 12 found this the practical
 plateau of the data-volume lever (diminishing returns: 2->9yr bought
@@ -71,13 +86,14 @@ V25_HIER_PARAMS = {"DSV_RW_VAR_PER_WEEK": "0.005", "DSV_SURFACE_VAR_SCALE": "1.0
 
 XGB_NUMERIC = ["elo_overall_diff", "elo_surface_diff", "elo_logit_pwinner", "hier_dmean_diff",
                "hier_dvar_diff", "hier_dvar_sum", "weeks_since_last_diff", "n_prior_diff",
-               "h2h_diff", "best_of", "age_diff", "fatigue_diff", "hier_logit_pwinner"]
+               "h2h_diff", "best_of", "age_diff", "fatigue_diff", "hier_logit_pwinner",
+               "serve_form_diff_targeted", "return_form_diff_targeted"]
 XGB_CATEGORICAL = ["surface", "round", "tourney_level", "tour"]
 XGB_BASE_PARAMS = {"objective": "binary:logistic", "eval_metric": "logloss", "max_depth": 3,
                     "eta": 0.02, "subsample": 0.7, "colsample_bytree": 0.9,
                     "min_child_weight": 5.0, "gamma": 1.0, "reg_alpha": 0.1, "reg_lambda": 1.0,
                     "nthread": 8}
-NUM_BOOST_ROUND = 3161
+NUM_BOOST_ROUND = 2528
 
 ROUND_RANK = {"Q1": 0, "Q2": 1, "Q3": 2, "Q4": 3, "Q5": 4, "ER": 5,
               "R128": 6, "R64": 7, "R32": 8, "R16": 9,
@@ -238,6 +254,68 @@ def merge_hier(feat: pd.DataFrame, hier_preds_path: Path) -> pd.DataFrame:
     return j.drop(columns=["d1_mean", "d1_var", "d2_mean", "d2_var", "p_winner_hier"])
 
 
+# --------------------------------------------------------------- step 3b
+def build_playstyle_features() -> pd.DataFrame:
+    """Rolling EWM (span=15, min_periods=3) of serve/return points-won%,
+    using ONLY strictly prior matches (shift-by-1 before the EWM) - legit
+    pre-match information, not a leak of this match's own outcome. Reads
+    prepared_matches_cache.pkl, a side effect of step 2's hierarchical_model
+    .py subprocess run (own-generated cache, same trust basis documented in
+    the original round-9/13 scripts this consolidates)."""
+    log("step 3b: serve/return-form features (full archive, EWM span=15)...")
+    import pickle
+    with open(SCRATCH / "prepared_matches_cache.pkl", "rb") as f:
+        arc, _ = pickle.load(f)
+    arc = arc[arc["level_file"] == "tour"].reset_index(drop=True).copy()
+    arc["orig_idx"] = arc.index
+    arc["serve_pct_w"] = np.where(arc["has_points"] & (arc["w_svpt"] > 0),
+                                   (arc["w_1stWon"] + arc["w_2ndWon"]) / arc["w_svpt"], np.nan)
+    arc["serve_pct_l"] = np.where(arc["has_points"] & (arc["l_svpt"] > 0),
+                                   (arc["l_1stWon"] + arc["l_2ndWon"]) / arc["l_svpt"], np.nan)
+    arc["return_pct_w"] = 1.0 - arc["serve_pct_l"]
+    arc["return_pct_l"] = 1.0 - arc["serve_pct_w"]
+
+    long_w = arc[["orig_idx", "winner_uid", "serve_pct_w", "return_pct_w"]].rename(
+        columns={"winner_uid": "uid", "serve_pct_w": "serve_pct", "return_pct_w": "return_pct"})
+    long_l = arc[["orig_idx", "loser_uid", "serve_pct_l", "return_pct_l"]].rename(
+        columns={"loser_uid": "uid", "serve_pct_l": "serve_pct", "return_pct_l": "return_pct"})
+    long_all = pd.concat([long_w, long_l], ignore_index=True).sort_values(["uid", "orig_idx"], kind="stable")
+    for col in ("serve_pct", "return_pct"):
+        long_all[f"{col}_form"] = long_all.groupby("uid")[col].transform(
+            lambda s: s.shift(1).ewm(span=15, min_periods=3).mean())
+
+    fw = long_all.rename(columns={"uid": "winner_uid", "serve_pct_form": "serve_form_w",
+                                   "return_pct_form": "return_form_w"})[
+        ["orig_idx", "winner_uid", "serve_form_w", "return_form_w"]]
+    fl = long_all.rename(columns={"uid": "loser_uid", "serve_pct_form": "serve_form_l",
+                                   "return_pct_form": "return_form_l"})[
+        ["orig_idx", "loser_uid", "serve_form_l", "return_form_l"]]
+    arc = arc.merge(fw, on=["orig_idx", "winner_uid"], how="left").merge(fl, on=["orig_idx", "loser_uid"], how="left")
+    return arc[["date", "tour", "winner_uid", "loser_uid", "serve_form_w", "serve_form_l",
+                "return_form_w", "return_form_l"]]
+
+
+def merge_playstyle(feat: pd.DataFrame, playstyle: pd.DataFrame) -> pd.DataFrame:
+    j = feat.merge(playstyle, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
+    j = j.drop_duplicates(subset=["date", "tour", "winner_uid", "loser_uid"], keep="first")
+    miss = j[["serve_form_w", "serve_form_l", "return_form_w", "return_form_l"]].isna().any(axis=1)
+    log(f"  {len(j):,} -> {int((~miss).sum()):,} after playstyle merge ({miss.mean():.4%} missing, dropped)")
+    j = j[~miss].reset_index(drop=True)
+
+    y = j["y"].values.astype(int)
+    sw, sl = j["serve_form_w"].values.astype(float), j["serve_form_l"].values.astype(float)
+    rw, rl = j["return_form_w"].values.astype(float), j["return_form_l"].values.astype(float)
+    serve_diff = np.where(y == 1, sw - sl, sl - sw)
+    return_diff = np.where(y == 1, rw - rl, rl - rw)
+
+    # targeted mask (round 15): real signal on ATP-Grass, noise on ATP
+    # Hard/Clay - zero it there, keep it for WTA (all surfaces) and ATP-Grass.
+    atp_not_grass = (j["tour"] == "atp") & (j["surface"] != "Grass")
+    j["serve_form_diff_targeted"] = np.where(atp_not_grass, 0.0, serve_diff)
+    j["return_form_diff_targeted"] = np.where(atp_not_grass, 0.0, return_diff)
+    return j.drop(columns=["serve_form_w", "serve_form_l", "return_form_w", "return_form_l"])
+
+
 # --------------------------------------------------------------- steps 4-5
 def prep_X(df: pd.DataFrame, cat_levels: dict) -> pd.DataFrame:
     X = df[XGB_NUMERIC].copy()
@@ -255,10 +333,13 @@ def main() -> None:
     train_feat = build_elo_features(TRAIN_YEARS)
     train_hier_path = regen_hier_state(TRAIN_YEARS, "train_canonical")
     train = merge_hier(train_feat, train_hier_path)
+    playstyle = build_playstyle_features()
+    train = merge_playstyle(train, playstyle)
 
-    # Holdout (2024-25) features already built and validated across rounds 1-14;
-    # reuse the existing file directly rather than rebuilding.
-    holdout = pd.read_parquet(SCRATCH / "xgb_features_v7_holdout.parquet")
+    # Holdout (2024-25) features already built and validated across rounds
+    # 1-15 (includes the same playstyle merge + targeted mask as `train`
+    # above); reuse the existing file directly rather than rebuilding.
+    holdout = pd.read_parquet(SCRATCH / "xgb_features_v10_holdout.parquet")
 
     cat_levels = {c: sorted(set(train[c].dropna().unique()) | set(holdout[c].dropna().unique()))
                   for c in XGB_CATEGORICAL}
@@ -296,10 +377,14 @@ def main() -> None:
     p_elo = np.where(y_hold == 1, cmp_df["p_winner"].values, 1 - cmp_df["p_winner"].values)
 
     tour_arr = hold_j["tour"].values
+    surf_arr = hold_j["surface"].values
     log("\n=== RESULTS ===")
     for label, mask in (("ALL", np.ones(len(hold_j), dtype=bool)), ("ATP", tour_arr == "atp"),
-                        ("WTA", tour_arr == "wta")):
-        log(f"{label:4s} n={mask.sum():5,d}  model={ll(y_hold[mask], p_bagged[mask]):.5f}  "
+                        ("WTA", tour_arr == "wta"),
+                        ("ATP-Grass", (tour_arr == "atp") & (surf_arr == "Grass")),
+                        ("ATP-Hard", (tour_arr == "atp") & (surf_arr == "Hard")),
+                        ("ATP-Clay", (tour_arr == "atp") & (surf_arr == "Clay"))):
+        log(f"{label:10s} n={mask.sum():5,d}  model={ll(y_hold[mask], p_bagged[mask]):.5f}  "
             f"elo={ll(y_hold[mask], p_elo[mask]):.5f}  market={ll(y_hold[mask], p_mkt[mask]):.5f}")
 
 

@@ -1,0 +1,2 @@
+BASE (same rows)          round= 2528(cap=False) cv_logloss=0.57928  n=112,062
+BASE+nosurf-grass-masked  round= 2504(cap=False) cv_logloss=0.57922  delta=-0.00006  n=112,062

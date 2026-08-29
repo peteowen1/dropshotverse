@@ -1,0 +1,22 @@
+step 1: Elo + engineered features for 1995-2023...
+  162,629 rows
+step 2: hierarchical-model posterior state for 1995-2023 (frozen v25 config, ~60-90s regardless of year count)...
+  exit=0  elapsed=93s
+  162,629 -> 118,912 after hier merge (26.8814% missing, dropped)
+step 3b: serve/return-form features (full archive, EWM span=15)...
+  118,912 -> 112,062 after playstyle merge (5.7606% missing, dropped)
+
+steps 4-5: training 5-seed bagged model, 2528 rounds each...
+  seed 0 done
+  seed 1 done
+  seed 2 done
+  seed 3 done
+  seed 4 done
+
+=== RESULTS ===
+ALL        n=8,294  model=0.59322  elo=0.61702  market=0.59352
+ATP        n=4,209  model=0.59454  elo=0.62138  market=0.59372
+WTA        n=4,085  model=0.59186  elo=0.61253  market=0.59330
+ATP-Grass  n=  508  model=0.59877  elo=0.62786  market=0.58287
+ATP-Hard   n=2,444  model=0.59413  elo=0.61756  market=0.59491
+ATP-Clay   n=1,257  model=0.59363  elo=0.62620  market=0.59579

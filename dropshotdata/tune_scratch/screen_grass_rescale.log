@@ -1,0 +1,4 @@
+BASE                     round= 2528(cap=False) cv_logloss=0.57928  n=112,062
+grass_rescale=1.5x  round= 2503(cap=False) cv_logloss=0.57922  delta=-0.00007  n=112,062
+grass_rescale=2.0x  round= 2540(cap=False) cv_logloss=0.57919  delta=-0.00010  n=112,062
+grass_rescale=3.0x  round= 2503(cap=False) cv_logloss=0.57924  delta=-0.00004  n=112,062

@@ -744,6 +744,28 @@ ATP-Grass kept v9's improvement. **ATP's overall gap nearly halved**
 population. Grass is now clearly the single remaining driver of ATP's
 shortfall - pushing further there next.
 
+**Three further grass-specific attempts, all negligible:**
+- `nosurf` hier state, grass-masked (same targeted-mask pattern that worked
+  for serve/return form): Δ−0.00006, noise-level.
+- 5-seed bagging on v10: unlike v8 (where bagging helped ATP substantially),
+  **ATP-Grass got very slightly WORSE with bagging** (0.59860→0.59877). v10's
+  targeted-mask feature already absorbed the variance-reduction benefit
+  bagging was providing in v8; there's little left for it to fix.
+- Rescaling `elo_surface_diff` on grass by 1.5x/2.0x/3.0x (to counter the
+  compressed grass ratings): all negligible (Δ−0.00004 to −0.00010) - tree
+  splits are largely invariant to monotonic per-feature rescaling, so this
+  was unlikely to matter much even before running it.
+
+**Reading of these three nulls together, especially bagging's non-effect**:
+grass's remaining gap looks like a systematic information deficit, not
+random noise. Bagging only reduces variance; it doing nothing for grass
+specifically suggests the model isn't just noisily wrong there, it's
+consistently missing something - consistent with round 7's original
+disagreement-accuracy finding that the market holds real informational
+edges no amount of reshaping existing signals closes. Concluding the
+grass-specific push here; the levers this pipeline has access to are
+exhausted for this segment.
+
 ## (superseded by v10 above) Fix in progress: grass-masked version (`serve_form_diff_grass` = the
 feature where `surface=='Grass'` else 0, same for return) - forces the tree
 to only use this signal where it's real, per stats-discipline's usual
