@@ -1,0 +1,39 @@
+training/loading model...
+=== loading cached bagged XGBoost model (skip retrain) ===
+step 3b: serve/return-form features (full archive, EWM span=15)...
+building bridged archive (real archive + tennismylife gap-fill)...
+[atp] downloading tennismylife 2026 data...
+  765 rows after 2026-05-25
+  33 winner/loser slots resolved to a synthetic new-player id (genuinely absent from the archive under any spelling checked)
+[wta] downloading tennismylife 2026 data...
+  672 rows after 2026-05-25
+  27 winner/loser slots resolved to a synthetic new-player id (genuinely absent from the archive under any spelling checked)
+combined: 1,226,517 archive rows + 1,437 bridge rows = 1,227,954
+  ratings as-of: 2026-08-24
+loading age table...
+
+=== building ratings.parquet ===
+  [atp] building active player pool...
+  [atp] 459 active players (match in the last 52 weeks)
+replaying 1,190,554 matches, snapshotting 1 cutoff dates...
+  ...300,000/1,190,554  (8s)
+  ...600,000/1,190,554  (16s)
+  ...900,000/1,190,554  (26s)
+replay done: 35s, 1/1 tournaments snapshotted
+  [atp] building BT round-robin (210,222 pairs)...
+  [wta] building active player pool...
+  [wta] 385 active players (match in the last 52 weeks)
+replaying 1,190,554 matches, snapshotting 1 cutoff dates...
+  ...300,000/1,190,554  (6s)
+  ...600,000/1,190,554  (11s)
+  ...900,000/1,190,554  (17s)
+replay done: 23s, 1/1 tournaments snapshotted
+  [wta] building BT round-robin (147,840 pairs)...
+wrote C:\dev\dropshotverse\dropshotdata\blog\ratings.parquet (844 rows)
+
+=== building predictions.parquet ===
+wrote C:\dev\dropshotverse\dropshotdata\blog\predictions.parquet (256 rows)
+
+=== validate outputs (torp convention: required files must exist and be non-trivial) ===
+  ratings.parquet: 844 rows OK
+  predictions.parquet: 256 rows OK
