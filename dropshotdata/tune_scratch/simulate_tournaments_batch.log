@@ -1,0 +1,45 @@
+running 16 tournaments, 2000 sims each...
+  [atp 2024-580] field=128 seeded=32 top_seed_rating=2573.0
+  [atp 2024-520] field=128 seeded=32 top_seed_rating=2531.9
+  [atp 2024-540] field=128 seeded=32 top_seed_rating=2560.3
+  [atp 2024-560] field=128 seeded=32 top_seed_rating=2543.6
+  [atp 2025-580] field=128 seeded=32 top_seed_rating=2616.2
+  [atp 2025-520] field=128 seeded=32 top_seed_rating=2632.6
+  [atp 2025-540] field=128 seeded=32 top_seed_rating=2620.5
+  [atp 2025-560] field=128 seeded=32 top_seed_rating=2622.5
+  [wta 2024-580] field=128 seeded=32 top_seed_rating=2726.6
+  [wta 2024-520] field=128 seeded=32 top_seed_rating=2734.6
+  [wta 2024-540] field=128 seeded=29 top_seed_rating=2756.8
+  [wta 2024-560] field=128 seeded=32 top_seed_rating=2748.1
+  [wta 2025-580] field=128 seeded=31 top_seed_rating=2673.6
+  [wta 2025-520] field=128 seeded=32 top_seed_rating=2693.6
+  [wta 2025-540] field=128 seeded=32 top_seed_rating=2702.0
+  [wta 2025-560] field=128 seeded=32 top_seed_rating=2688.7
+
+=== anchor: top seed's simulated title-probability rank, per tournament ===
+  atp 2024-580: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  atp 2024-520: top seed ranked #2 of 128 by simulated P(title)  [OK]
+  atp 2024-540: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  atp 2024-560: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  atp 2025-580: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  atp 2025-520: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  atp 2025-540: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  atp 2025-560: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2024-580: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2024-520: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2024-540: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2024-560: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2025-580: top seed ranked #2 of 128 by simulated P(title)  [OK]
+  wta 2025-520: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2025-540: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  wta 2025-560: top seed ranked #1 of 128 by simulated P(title)  [OK]
+  top seed in simulated top-3 by title chance: 16/16 tournaments
+
+=== POOLED stage-reaching log-loss across all 16 tournaments ===
+  >= R64   n=2048  base_rate=0.500  model_logloss=0.6251  flat_logloss=0.6931  model wins  (delta=-0.0680)
+  >= R32   n=2048  base_rate=0.250  model_logloss=0.4588  flat_logloss=0.5623  model wins  (delta=-0.1035)
+  >= R16   n=2048  base_rate=0.125  model_logloss=0.2676  flat_logloss=0.3768  model wins  (delta=-0.1092)
+  >= QF    n=2048  base_rate=0.062  model_logloss=0.1381  flat_logloss=0.2338  model wins  (delta=-0.0957)
+  >= SF    n=2048  base_rate=0.031  model_logloss=0.0793  flat_logloss=0.1391  model wins  (delta=-0.0598)
+  >= F     n=2048  base_rate=0.016  model_logloss=0.0396  flat_logloss=0.0805  model wins  (delta=-0.0409)
+  >= W     n=2048  base_rate=0.008  model_logloss=0.0225  flat_logloss=0.0457  model wins  (delta=-0.0232)
