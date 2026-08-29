@@ -850,6 +850,41 @@ exactly the signature of genuine match-time information (player form,
 matchup specifics, conditions) the market has and this archive doesn't -
 not a fixable modeling gap.
 
+## Round 19 - a statistical check that reframes the whole result
+
+Before chasing an eleventh feature idea, checked something more basic: is
+ANY of this session's gap-to-market numbers even statistically
+distinguishable from zero, at this holdout's sample size?
+`tune_scratch/ci_atp_gap.py` - paired per-match log-loss difference
+(model − market), 95% CI on the mean:
+
+| | n | mean gap | 95% CI | resolved? |
+|---|---|---|---|---|
+| ALL | 8,294 | −0.00022 | [−0.00407, +0.00364] | No |
+| ATP | 4,209 | +0.00082 | [−0.00470, +0.00635] | No |
+| WTA | 4,085 | −0.00129 | [−0.00667, +0.00409] | No |
+| ATP-Grass | 508 | +0.01573 | [−0.00287, +0.03433] | No |
+| ATP-non-Grass | 3,701 | −0.00122 | [−0.00696, +0.00451] | No |
+
+**Every single number this session has reported, including WTA's own
+"beating the market" result, has a 95% CI that includes zero.** At n≈4,200
+per tour, per-match log-loss variance is large enough that neither tour's
+result is statistically distinguishable from exact parity with the market
+- in either direction. This is stats-discipline #10's own rule applied to
+this session's own headline claim: a wide CI is an open question, not a
+smaller version of a resolved result, and it cuts both ways - "ATP hasn't
+beaten the market" is exactly as statistically unresolved as "WTA has."
+
+**Honest reframing**: the defensible statistical statement isn't "WTA beat
+it, ATP didn't." It's "both tours are running statistically even with the
+market at this sample size, and this specific 2024-25 holdout happened to
+land slightly favorably for one point estimate and slightly unfavorably
+for the other." The point-estimate ordering Pete's goal is keyed to (does
+ATP's number literally beat market's number) isn't a resolved question this
+holdout can answer either way - more data (a future season) would be needed
+to distinguish genuine over/underperformance from this sample's own noise,
+not more feature engineering on the same fixed 8,591 rows.
+
 **Reading of these ten ATP-Grass attempts together, especially bagging's
 non-effect and now this clean-OOF-calibration finding**:
 grass's remaining gap looks like a systematic information deficit, not

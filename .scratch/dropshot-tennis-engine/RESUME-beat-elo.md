@@ -448,6 +448,33 @@ ATP-Grass specifically all came back negative, and the clean OOF
 calibration finding gives a real, evidence-backed reason why: this is a
 genuine information limit of the archive, not an unsolved modeling problem.
 
+## UPDATE 2026-08-29 (round 19 - a statistical check that reframes the
+whole result)
+
+Before an eleventh feature idea, checked something more basic: is ANY of
+this session's gap-to-market numbers statistically distinguishable from
+zero at this holdout's sample size? Computed a 95% CI on the mean paired
+per-match log-loss difference (`tune_scratch/ci_atp_gap.py`):
+
+| | n | mean gap | 95% CI |
+|---|---|---|---|
+| ATP | 4,209 | +0.00082 | [−0.00470, +0.00635] |
+| WTA | 4,085 | −0.00129 | [−0.00667, +0.00409] |
+| ATP-Grass | 508 | +0.01573 | [−0.00287, +0.03433] |
+
+**Every single number this session has reported, including WTA's own
+"beating the market" result, has a 95% CI that includes zero.** At n≈4,200
+per tour, per-match log-loss variance is large enough that neither tour's
+result is statistically distinguishable from exact parity with the market
+in either direction. The honest statistical statement isn't "WTA beat it,
+ATP didn't" - it's that both tours are running statistically even with the
+market, and this specific 2024-25 sample happened to land slightly
+favorably for one point estimate and slightly unfavorably for the other.
+The point-estimate ordering the literal goal is keyed to isn't resolvable
+by more feature engineering on this same fixed 8,591-row holdout - it would
+need more data (a future season) to distinguish real over/underperformance
+from this sample's own noise.
+
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
 
 Tested the v2 diagnostic pass's recommendation #2 (see prior section below):
