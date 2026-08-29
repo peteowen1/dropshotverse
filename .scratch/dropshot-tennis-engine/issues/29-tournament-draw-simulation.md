@@ -1,7 +1,8 @@
 # 29 — Tournament draw simulation
 
 Type: plan
-Status: planned (not yet built)
+Status: v1 (frozen Elo baseline) shipped and validated; MC-with-updates arm
+and richer match model (XGBoost/hier) not yet built
 
 ## Destination
 
@@ -137,6 +138,28 @@ pattern - Elo before the hierarchical model, etc.):
    Betfair account and direct verification that outright markets are
    actually in the free tier's coverage before committing to it as the
    data source. Not blocking test #1; pick up when convenient.
+
+## v1 shipped and validated: frozen-Elo baseline, all 16 available Slams
+
+`scripts/simulate_tournament.py` (single tournament, `run_one_tournament()`
+reusable) + `scripts/simulate_tournaments_batch.py` (all 16: 4 events x 2
+years x 2 tours, 2000 sims each). Elo-only, frozen ratings, no hier state -
+deliberately the cheap baseline this plan called for first.
+
+Real bugs found and fixed along the way: the raw CSV's R128 round only
+matched 61/64 rows to `elo_raw_ratings_full.parquet` because
+`elo_baseline.py`'s own `prepare()` drops unparseable-score
+(walkover/retirement) rows - fixed by looking up each player's most recent
+PRIOR real rating (any tournament before this one) rather than requiring a
+match specifically at this tournament's R128 row.
+
+**Pooled result across all 16 tournaments (n=2,048 stage-reach
+observations): beats a flat-baseline comparison at every stage**, including
+R64/R32 which looked roughly flat-or-worse on a single tournament (2025
+Wimbledon ATP alone) - exactly the noise that single-tournament result was
+flagged as, now resolved with real pooled data. Anchor check: top seed
+lands in the simulated top-3 by title probability in 16/16 tournaments,
+#1 in 14 of them.
 
 ## Open items before building
 
