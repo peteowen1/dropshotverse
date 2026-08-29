@@ -1,8 +1,14 @@
-"""Ticket 28 round 12, Arm C: full v2 feature set (Elo + hier + engineered)
-but trained on 2015-2023 (9yr, 43,862 rows) instead of v2's 2022-2023 (2yr,
-10,290 rows) - hier state now available for the wider window via
-regen_hier_widedata.py (frozen v25 hyperparameters, no retuning). ONE holdout
-reveal, compared directly to v2's 0.6017."""
+"""Ticket 28 round 14, Arm G: v7's feature set (Elo + hier + hier_logit_pwinner
++ engineered features) plus `tour` as an explicit categorical, trained on
+1995-2023 (29yr, 118,912 rows) - hier state available for the wide window via
+regen_hier_wide1995.py (frozen v25 hyperparameters, no retuning). ONE holdout
+reveal, compared to Arm F's 0.59017.
+
+Note: TRAIN/HOLDOUT below point at xgb_features_v7_{train,holdout}.parquet,
+which were overwritten in place by later round-13 work (build_v7_features.py)
+to hold the 1995-2023/118,912-row build - not the 2015-2023/43,862-row build
+this docstring described in an earlier version of this file. Corrected here;
+see tune_scratch/train_xgb_v8.log for the actual run's row count."""
 import numpy as np
 import pandas as pd
 import xgboost as xgb

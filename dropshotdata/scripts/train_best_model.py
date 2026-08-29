@@ -9,6 +9,10 @@ bagged: ALL log-loss 0.58976 vs market's 0.58903 (gap 0.00073). WTA beats
 the market outright (0.58779 vs 0.58852); ATP remains the laggard (0.00214
 gap). Gap closed from Elo's original 0.026, and from XGBoost v1's 0.0145.
 
+Verified by an actual end-to-end run of this exact script (not just derived
+from the incremental v2-v8 scripts it consolidates): reproduced 0.58976 /
+0.59167 / 0.58779 exactly - see tune_scratch/train_best_model_verify.log.
+
 Pipeline (each step's rationale is in issues/28-chase-the-market.md):
   1. Elo-only + engineered features (age, in-tournament fatigue, as-of h2h,
      inter-tournament layoff) for TRAIN_YEARS, from elo_raw_ratings_full
@@ -193,11 +197,12 @@ def build_elo_features(years: list[int]) -> pd.DataFrame:
 def regen_hier_state(years: list[int], tag: str) -> Path:
     log(f"step 2: hierarchical-model posterior state for {years[0]}-{years[-1]} "
         f"(frozen v25 config, ~60-90s regardless of year count)...")
+    # Always regenerated, never cached-and-reused: a cache keyed only on `tag`
+    # would silently go stale if TRAIN_YEARS or V25_HIER_PARAMS ever changes
+    # without also renaming `tag` - and at ~60-90s regardless of year count,
+    # caching buys nothing worth that risk.
     years_str = ",".join(str(y) for y in years)
     preds_path = SCRATCH / f"v25_postfix_{tag}_preds.parquet"
-    if preds_path.exists():
-        log(f"  {preds_path.name} already exists, reusing")
-        return preds_path
     env = {**os.environ, **V25_HIER_PARAMS, "DSV_EVAL_YEARS": years_str,
            "DSV_OUT_PREDS": str(preds_path), "DSV_OUT_STATE": str(SCRATCH / f"v25_postfix_{tag}_state.pkl")}
     t0 = time.time()
