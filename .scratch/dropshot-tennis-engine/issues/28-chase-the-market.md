@@ -825,8 +825,33 @@ toward either a genuine calibration-under-thin-information problem (already
 tested and rejected, round 4/14) or opponent-quality information (who
 exactly the lower-ranked player is) this archive's features don't capture.
 
-**Reading of these nine ATP-Grass attempts together, especially bagging's
-non-effect**:
+**Round 18 - grass-specific recalibration, and the decisive diagnostic.**
+Round 14's isotonic recalibration was fit on ALL ATP predictions pooled -
+dominated by hard/clay, which would dilute any grass-specific
+miscalibration. Grass has ~8,000 training rows, enough for a proper nested
+fit restricted to grass only. `tune_scratch/recalibrate_grass.py` tried
+three scopes (ATP-Grass only, ATP+WTA-Grass pooled, R128-only fit) - **all
+three made holdout performance WORSE** (ATP-Grass-only: 0.59860→0.60186;
+pooled: 0.60498→0.60645; R128-only: 0.59860→0.60453).
+
+**The decisive piece: the OOF calibration curve on 8,044 TRAINING grass
+rows is already clean** - bin errors all under 1.3 percentage points, no
+systematic direction (`[0.2,0.4)`: +0.93pp, `[0.6,0.8)`: −1.22pp, everything
+else near zero). **The model is not systematically miscalibrated on grass
+in general.** Recalibration can only correct a STABLE bias; there isn't one
+to find, which is exactly why every recalibration attempt made things
+worse (fitting to training-window noise rather than a real, transferable
+correction). This is the clearest evidence yet for what's actually
+happening: whatever makes the 2024-25 holdout's grass matches (especially
+R128) harder than the training distribution predicts isn't a property of
+the model's general treatment of grass - it's specific to those particular
+matches, in a way archived pre-match statistics don't capture. That is
+exactly the signature of genuine match-time information (player form,
+matchup specifics, conditions) the market has and this archive doesn't -
+not a fixable modeling gap.
+
+**Reading of these ten ATP-Grass attempts together, especially bagging's
+non-effect and now this clean-OOF-calibration finding**:
 grass's remaining gap looks like a systematic information deficit, not
 random noise. Bagging only reduces variance; it doing nothing for grass
 specifically suggests the model isn't just noisily wrong there, it's

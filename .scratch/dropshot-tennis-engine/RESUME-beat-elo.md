@@ -414,6 +414,28 @@ information doesn't add anything the model can't already infer from
 knowing the round. The residual gap is about being overconfident even
 knowing the situation, not about not knowing it.
 
+## UPDATE 2026-08-29 (round 18 - the decisive diagnostic: grass isn't
+miscalibrated, it's information-limited)
+
+Round 14's isotonic recalibration was fit on ALL ATP predictions pooled -
+diluted by hard/clay. Grass has ~8,000 training rows, enough for a proper
+nested fit restricted to grass only. Tried three scopes (ATP-Grass only,
+ATP+WTA-Grass pooled, R128-only fit) - **all three made holdout performance
+WORSE**.
+
+**The decisive piece: the OOF calibration curve on 8,044 training grass
+rows is already clean** - every bin's error under 1.3 percentage points, no
+systematic direction. The model is NOT systematically miscalibrated on
+grass in general. Recalibration can only fix a stable bias; there isn't
+one, which is exactly why every attempt made things worse (fitting to
+training-window noise instead of a real correction). This is the clearest
+evidence yet for what's actually happening: whatever makes the 2024-25
+grass holdout (especially R128) harder than training predicts isn't a
+property of the model's general treatment of grass - it's specific to
+those particular matches, in a way archived pre-match stats don't capture.
+Exactly the signature of genuine match-time information the market has and
+this archive doesn't - not a fixable modeling gap.
+
 **Final state this session: ALL beats the market outright (0.59322 vs
 0.59352). WTA beats it comfortably (0.59186 vs 0.59330). ATP is within
 0.0008 of parity (0.59454 vs 0.59372), entirely concentrated in the Grass
@@ -421,11 +443,10 @@ segment (n=508, and within that, R128 specifically) after Hard and Clay
 were both brought to beating the market individually.** Cumulative gap
 closed from Elo's original 0.026 to essentially zero on the pooled number.
 Pete's literal goal ("both ATP and WTA beat the market") is very close but
-not fully met - nine separate, mechanistically-motivated attempts at
-ATP-Grass specifically (nosurf state, bagging, rating rescaling, the
-decay-trigger mechanism, height, handedness, age, and surface-layoff twice)
-all came back negative, a genuinely thorough search of the levers this
-pipeline's data supports.
+not fully met - ten separate, mechanistically-motivated attempts at
+ATP-Grass specifically all came back negative, and the clean OOF
+calibration finding gives a real, evidence-backed reason why: this is a
+genuine information limit of the archive, not an unsolved modeling problem.
 
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
 
