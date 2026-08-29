@@ -640,6 +640,33 @@ visible in variance-reduction theory (1/√N) and this session's real resource
 instability (two OOM crashes earlier this round), **not re-attempted - the
 5-seed bagged model stands as the final result of this round.**
 
+**Bagging lever confirmed saturated at 5 seeds.** Extended to 20 seeds,
+saving each seed's prediction incrementally to survive interruption
+(`tune_scratch/bag_v8_incremental.py`, `score_bag_v8_20.py`). Scored the
+running average at n=1/5/10/15/20:
+
+| n_bags | ALL | ATP | WTA |
+|---|---|---|---|
+| 1 | 0.58992 (+0.00089) | 0.59207 (+0.00253) | 0.58772 (−0.00080) |
+| 5 | 0.58976 (+0.00072) | 0.59167 (+0.00214) | 0.58779 (−0.00073) |
+| 10 | 0.58981 (+0.00077) | 0.59178 (+0.00224) | 0.58778 (−0.00074) |
+| 20 | 0.58981 (+0.00078) | 0.59174 (+0.00221) | 0.58782 (−0.00070) |
+
+**5 bags captures essentially all the benefit** - going to 10/15/20 makes no
+further real difference (differences are noise-level, if anything slightly
+worse than n=5). Consistent with 1/√N variance-reduction theory: most of the
+gain from averaging independent fits comes from the first few. **ATP's gap
+settles at ~0.0021-0.0025 regardless of bag size** - this is the practical
+floor of the bagging lever, not a number that improves with more compute.
+
+**Conclusion on chasing ATP further**: every lever tried this round (raw
+point-estimate quality, explicit tour-awareness, full model separation,
+isotonic recalibration, bagging) has been exhausted except bagging, which is
+now confirmed saturated. What's left is bigger-scope work - a genuinely
+different rating architecture, or new information sources - not another
+round of tweaks to this pipeline. Treating ATP's ~0.0022 gap as this
+session's practical floor.
+
 ## Session state: gap to market 0.00073, WTA beaten outright, ATP the
 remaining laggard
 

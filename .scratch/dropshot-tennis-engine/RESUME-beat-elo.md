@@ -1,5 +1,11 @@
 # RESUME HERE — goal: BEAT THE MARKET's log-loss on the 2024-25 holdout
 
+**Canonical reproduction script: `dropshotdata/scripts/train_best_model.py`**
+— rebuilds the current best model (Arm G, 5-seed bagged, gap 0.00073) end to
+end from the raw archive + the frozen v25 hierarchical config. Consolidates
+what v2-v8's incremental scripts + a dozen `tune_scratch` screens found;
+those stay on disk as the experimental record, this is the one to run.
+
 **Goal escalated 2026-08-29 via Pete's `/goal`: the original "beat Elo" goal was
 achieved and validated 2026-08-28 (issue 27, XGBoost 0.6041 vs Elo 0.6120). Pete's
 new instruction: keep chasing the MARKET itself — features, Elo, ratings, data cuts,
@@ -299,6 +305,30 @@ bagging.**
 **Cumulative gap closed from Elo's original 0.026 to 0.00073 - a 97%
 reduction**, across 14 rounds, from a starting point of "beat Elo" that was
 itself already achieved before this `/goal` even started.
+
+## UPDATE 2026-08-29 (bagging confirmed saturated at 5 seeds - ATP chase
+concluded for this session)
+
+Extended bagging to 20 seeds (incremental saves, survived one interruption).
+**5 seeds captures essentially all the benefit** - 10/15/20 seeds make no
+further real difference (noise-level). ATP's gap settles at ~0.0021-0.0025
+regardless of bag size - this is the practical floor of the one lever that
+worked for it, not something more compute fixes.
+
+**Every ATP-specific lever this round is now exhausted**: raw point-estimate
+quality (checked, not the cause), explicit tour-awareness (helped WTA, not
+ATP), full model separation (rejected, worse than pooled), isotonic
+recalibration (negligible, twice), bagging (real but saturated). What's left
+for ATP is bigger-scope work - a different rating architecture or new
+information sources - not another tweak to this pipeline. Concluding the
+ATP-specific push here.
+
+**Repo state**: this session's work committed to `dev` (commit `d13cdd8`
+plus this round's follow-ups). Canonical reproduction script:
+`dropshotdata/scripts/train_best_model.py`. `map.md` updated - ticket 28
+logged, the stale "beating the closing line ruled out" note removed since
+it's now measurably reopened and 97% closed. Per Pete's plan: code review
+next, then a PR.
 
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
 
