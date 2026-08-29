@@ -1,0 +1,42 @@
+dropped: {'unparseable date': 0, 'missing player id': 0, 'retirement/walkover/no score': 37345, '_diag_round_inversions_before': 75367441, '_diag_round_inversions_after': 0, '_total_in': 1226517, '_kept': 1189172}
+no-op check (decay=0): max |p_winner diff| = 0.00e+00 (OK)
+
+=== compression check: surface-specific-trigger vs overall-trigger decay ===
+  [original (surface-trigger)] atp  Grass  n=  605  mean|rs_diff|=221.7
+  [original (surface-trigger)] atp  Hard   n=4,191  mean|rs_diff|=402.6
+  [original (surface-trigger)] atp  Clay   n=2,394  mean|rs_diff|=426.3
+  [original (surface-trigger)] wta  Grass  n=  583  mean|rs_diff|=218.6
+  [original (surface-trigger)] wta  Hard   n=3,933  mean|rs_diff|=377.3
+  [original (surface-trigger)] wta  Clay   n=1,913  mean|rs_diff|=397.7
+  [fixed (overall-trigger)] atp  Grass  n=  605  mean|rs_diff|=287.3
+  [fixed (overall-trigger)] atp  Hard   n=4,191  mean|rs_diff|=416.8
+  [fixed (overall-trigger)] atp  Clay   n=2,394  mean|rs_diff|=474.9
+  [fixed (overall-trigger)] wta  Grass  n=  583  mean|rs_diff|=316.8
+  [fixed (overall-trigger)] wta  Hard   n=3,933  mean|rs_diff|=396.9
+  [fixed (overall-trigger)] wta  Clay   n=1,913  mean|rs_diff|=448.5
+
+=== pure surface-Elo predictive power (blend=1.0 equivalent) ===
+  [original] atp  Grass  n=  535  pure-surface-elo logloss=0.99026
+  [original] atp  Hard   n=2,510  pure-surface-elo logloss=1.14704
+  [original] atp  Clay   n=1,313  pure-surface-elo logloss=1.27852
+  [original] atp  all    n=4,358  pure-surface-elo logloss=1.16740
+  [original] wta  Grass  n=  524  pure-surface-elo logloss=0.93897
+  [original] wta  Hard   n=2,690  pure-surface-elo logloss=1.12884
+  [original] wta  Clay   n=1,025  pure-surface-elo logloss=1.27098
+  [original] wta  all    n=4,240  pure-surface-elo logloss=1.13960
+  [original] all  Grass  n=1,059  pure-surface-elo logloss=0.96488
+  [original] all  Hard   n=5,200  pure-surface-elo logloss=1.13763
+  [original] all  Clay   n=2,338  pure-surface-elo logloss=1.27521
+  [original] all  all    n=8,598  pure-surface-elo logloss=1.15369
+  [fixed] atp  Grass  n=  535  pure-surface-elo logloss=1.11365
+  [fixed] atp  Hard   n=2,510  pure-surface-elo logloss=1.17516
+  [fixed] atp  Clay   n=1,313  pure-surface-elo logloss=1.38460
+  [fixed] atp  all    n=4,358  pure-surface-elo logloss=1.23071
+  [fixed] wta  Grass  n=  524  pure-surface-elo logloss=1.15316
+  [fixed] wta  Hard   n=2,690  pure-surface-elo logloss=1.16849
+  [fixed] wta  Clay   n=1,025  pure-surface-elo logloss=1.37042
+  [fixed] wta  all    n=4,240  pure-surface-elo logloss=1.21527
+  [fixed] all  Grass  n=1,059  pure-surface-elo logloss=1.13320
+  [fixed] all  Hard   n=5,200  pure-surface-elo logloss=1.17171
+  [fixed] all  Clay   n=2,338  pure-surface-elo logloss=1.37838
+  [fixed] all  all    n=8,598  pure-surface-elo logloss=1.22309

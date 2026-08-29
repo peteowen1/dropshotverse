@@ -1,0 +1,30 @@
+dropped: {'unparseable date': 0, 'missing player id': 0, 'retirement/walkover/no score': 37345, '_diag_round_inversions_before': 75367441, '_diag_round_inversions_after': 0, '_total_in': 1226517, '_kept': 1189172}
+no-op check (decay=0): max |p_winner diff| = 0.00e+00 (OK)
+
+=== original (surface-specific decay trigger, decay=0.3, frozen basis) ===
+  [original] atp  Grass  n=  535  logloss=0.62253
+  [original] atp  Hard   n=2,510  logloss=0.61358
+  [original] atp  Clay   n=1,313  logloss=0.62220
+  [original] atp  all    n=4,358  logloss=0.61727
+  [original] wta  Grass  n=  524  logloss=0.62612
+  [original] wta  Hard   n=2,690  logloss=0.61239
+  [original] wta  Clay   n=1,025  logloss=0.58147
+  [original] wta  all    n=4,240  logloss=0.60651
+  [original] all  Grass  n=1,059  logloss=0.62430
+  [original] all  Hard   n=5,200  logloss=0.61296
+  [original] all  Clay   n=2,338  logloss=0.60434
+  [original] all  all    n=8,598  logloss=0.61197
+
+=== fixed (overall-trigger surface decay, decay=0.3) ===
+  [fixed] atp  Grass  n=  535  logloss=0.62253
+  [fixed] atp  Hard   n=2,510  logloss=0.61358
+  [fixed] atp  Clay   n=1,313  logloss=0.62220
+  [fixed] atp  all    n=4,358  logloss=0.61727
+  [fixed] wta  Grass  n=  524  logloss=0.62612
+  [fixed] wta  Hard   n=2,690  logloss=0.61239
+  [fixed] wta  Clay   n=1,025  logloss=0.58147
+  [fixed] wta  all    n=4,240  logloss=0.60651
+  [fixed] all  Grass  n=1,059  logloss=0.62430
+  [fixed] all  Hard   n=5,200  logloss=0.61296
+  [fixed] all  Clay   n=2,338  logloss=0.60434
+  [fixed] all  all    n=8,598  logloss=0.61197

@@ -370,15 +370,39 @@ the grass-specific push here.
 targeted mask added as step 3b) and re-verified end to end: reproduced
 0.59322/0.59454/0.59186/0.59877/0.59413/0.59363 exactly.
 
+## UPDATE 2026-08-29 (round 16 - a mechanism hypothesis, tested and rejected)
+
+One more idea, mechanistically well-reasoned rather than another feature
+tweak: `elo_baseline.py`'s layoff decay pulls the SURFACE rating toward
+START using days-since-last-match-ON-THAT-SURFACE. Grass's ~350-360-day
+gap between seasons sits deep in the decay curve, so every grass-season
+opener shrinks the surface rating toward 1500 - every year, for every
+player, regardless of activity elsewhere. Hard/clay gaps rarely exceed the
+30-day grace period, so this essentially never fires there. A real
+candidate for the observed grass compression.
+
+Built and tested a fix (`scripts/tune_surface_decay_fix.py`): trigger the
+surface rating's decay off OVERALL recency instead. Confirmed the mechanism
+- it genuinely decompresses grass ratings (ATP mean|rs_diff| 221.7→287.3,
+WTA 218.6→316.8). **But the decompressed rating is a clearly WORSE
+standalone predictor everywhere** (ATP-Grass pure-surface-Elo log-loss
+0.965→1.133), not just grass - hard/clay got worse too. Decompression
+didn't recover real signal, it let stale grass ratings drift unchecked for
+up to a year with no corrective pull. Rejected before the expensive full
+XGBoost retrain - a standalone signal that gets worse in isolation isn't
+promising as a downstream feature either.
+
 **Final state this session: ALL beats the market outright (0.59322 vs
 0.59352). WTA beats it comfortably (0.59186 vs 0.59330). ATP is within
 0.0008 of parity (0.59454 vs 0.59372), entirely concentrated in the Grass
 segment (n=508) after Hard and Clay were both brought to beating the
-market individually.** Cumulative gap closed from Elo's original 0.026 (and
-from the market's original 0.026 gap when this chase began) to essentially
-zero on the pooled number. Pete's literal goal ("both ATP and WTA beat the
-market") is very close but not fully met - ATP-Grass specifically resisted
-every lever this session had access to.
+market individually.** Cumulative gap closed from Elo's original 0.026 to
+essentially zero on the pooled number. Pete's literal goal ("both ATP and
+WTA beat the market") is very close but not fully met - four separate,
+mechanistically-motivated attempts at ATP-Grass specifically (nosurf state,
+bagging, rating rescaling, and now the decay-trigger mechanism itself) all
+came back negative, a genuinely thorough search of the levers this
+pipeline's data supports.
 
 ## UPDATE 2026-08-29 (Elo's blended p_winner added as an XGBoost feature — small, honest null result)
 

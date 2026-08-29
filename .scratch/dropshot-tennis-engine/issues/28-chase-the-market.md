@@ -756,7 +756,36 @@ shortfall - pushing further there next.
   splits are largely invariant to monotonic per-feature rescaling, so this
   was unlikely to matter much even before running it.
 
-**Reading of these three nulls together, especially bagging's non-effect**:
+**Round 16 - a mechanism hypothesis, tested and rejected.** `elo_baseline.py`'s
+layoff decay is applied to the SURFACE rating using days-since-last-match-ON-
+THAT-SURFACE as the trigger. Grass is played in one ~4-6 week window/year, so
+a player's grass-to-grass gap is typically ~350-360 days - deep in the decay
+curve's steep region (`LAYOFF_PERIOD=500, GRACE=30, GRADIENT=100`) - meaning
+every grass-season opener pulls the surface rating back toward START=1500,
+every year, regardless of how active the player's been elsewhere. Hard/clay
+gaps are almost always under the 30-day grace period, so this essentially
+never fires there. A real, well-quantified, mechanistic candidate for the
+compressed `elo_surface_diff` on grass.
+
+`scripts/tune_surface_decay_fix.py` - built a variant triggering the surface
+rating's decay off OVERALL days-since-last-match instead (a player active on
+hard/clay hasn't forgotten their grass game). First test was a bug: the
+frozen config's `p_winner` uses `blend=0.0` (pure overall rating), so it
+never touches the surface rating at all - the fix had nowhere to act on
+`p_winner`. Fixed to compare the surface RATINGS directly.
+
+**Confirmed the mechanism**: the fix genuinely decompresses grass ratings as
+predicted (ATP mean|rs_diff| 221.7→287.3, WTA 218.6→316.8, both real
+increases). **But the decompressed rating is a clearly WORSE standalone
+predictor everywhere** (pure surface-Elo log-loss on ATP-Grass: 0.965→1.133,
+and hard/clay got worse too, not just grass). Decompression didn't recover
+real signal - it likely let stale grass ratings drift unchecked for up to a
+year whenever a player stayed active on OTHER surfaces, with no corrective
+pull at all. **Rejected before the expensive full XGBoost retrain**: a
+standalone signal that gets worse in isolation isn't a promising downstream
+feature either.
+
+**Reading of these four nulls together, especially bagging's non-effect**:
 grass's remaining gap looks like a systematic information deficit, not
 random noise. Bagging only reduces variance; it doing nothing for grass
 specifically suggests the model isn't just noisily wrong there, it's
