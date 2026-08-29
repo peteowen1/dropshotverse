@@ -108,6 +108,7 @@ Plus two ranking outputs: current form (both tours, by surface) and an all-time 
 
 ## Frontier tickets awaiting pickup
 
+- [29 — Tournament draw simulation](issues/29-tournament-draw-simulation.md) — planned 2026-08-29, not yet built. Grand Slams only, both tours. Cheap frozen-rating baseline first, then Monte Carlo with in-simulation Bayesian updates (reuses the hierarchical model's existing update rule, not a new mechanism). Seeding-reconstruction logic already validated against 855 real Slam matches, zero violations. Stretch goal (outright-market comparison) blocked on verifying whether Betfair's free Historical Data tier actually covers tennis outright markets.
 - [21 — Build the panel-based scoreline inversion for regime-B matches](issues/21-build-scoreline-inversion-regime-b.md) — ticket 12's proven-viable panel inversion, never built. Do after ticket 20's regime-B evidence-weighting result — may be a much bigger fix than needed if `REGIME_B_N` alone closes most of the gap.
 - [22 — Weight match updates by tournament tier and round](issues/22-tournament-tier-and-round-weighting.md) — `tourney_level`/`round` are loaded but unused; cheapest of the three remaining architecture gaps.
 - [23 — Is best-of-3/best-of-5 skill transfer real?](issues/23-validate-bo3-bo5-skill-transfer.md) — flagged as unestablished since ticket 11; format-blind bias every current diagnostic would miss.
@@ -118,8 +119,7 @@ Plus two ranking outputs: current form (both tours, by surface) and an all-time 
 Fog. In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
 
 - **Era adjustment for the GOAT list.** How to bridge 1975 to 2026 in a state-space rating when the talent pool has almost certainly strengthened. Blocked on the rating engine design existing at all.
-- **Draw simulation design.** Bracket Monte Carlo with correlated paths, seeding, byes, retirements. Shape depends on what the match model outputs.
-<!-- graduated 2026-08-27: player identity resolution is now part of ticket 07a, since 01 and 04 made the question sharp -->
+<!-- graduated 2026-08-29: draw simulation is now planned, ticket 29 - the match model existing (ticket 28) unblocked it -->
 
 - **Repo scaffolding specifics.** DESCRIPTION contents, CI workflows, `.gitignore`, pkgdown, which functions are exported.
 - **Refresh cadence and automation.** How often ratings refit, what triggers it, where the GitHub Action lives.
