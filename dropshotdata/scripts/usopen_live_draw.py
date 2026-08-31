@@ -82,6 +82,20 @@ def event_prefix(matches: list[dict]) -> str:
     return prefixes.pop()
 
 
+def quarters(bracket: list[str]) -> dict[str, str]:
+    """uid -> quarter letter A/B/C/D by true draw position.
+
+    A 128 draw splits into four 32-slot quarters, so quarter = slot // 32.
+    Only meaningful because `bracket` is in REAL draw order (from the feed) -
+    it would be noise against a randomised bracket. Players in the same
+    quarter can meet no later than the semi-final, which is what makes this
+    the useful lens on why a probability moved: a rival falling in your own
+    quarter helps you far more than one falling across the draw."""
+    n = len(bracket)
+    per = n // 4
+    return {uid: "ABCD"[min(i // per, 3)] for i, uid in enumerate(bracket)}
+
+
 def fetch_draw(code: str, cache_path: str | Path | None = None,
                use_cache: bool = False) -> dict:
     """Download one draw feed. `use_cache` re-reads `cache_path` instead of

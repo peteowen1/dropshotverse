@@ -152,6 +152,12 @@ def report(label: str, res: dict, top_n: int = 12) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sims", type=int, default=N_SIMS_DEFAULT)
+    ap.add_argument("--ignore-results", action="store_true",
+                    help="Use the REAL bracket but pretend nothing has been played. "
+                         "Diagnostic only: comparing locked -> this isolates the effect of "
+                         "knowing the draw, and this -> live isolates the effect of results. "
+                         "The locked-vs-live difference alone conflates the two.")
+    ap.add_argument("--out", default="us_open_2026_live_predictions.json")
     args = ap.parse_args()
 
     log("loading model...")
@@ -168,6 +174,8 @@ def main() -> None:
         if problems:
             raise SystemExit(f"{tour}: draw failed verification, refusing to simulate "
                              f"on a bracket we cannot trust: {problems[:3]}")
+        if args.ignore_results:
+            d["results"] = {}          # real bracket, clean slate - diagnostic arm
         draws[tour] = d
         metas[f"{tour}:2026-usopen"] = {"date0": DATE0, "field_uids": sorted(set(d["bracket"]))}
 
@@ -187,11 +195,44 @@ def main() -> None:
                    "probs": r["probs"], "n_done": r["n_done"]}
                for t, r in out.items()}
     payload["_meta"] = {"generated_at": datetime.now(timezone.utc).isoformat(),
-                        "n_sims": args.sims, "source": "live",
+                        "n_sims": args.sims,
+                        "source": "draw-only" if args.ignore_results else "live",
                         "ratings_as_of": str(DATE0.date())}
-    path = OUT_DIR / "us_open_2026_live_predictions.json"
+    path = OUT_DIR / args.out
     path.write_text(json.dumps(payload), encoding="utf-8")
     log(f"\nwrote {path}")
+
+    # Parquet in the existing blog schema, so upload_blog_data.py (which globs
+    # *.parquet) publishes it with no change and the site reads one format.
+    # Skipped for the --ignore-results diagnostic arm: that is an analysis
+    # artifact and must never reach the site as if it were the real forecast.
+    if args.ignore_results:
+        log("--ignore-results: diagnostic arm, deliberately NOT writing site parquet")
+        return
+
+    rows = []
+    now = datetime.now(timezone.utc).isoformat()
+    for tour, r in out.items():
+        q = draw_mod.quarters(draws[tour]["bracket"])
+        for uid in r["field_uids"]:
+            p = r["probs"][uid]
+            rows.append({
+                "tournament_id": "2026-usopen", "tournament_name": "US Open", "year": 2026,
+                "tour": tour, "player_id": uid, "player_name": r["names"].get(uid, uid),
+                "seed": int(r["seed_map"][uid]) if uid in r["seed_map"] else None,
+                "quarter": q.get(uid),
+                "p_r64": round(p["R64"], 4), "p_r32": round(p["R32"], 4),
+                "p_r16": round(p["R16"], 4), "p_qf": round(p["QF"], 4),
+                "p_sf": round(p["SF"], 4), "p_f": round(p["F"], 4),
+                "p_title": round(p["W"], 4),
+                # still alive == has not yet lost; R64==0 means eliminated in R1
+                "eliminated": bool(p["R64"] == 0.0),
+                "matches_decided": r["n_done"],
+                "source": "live", "ratings_as_of": str(DATE0.date()), "updated_at": now,
+            })
+    pq = OUT_DIR / "live_predictions.parquet"
+    pd.DataFrame(rows).sort_values(["tour", "p_title"], ascending=[True, False]).to_parquet(pq, index=False)
+    log(f"wrote {pq} ({len(rows)} rows)")
 
 
 if __name__ == "__main__":
