@@ -149,6 +149,11 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
         1102 team1, ...). Index i faces index i^1 in round 1.
     results : dict[str, str]
         match_id -> winning uid, for matches the feed reports as decided.
+    losers : set[str]
+        Every uid that has lost a decided match, i.e. is out of the
+        tournament. Read straight off the feed rather than inferred from a
+        stage probability - a player knocked out in R2 still has
+        P(reach R64) == 1.0, so probabilities cannot answer "are they out".
     names, seed_map : dict[str, str] / dict[str, float]
     unmatched : list[str]
         Feed players that got a synthetic uid because the archive has never
@@ -193,18 +198,28 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
             bracket.append(uid)
 
     # --- results: every decided match, any round ----------------------------
+    # Both sides are resolved through the SAME uid_for path, so a player can
+    # never end up neither a winner nor a loser because of a uid-resolution
+    # quirk on one side only. `losers` is the authoritative elimination set:
+    # who is out is a fact the feed reports, not something to infer from a
+    # simulated probability being zero.
     results: dict[str, str] = {}
+    losers: set[str] = set()
     for m in matches:
         w = m.get("winner")
         if w not in ("1", "2"):
             continue
         uid = uid_for(m["team1" if w == "1" else "team2"])
+        lost = uid_for(m["team2" if w == "1" else "team1"])
         if uid is not None:
             results[m["match_id"]] = uid
+        if lost is not None:
+            losers.add(lost)
 
     return {"tour": tour, "code": code, "draw_size": draw_size,
-            "bracket": bracket, "results": results, "names": names,
-            "seed_map": seed_map, "unmatched": unmatched, "event": ev, "raw": data}
+            "bracket": bracket, "results": results, "losers": losers,
+            "names": names, "seed_map": seed_map, "unmatched": unmatched,
+            "event": ev, "raw": data}
 
 
 def verify(draw: dict, verbose: bool = True) -> list[str]:
