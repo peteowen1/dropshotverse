@@ -593,5 +593,38 @@ check("round_rank: 'f' normalizes to the same rank as 'F'",
      hm.round_rank(pd.Series(["f"])).iloc[0] == hm.round_rank(pd.Series(["F"])).iloc[0],
      f"f rank={hm.round_rank(pd.Series(['f'])).iloc[0]}, F rank={hm.round_rank(pd.Series(['F'])).iloc[0]}")
 
+# ---- dropshotverse#7: the pairwise match matrix must be antisymmetric.
+# p(A beats B) + p(B beats A) == 1 is an invariant of the problem, not of the
+# model: XGBoost scores each ordered pair independently, so nothing enforced
+# it and the two directions disagreed by up to 0.54, with 836 pairs naming the
+# same player favourite BOTH ways. Caught only because someone tried to halve
+# a published file on the assumption it held.
+from simulate_tournament_xgb import antisymmetrise as _antisym
+
+_rng21 = np.random.default_rng(21)
+_n21 = 40
+_raw21 = _rng21.uniform(0.02, 0.98, size=(_n21, _n21))   # deliberately asymmetric
+np.fill_diagonal(_raw21, np.nan)
+_fix21 = _antisym(_raw21)
+_off21 = ~np.eye(_n21, dtype=bool)
+_sums21 = (_fix21 + _fix21.T)[_off21]
+
+check("antisymmetrise: p_ij + p_ji == 1 off the diagonal",
+     np.nanmax(np.abs(_sums21 - 1.0)) < 1e-12,
+     f"max |sum-1| over {_off21.sum()} ordered pairs = {np.nanmax(np.abs(_sums21 - 1.0)):.2e}")
+
+check("antisymmetrise: never names the same player favourite both ways",
+     int(((_fix21 > 0.5) & (_fix21.T > 0.5))[_off21].sum()) == 0,
+     f"raw input had {int(((_raw21 > 0.5) & (_raw21.T > 0.5))[_off21].sum())} such pairs, output has "
+     f"{int(((_fix21 > 0.5) & (_fix21.T > 0.5))[_off21].sum())}")
+
+check("antisymmetrise: preserves ordering of an already-symmetric matrix",
+     np.allclose(_antisym(_fix21)[_off21], _fix21[_off21], atol=1e-12),
+     "idempotent on an already-antisymmetric matrix")
+
+check("antisymmetrise: output stays a valid probability",
+     bool(np.nanmin(_fix21) > 0.0 and np.nanmax(_fix21) < 1.0),
+     f"range [{np.nanmin(_fix21):.2e}, {np.nanmax(_fix21):.6f}]")
+
 print(f"\n{'ALL PASS' if not FAILURES else 'FAILURES: ' + str(FAILURES)}")
 sys.exit(1 if FAILURES else 0)
