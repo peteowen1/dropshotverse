@@ -95,12 +95,28 @@ goes 0.016% -> 0.003%.
 2. The tiebreak math is ELIMINATED as a cause. The overconfidence is in the
    variance/uncertainty mechanism, exactly where this ticket said it was.
    One hypothesis down, the original next step unchanged.
-3. NOT YET TESTED: this re-score holds the posterior state fixed, but
-   `adf_update` also calls `p_set_full`, so the fitted variances adapted to
-   the compressed inputs. A full refit feeds correct set probabilities into
-   the ADF updates and could learn wider variances, recovering some or all of
-   the +0.047. That refit is the open question.
+3. A refit would change NOTHING. Traced after first writing the opposite here:
+   the state-update path calls `adf_update` on point counts (`w_svpt`/
+   `w_won`), never `p_set_full`. The only caller that would is
+   `adf_update_full_dp`, gated behind `DSV_REGIME_B_FULL_DP`, which defaults
+   to `"0"` and is set nowhere in the repo. So `p_set`/`p_match` are called
+   in exactly one place, line 1061, to produce `p_winner_hier`. The +0.047 is
+   the whole and final effect, not an upper bound pending a refit.
 
-Nothing shipped changed: the live US Open pipeline runs a cached XGBoost
-model, and hier state reaches it only via `build_xgb_features.py`'s
-`d1_mean`/`d1_var` features, which move only on a feature rebuild.
+## What this fix does and does not reach
+
+`p_winner_hier` is the ONLY output affected, and nothing consumes it - it is
+the retired standalone predictor this ticket is about.
+
+XGBoost consumes three hier-derived features (`hier_dmean_diff`,
+`hier_dvar_diff`, `hier_dvar_sum`), all built from the posterior state
+`d1_mean`/`d1_var`/`d2_mean`/`d2_var`. That state comes from the `adf_update`
+path, which this fix does not touch. So the live model is unaffected now AND
+after any feature rebuild - not merely "unaffected until a rebuild", which is
+what this note claimed before the call graph was checked.
+
+The fix becomes load-bearing the moment anyone sets
+`DSV_REGIME_B_FULL_DP=1`, since that path scores observed set scorelines
+through `set_outcome_dist_for_d` -> `p_set_full`. Turning that on with the
+old maths would have fed a systematically compressed likelihood into every
+state update.
