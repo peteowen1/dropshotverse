@@ -65,7 +65,8 @@ RATINGS_POOL_SIZE = 150   # top-N by elo within the active pool - matches real A
 
 
 def build_active_pool(bridged_df: pd.DataFrame, tour: str, as_of: pd.Timestamp,
-                      elo_path: str, top_n: int = RATINGS_POOL_SIZE) -> list[str]:
+                      elo_path: str, top_n: int = RATINGS_POOL_SIZE,
+                      must_include: set[str] | None = None) -> list[str]:
     """Active = at least one tour-level match in the 52 weeks before as_of -
     same "active" spirit elo_baseline.py's own anchor-check filter uses
     (>=15 matches in-year), loosened to a rolling window since this needs to
@@ -73,13 +74,48 @@ def build_active_pool(bridged_df: pd.DataFrame, tour: str, as_of: pd.Timestamp,
     the top_n by current Elo BEFORE any of the expensive per-player work
     below (hier snapshot, BT round-robin) - ranking on the cheap raw Elo
     lookup first, not after building the full table, is what actually saves
-    the O(n^2) cost."""
+    the O(n^2) cost.
+
+    `must_include` is the fix for a real downstream failure. The top-N cap is a
+    RATINGS PAGE decision - it exists so the table reads like ATP/WTA rankings
+    rather than trailing off into rank-300 journeymen. But the blog's draw
+    simulator also joins bt_rating from this table, and a Grand Slam draw is
+    not the top 150: the current US Open field has a MEDIAN Elo rank of 174,
+    so the cap covered only 52 of 128 players a tour. The other 76 imputed to
+    the field median, which reads a qualifier as thoroughly average - measured
+    at up to 77 points away from the real match model on a single match.
+
+    Raising the cap is the wrong lever, and this was measured before it was
+    built rather than after: cap 400 still misses 8 and nearly triples the
+    table, defeating the reason the cap exists. Unioning the draw in covers
+    127 of 128 at a table of ~225.
+
+    Players named here are admitted on ANY-level activity (qualifying and
+    challenger count), not tour-level only, because a qualifier's route into
+    the draw is exactly the history the tour-level filter throws away. Three
+    of the four ATP players the cap missed are recovered by that alone.
+    """
     window_start = as_of - pd.Timedelta(weeks=52)
-    recent = bridged_df[(bridged_df["tour"] == tour) & (bridged_df["level_file"] == "tour") &
-                        (bridged_df["date"] >= window_start) & (bridged_df["date"] < as_of)]
+    in_window = bridged_df[(bridged_df["tour"] == tour) &
+                           (bridged_df["date"] >= window_start) & (bridged_df["date"] < as_of)]
+    recent = in_window[in_window["level_file"] == "tour"]
     active = sorted(set(recent["winner_uid"]) | set(recent["loser_uid"]))
+
+    extra: list[str] = []
+    if must_include:
+        any_level = set(in_window["winner_uid"]) | set(in_window["loser_uid"])
+        # Admitted only with SOME match history in the window. A uid with none
+        # cannot be rated from this archive at all, and inventing a row for it
+        # would publish a number with nothing behind it - the caller reports
+        # those instead, so a missing player is visible rather than imputed.
+        # NOT `- active`. Most of the draw IS tour-level active; it is simply
+        # ranked below the cap (the field's median Elo rank is 174). Excluding
+        # the active ones here left them to be cut by the top_n slice anyway,
+        # which recovered 4 players instead of 70.
+        extra = sorted(set(must_include) & any_level)
+
     if len(active) <= top_n:
-        return active
+        return sorted(set(active) | set(extra))
 
     elo = pd.read_parquet(elo_path)
     elo_t = elo[(elo["tour"] == tour) & (elo["level_file"] == "tour") & (elo["date"] < as_of)]
@@ -89,7 +125,7 @@ def build_active_pool(bridged_df: pd.DataFrame, tour: str, as_of: pd.Timestamp,
     long_ro = long_ro[long_ro["uid"].isin(active)].sort_values("date")
     latest_ro = long_ro.drop_duplicates(subset="uid", keep="last").set_index("uid")["ro"]
     ranked = latest_ro.reindex(active).fillna(1500.0).sort_values(ascending=False)
-    return list(ranked.index[:top_n])
+    return sorted(set(ranked.index[:top_n]) | set(extra))
 
 
 def build_name_lookup(bridged_df: pd.DataFrame) -> dict[str, str]:
@@ -104,14 +140,40 @@ def build_name_lookup(bridged_df: pd.DataFrame) -> dict[str, str]:
     return long_all.drop_duplicates(subset="uid", keep="last").set_index("uid")["name"].to_dict()
 
 
+def draw_uids_by_tour() -> dict[str, set[str]]:
+    """Who is actually in the tournament this table will be joined against.
+
+    Read from the same predictions JSON build_predictions_table() uses, so it
+    costs no new input and cannot drift from the field the site is showing."""
+    with open(PREDICTIONS_JSON, encoding="utf-8") as f:
+        raw = json.load(f)
+    return {tour: set(data["probs"]) for tour, data in raw.items()}
+
+
 def build_ratings_table(models: list, cat_levels: dict, playstyle_full: pd.DataFrame, age_table: pd.DataFrame,
                         bridged_df: pd.DataFrame, as_of: pd.Timestamp) -> pd.DataFrame:
     name_lookup = build_name_lookup(bridged_df)
+    draws = draw_uids_by_tour()
     rows = []
+    unrated: dict[str, list[str]] = {}
     for tour in ("atp", "wta"):
         log(f"  [{tour}] building active player pool...")
-        field_uids = build_active_pool(bridged_df, tour, as_of, str(SCRATCH / "elo_raw_ratings_full.parquet"))
-        log(f"  [{tour}] {len(field_uids)} players (active in last 52 weeks, capped to top {RATINGS_POOL_SIZE} by elo)")
+        draw = draws.get(tour, set())
+        field_uids = build_active_pool(bridged_df, tour, as_of, str(SCRATCH / "elo_raw_ratings_full.parquet"),
+                                       must_include=draw)
+        covered = len(draw & set(field_uids))
+        log(f"  [{tour}] {len(field_uids)} players (top {RATINGS_POOL_SIZE} by elo, "
+            f"plus the current draw: {covered}/{len(draw)} of it covered)")
+        # Anyone in the draw this archive cannot rate at all. Named, because the
+        # blog imputes a missing bt_rating to the field median, which reads a
+        # qualifier as thoroughly average - the single largest source of error
+        # in its fallback path. A count alone would not say who to go and fix.
+        missing = sorted(draw - set(field_uids))
+        if missing:
+            unrated[tour] = missing
+            log(f"  [{tour}] WARNING: {len(missing)} draw player(s) have no match history in the "
+                f"52-week window and will have NO bt_rating: "
+                f"{', '.join(name_lookup.get(u, u) for u in missing)}")
         if not field_uids:
             continue
 
