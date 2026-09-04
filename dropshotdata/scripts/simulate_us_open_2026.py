@@ -38,6 +38,7 @@ score against.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -52,8 +53,16 @@ from xgb_bt_rating import build_h2h_dict, build_pairwise_features_base, build_pl
     prep_X_d, train_bagged_model
 
 DD = r"C:\dev\dropshotverse\dropshotdata"
-ENTRANTS_DIR = (r"C:\Users\peteo\AppData\Local\Temp\claude\C--dev-dropshotverse"
-                r"\43d36b54-7c83-4d41-b4ff-6e4376e6c984\scratchpad")
+# The entrant lists are INPUTS, so they live in the repo. They used to be read
+# from a Claude Code session scratchpad under %TEMP%, keyed by a session UUID -
+# which meant this script, the source of truth for the locked pre-tournament
+# forecast, depended on a directory Windows clears whenever it likes. The
+# sibling case proves the risk was real rather than theoretical: fetch_archive.py
+# pointed at a different session's scratchpad and that one is now empty, so the
+# script that acquires the entire base archive could no longer run at all.
+ENTRANTS_DIR = Path(__file__).resolve().parent.parent / "reference"
+ENTRANTS = {"atp": ENTRANTS_DIR / "usopen_men_entrants.json",
+            "wta": ENTRANTS_DIR / "usopen_women_entrants.json"}
 DATE0 = pd.Timestamp("2026-08-30")   # real 2026 US Open main-draw start
 SURFACE = "Hard"
 
@@ -153,8 +162,16 @@ def main() -> None:
     n_sims = 5000
     models, cat_levels, playstyle_full = train_bagged_model()
 
+    missing = [str(p) for p in ENTRANTS.values() if not p.exists()]
+    if missing:
+        raise SystemExit(
+            "entrant list(s) not found: " + ", ".join(missing) +
+            "\nThese are committed reference inputs under dropshotdata/reference/."
+            "\nIf they are absent the checkout is incomplete - do not regenerate them"
+            " from a scratch directory, which is how this dependency was lost before.")
+
     all_field_uids_probe = set()
-    for path in (f"{ENTRANTS_DIR}\\usopen_men_entrants.json", f"{ENTRANTS_DIR}\\usopen_women_entrants.json"):
+    for path in ENTRANTS.values():
         with open(path, encoding="utf-8") as f:
             for e in json.load(f):
                 if e["uid"]:
@@ -162,9 +179,7 @@ def main() -> None:
     log(f"loading age table ({len(all_field_uids_probe)} pool players)...")
     age_table = load_age_table()
 
-    tour_paths = {"atp": f"{ENTRANTS_DIR}\\usopen_men_entrants.json",
-                 "wta": f"{ENTRANTS_DIR}\\usopen_women_entrants.json"}
-    field_metas = {tour: load_field(path, tour) for tour, path in tour_paths.items()}
+    field_metas = {tour: load_field(str(path), tour) for tour, path in ENTRANTS.items()}
 
     log("building bridged archive (real archive + tennismylife 2026 gap-fill)...")
     bridged_raw = bridge.load_matches_with_bridge(hm)

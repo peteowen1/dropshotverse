@@ -49,8 +49,8 @@ from xgb_bt_rating import build_h2h_dict, build_pairwise_features_base, build_pl
 
 SCRATCH = DD / "tune_scratch"
 BLOG_DIR = DD / "blog"
-ENTRANTS_DIR = (r"C:\Users\peteo\AppData\Local\Temp\claude\C--dev-dropshotverse"
-                r"\43d36b54-7c83-4d41-b4ff-6e4376e6c984\scratchpad")
+PREDICTIONS_JSON = SCRATCH / "us_open_2026_predictions.json"
+ELO_RAW = SCRATCH / "elo_raw_ratings_full.parquet"
 REFERENCE_SURFACE = "Hard"   # most common surface tour-wide - the ratings.parquet BT context
 REFERENCE_ROUND = "R32"      # neutral round, same convention xgb_bt_rating.py's own BT extraction uses
 
@@ -159,7 +159,7 @@ def build_predictions_table() -> pd.DataFrame:
     than re-simulating - that script is the source of truth for HOW these
     numbers are produced (model choice, bracket sim, n_sims); this just
     reshapes its output into the curated blog schema."""
-    with open(SCRATCH / "us_open_2026_predictions.json", encoding="utf-8") as f:
+    with open(PREDICTIONS_JSON, encoding="utf-8") as f:
         raw = json.load(f)
 
     rows = []
@@ -183,6 +183,22 @@ def build_predictions_table() -> pd.DataFrame:
 def main() -> None:
     BLOG_DIR.mkdir(parents=True, exist_ok=True)
     updated_at = datetime.now(timezone.utc).isoformat()
+
+    # Check the inputs BEFORE the expensive work. Both are gitignored build
+    # artifacts, not committed data, so a fresh checkout has neither and the
+    # first symptom used to be a bare FileNotFoundError thrown after the model
+    # had already been trained and the whole archive loaded.
+    missing = [(p, how) for p, how in
+               ((PREDICTIONS_JSON, "python simulate_us_open_2026.py"),
+                (ELO_RAW, "python elo_raw_ratings_for_xgb.py"))
+               if not p.exists()]
+    if missing:
+        lines = [f"  {p}\n      produce it with:  {how}" for p, how in missing]
+        raise SystemExit("required input(s) not found:\n" + "\n".join(lines) +
+                         "\n\nThese are generated artifacts kept out of git by .gitignore, so a "
+                         "fresh checkout will not have them and neither will CI. Run the "
+                         "producer(s) above first, or publish them as release assets the way "
+                         "every other verse does.")
 
     log("training/loading model...")
     models, cat_levels, playstyle_full = train_bagged_model()
