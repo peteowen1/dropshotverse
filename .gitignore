@@ -13,6 +13,11 @@ __pycache__/
 dropshotdata/tune_scratch/xgb_bagged_model_cache*/
 dropshotdata/tune_scratch/tml_2026_*.csv
 dropshotdata/tune_scratch/us_open_2026_predictions.json
+# elo_compact.py's derived array cache (4.8 MB .npz - not covered by the
+# *.parquet/*.pkl rules above). Rebuilt from the archive in ~2 minutes by
+# `python dropshotdata/tune_scratch/elo_compact.py --force`, so it is a cache,
+# not data worth versioning.
+dropshotdata/tune_scratch/elo_compact_cache.npz
 # release build staging - assets are published to GitHub Releases, never committed
 # (a 137 MB tarball got swept in here once by `git add -A` and silently stalled
 # every push; GitHub also hard-rejects blobs over 100 MB)
