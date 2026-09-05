@@ -44,7 +44,14 @@ WO_PAT = r"W/O|DEF|ABD|Walkover|Def\."
 
 KIND_OK, KIND_RET, KIND_WO = 0, 1, 2
 USE_COLS = ["tourney_date", "surface", "score", "round",
-            "winner_id", "loser_id"]
+            "winner_id", "loser_id", "tourney_level", "best_of"]
+
+# Context categories kept as small integer codes so the cache stays arrays.
+# Order is fixed here rather than inferred per-file, or the codes would mean
+# different things depending on which files happened to be read.
+ROUNDS = ("Q1", "Q2", "Q3", "RR", "BR", "R128", "R64", "R32", "R16",
+          "QF", "SF", "F", "?")
+LEVELS = ("G", "M", "F", "PM", "O", "A", "D", "C", "S", "15", "25", "?")
 
 
 def log(m: str = "") -> None:
@@ -97,6 +104,9 @@ def build_compact(force: bool = False) -> dict:
                         arr[i] = c
                     codes.append(arr)
 
+                rnd = df["round"].astype(str).str.strip()
+                lev = df["tourney_level"].astype(str).str.strip()
+                bo = pd.to_numeric(df["best_of"], errors="coerce").fillna(3)
                 parts.append((
                     (date.values.astype("datetime64[D]").astype(np.int32)),
                     codes[0], codes[1],
@@ -105,13 +115,18 @@ def build_compact(force: bool = False) -> dict:
                     kind.astype(np.int8),
                     np.full(len(df), tour_i, dtype=np.int8),
                     np.full(len(df), lvl, dtype=np.int8),
+                    np.array([ROUNDS.index(r) if r in ROUNDS else len(ROUNDS) - 1
+                              for r in rnd], dtype=np.int8),
+                    np.array([LEVELS.index(v) if v in LEVELS else len(LEVELS) - 1
+                              for v in lev], dtype=np.int8),
+                    bo.to_numpy(dtype=np.int8),
                 ))
                 del df, date, surf, sc
                 gc.collect()
 
     out = {name: np.concatenate([p[i] for p in parts])
            for i, name in enumerate(["day", "w", "l", "surf", "rr", "kind",
-                                     "tour", "lvl"])}
+                                     "tour", "lvl", "round", "level", "best_of"])}
     del parts
     gc.collect()
 
