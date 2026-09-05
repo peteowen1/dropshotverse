@@ -252,6 +252,20 @@ def main() -> None:
     now = datetime.now(timezone.utc).isoformat()
     for tour, r in out.items():
         q = draw_mod.quarters(draws[tour]["bracket"])
+        # event_status lets the site render a FINISHED event as a result rather
+        # than as a live projection. Without it a completed tournament keeps
+        # rendering as a forecast forever once the scheduled task's trigger
+        # expires (2026-09-14), and nothing alarms - a frozen parquet is still a
+        # structurally valid parquet, so ITG's validator keeps passing on stale
+        # data. Computed per tour because the two finals are on different days.
+        n_total = len(r["field_uids"]) - 1          # 128-draw -> 127 matches
+        status = "complete" if r["n_done"] >= n_total else "live"
+        champion = None
+        if status == "complete":
+            still_in = [u for u in r["field_uids"] if u not in r["eliminated"]]
+            champion = r["names"].get(still_in[0]) if len(still_in) == 1 else None
+        log(f"  [{tour}] event_status={status} ({r['n_done']}/{n_total} decided)"
+            + (f", champion {champion}" if champion else ""))
         for uid in r["field_uids"]:
             p = r["probs"][uid]
             rows.append({
@@ -268,6 +282,9 @@ def main() -> None:
                 # loser still has p_r64 == 1.0.
                 "eliminated": bool(uid in r["eliminated"]),
                 "matches_decided": r["n_done"],
+                "matches_total": n_total,
+                "event_status": status,
+                "champion": champion,
                 "source": "live", "ratings_as_of": str(DATE0.date()), "updated_at": now,
             })
     pq = OUT_DIR / "live_predictions.parquet"
