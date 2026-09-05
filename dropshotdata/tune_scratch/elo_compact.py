@@ -141,7 +141,8 @@ def run_elo_fast(d: dict, *, blend: float = 0.0, decay: float = 0.3,
                  k_base: float = 250.0, k_shape: float = 0.4, k_min: float = 16.0,
                  ret_update: float = 0.0, wo_update: float = 0.0,
                  ret_counts: bool | None = None,
-                 wo_counts: bool | None = None) -> np.ndarray:
+                 wo_counts: bool | None = None,
+                 return_state: bool = False):
     """Sackmann-K online Elo on compact arrays.
 
     `ret_update` / `wo_update` scale the K applied to a RET / W-O row's rating
@@ -169,6 +170,15 @@ def run_elo_fast(d: dict, *, blend: float = 0.0, decay: float = 0.3,
 
     day, W, L, S, K = d["day"], d["w"], d["l"], d["surf"], d["kind"]
     preds = np.full(len(day), np.nan)
+    # Pre-match state as each row SEES it (post-decay, pre-update) - this is
+    # what build_xgb_features.py's elo_overall_diff / elo_surface_diff /
+    # n_prior_diff are built from. Only allocated when asked for: 8 extra
+    # float/int arrays over 1.23M rows is ~79 MB.
+    if return_state:
+        st = {k: np.full(len(day), np.nan) for k in
+              ("ro_w", "ro_l", "rs_w", "rs_l")}
+        st["n_all_w"] = np.zeros(len(day), dtype=np.int32)
+        st["n_all_l"] = np.zeros(len(day), dtype=np.int32)
 
     LP, LG, DR = eb.LAYOFF_PERIOD, eb.LAYOFF_GRADIENT, eb._LAYOFF_DRIFT
     START = eb.START
@@ -191,6 +201,10 @@ def run_elo_fast(d: dict, *, blend: float = 0.0, decay: float = 0.3,
         p_w = 1.0 / (1.0 + 10 ** (-diff / 400.0))
         if kd == KIND_OK:
             preds[i] = p_w
+        if return_state:
+            st["ro_w"][i], st["ro_l"][i] = ro_w, ro_l
+            st["rs_w"][i], st["rs_l"][i] = rs_w, rs_l
+            st["n_all_w"][i], st["n_all_l"][i] = n_all[w], n_all[l]
 
         if kd == KIND_OK:
             mult, counts = 1.0, True
@@ -204,11 +218,19 @@ def run_elo_fast(d: dict, *, blend: float = 0.0, decay: float = 0.3,
             kl = max(k_min, k_base / ((n_all[l] + 5) ** k_shape)) * mult
             ro[w] = ro_w + kw * (1 - p_w)
             ro[l] = ro_l - kl * (1 - p_w)
-            p_s = 1.0 / (1.0 + 10 ** (-(rs_w - rs_l) / 400.0))
+            # elo_baseline.py:409 updates the SURFACE rating with the BLENDED
+            # p_w, not with a surface-specific expectation. At blend=0.0 that
+            # means the surface rating is driven entirely by overall-Elo
+            # residuals bucketed by surface, with no feedback loop of its own -
+            # so it drifts ~2.8x wider than a self-correcting rating would.
+            # Reproducing the shipped behaviour is the point here, not fixing
+            # it; whether it SHOULD be p_s is a separate open question, since
+            # elo_surface_diff feeds XGBoost even though blend=0 keeps it out
+            # of Elo's own prediction.
             ksw = max(k_min, k_base / ((n_surf[w, s] + 5) ** k_shape)) * mult
             ksl = max(k_min, k_base / ((n_surf[l, s] + 5) ** k_shape)) * mult
-            rs[w, s] = rs_w + ksw * (1 - p_s)
-            rs[l, s] = rs_l - ksl * (1 - p_s)
+            rs[w, s] = rs_w + ksw * (1 - p_w)
+            rs[l, s] = rs_l - ksl * (1 - p_w)
         if counts:
             n_all[w] += 1
             n_all[l] += 1
@@ -218,6 +240,9 @@ def run_elo_fast(d: dict, *, blend: float = 0.0, decay: float = 0.3,
             last_surf[w, s] = last_surf[l, s] = dy
             seen[w] = seen[l] = True
             seen_s[w, s] = seen_s[l, s] = True
+    if return_state:
+        st["p_winner"] = preds
+        return st
     return preds
 
 

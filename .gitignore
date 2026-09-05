@@ -18,6 +18,10 @@ dropshotdata/tune_scratch/us_open_2026_predictions.json
 # `python dropshotdata/tune_scratch/elo_compact.py --force`, so it is a cache,
 # not data worth versioning.
 dropshotdata/tune_scratch/elo_compact_cache.npz
+# stdout/stderr from detached screen runs - regenerated every run, and the
+# results themselves land in the per-arm parquet checkpoints
+dropshotdata/tune_scratch/*.log
+dropshotdata/tune_scratch/*.err
 # release build staging - assets are published to GitHub Releases, never committed
 # (a 137 MB tarball got swept in here once by `git add -A` and silently stalled
 # every push; GitHub also hard-rejects blobs over 100 MB)
