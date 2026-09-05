@@ -297,6 +297,120 @@ Provisional read: the K schedule is not a lever, and Sackmann's defaults sit at
 or very near the optimum of this grid. Finish `k_shape=0.5` before recording
 that as settled.
 
+### The provisional null was WRONG, and the untested region held the win
+
+`k_shape=0.5` was the one region with no evidence, and refusing to call the null
+was the right decision. Full 27-point grid (`screen_k_remaining.py`):
+**`k_base=350, k_shape=0.5, k_min=16` at -0.000616**, best per shape being
+0.3 → +0.000289, 0.4 → 0.000000, **0.5 → -0.000616**. Monotone into the
+direction that had not been tested.
+
+Extended past that boundary (`screen_k_extend.py`, 48 arms, k_base to 700,
+k_shape to 0.7, k_min 12/16/20/28). The script's own boundary check still says
+`ON EDGE for k_base, k_shape` — I extended upward and the optimum moved back
+to the new *lower* edge.
+
+**The reason is a ridge, and it is the actual finding.** The top cells:
+
+| arm | delta |
+|---|---|
+| kb=350 ks=0.5 kmin=16 | -0.000616 |
+| kb=550 ks=0.6 kmin=16 | -0.000586 |
+| kb=350 ks=0.5 kmin=20 | -0.000557 |
+| kb=550 ks=0.6 kmin=20 | -0.000543 |
+
+`k_base` and `k_shape` trade off: a higher starting K with faster decay traces
+nearly the same K(n) curve, so the search slides along a valley floor and stops
+wherever the grid stops. **Do not ship a specific triple as though it were
+identified.** The transferable claim is the direction: *the shipped K decays too
+slowly, and the faster-decay ridge is worth ~0.0006 on Elo.* `k_min` is the one
+axis that genuinely resolved — 16-20 wins, 12 and 28 are worse on both sides,
+and the shipped 16 is already on it.
+
+---
+
+## Downstream: does either survive into the model?
+
+`screen_xgb_downstream.py` then `screen_xgb_paired_folds.py`. Both arms use the
+same rows, folds and hyperparameters; only the four Elo-derived columns
+(`elo_overall_diff`, `elo_surface_diff`, `elo_logit_pwinner`, `n_prior_diff`)
+are recomputed per arm, so a difference is attributable to the Elo change alone.
+
+**Limiting case:** rebuilding those columns at the shipped configuration
+reproduces `xgb_features_tune.parquet` at max |delta| **0.000e+00 on all four**.
+
+### Paired per-fold result — the unpaired test would have got this wrong
+
+The unpaired comparison put the K change at -0.0011 against a fold-to-fold
+spread of 0.0133, i.e. 8% of noise, which reads as nothing. But the arms share
+folds, and baseline log-loss ranges 0.574 to 0.609 across those folds — a 0.035
+swing that is entirely about which matches land in which fold and is **common to
+both arms**. Pairing removes it. `xgb.cv` returns only across-fold means and
+stds, never per-fold values, so it cannot do this test at all; the folds had to
+be rebuilt by hand.
+
+`num_boost_round` pinned at 217 for every arm. The unpaired run let each arm
+select its own stopping point (217 vs 250), which is a second changed axis
+(stats-discipline #5 rule 4).
+
+| candidate | mean delta | folds improved | t |
+|---|---|---|---|
+| round 13 retirements @0.5 | -0.000315 | **3/5** | -0.68 |
+| **round 14 K ridge** | **-0.001393** | **5/5** | **-5.70** |
+| both | -0.001454 | 5/5 | -3.36 |
+
+**Round 13 REJECTED downstream.** Real on Elo, cleanly decomposed, and it does
+not reach the model: 3/5 folds with two going the wrong way is noise.
+
+**Round 14 SURVIVES.** All five folds improve, -0.00074 to -0.00207. It is the
+only candidate across fourteen rounds of this programme to move every fold in
+the same direction.
+
+### What is NOT established
+
+- **The magnitude.** The K point was selected on this same tune window, so
+  -0.0014 is optimistically biased. 5/5 supports the direction; the size needs
+  the 2026 forward test.
+- **The parameters.** Ship "K should decay faster", not `(350, 0.5, 16)` — see
+  the ridge above.
+- **Transfer to config D.** This ran on the v1 19-feature set. Config D carries
+  set- and game-level Elo that would absorb some of the same signal, so this is
+  an upper bound, not an estimate.
+
+---
+
+## Found on the way: the surface rating is not a self-correcting rating
+
+`elo_baseline.py:409` updates the surface rating with the **blended** `p_w`:
+
+    surf[(w, s)] = rs_w + ksw * (1 - p_w)
+
+At the shipped `blend=0.0`, `p_w` is computed entirely from OVERALL Elo. So the
+surface rating is updated by a residual that is not its own: it accumulates
+overall-Elo surprises bucketed by surface, with no feedback loop, and drifts
+**2.8x wider** than a self-correcting rating (file std 498 vs 180 for a
+`p_s`-updated version; range -2508..+1918 vs -761..+883).
+
+This never touches Elo's own prediction, because blend=0 keeps the surface
+rating out of it. But `elo_surface_diff` **is** an XGBoost feature. So the model
+consumes a quantity that looks like a surface rating and is not one.
+
+Found only because the downstream limiting case demanded exact equality: three
+of four columns matched at 0.000e+00 while `elo_surface_diff` was off by up to
+2,166 rating points. A tolerance-based check would have hidden it.
+
+**Also a correction to an earlier claim in this ticket.** The compact harness
+was described as "bit-identical to `elo_baseline.py`". That verification
+compared `p_winner`, and at blend=0.0 `p_winner` does not depend on the surface
+rating at all — so the surface state was never exercised by it. The claim was
+true of what it tested and stated too broadly. Rounds 13/14 are unaffected
+(they score Elo log-loss, which at blend=0 is pure overall Elo; overall matched
+exactly on 10,290 rows and `p_winner` on 89,678, and the two ratings are
+separate arrays with separate counters).
+
+Open question worth its own round: should the surface rating be updated with
+`p_s`? It would make `elo_surface_diff` an actual surface rating. Untested.
+
 ---
 
 ## Harness note: `tune_scratch/elo_compact.py`

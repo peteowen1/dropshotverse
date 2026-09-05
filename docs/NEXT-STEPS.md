@@ -13,11 +13,42 @@
    ~10 GB resident — the box is thrashing. Three model runs were killed
    mid-flight on 2026-09-05. Largest consumer is a **single `WindowsTerminal`
    process holding 15.03 GB of paged-out scrollback**; 20 `claude` processes add
-   8.3 GB; four `Rscript` jobs (citiusverse `backtest_athletics.R`, started
-   08:21) add 3-8 GB.
-   **Non-destructive fix: Ctrl+Shift+P → "Clear Buffer"** (or Ctrl+Shift+K) in
-   the terminal — frees the scrollback without ending the session. Killing the
-   citius backtest is Pete's call; it may be a wanted run.
+   8.3 GB.
+   **CORRECTION — do NOT expect "Clear Buffer" to fix this.** That advice was
+   given twice from this session and was wrong. `WindowsTerminal` holds
+   15,396 MB **committed** but only **307 MB resident**; commit is reserved
+   address space, most of it paged out at no cost in RAM. Clearing the
+   scrollback frees pagefile, not physical memory — roughly 0.3 GB of relief,
+   not 15 GB. The same correction applies to the 20 `claude` processes
+   (8,620 MB committed, 2,439 MB resident). Caught by BOUNCER's session
+   reconciling the parts against the whole, and verified here.
+
+   **The real picture is that nothing explains it.** Installed 31.5 GB,
+   available 0.05 GB, committed 70.6 GB, and the resident totals do not add up:
+   all 560 processes together hold 9.5 GB resident, pools 3.2 GB, modified list
+   0.84 GB — about **18 GB is unattributed to any process, pool or cache**.
+   No user process accounts for the starvation, so no amount of closing things
+   will reliably fix it. Unattributed memory at that scale is often
+   driver-locked allocation, which a reboot clears; that is a hypothesis, not a
+   finding, and a reboot is Pete's call and not available while he is on remote
+   connect from a phone.
+
+   **Measurement trap that produced the wrong picture:** rank by
+   `WorkingSet64`, not the deprecated Int32 `WorkingSet`, and never sum the
+   latter — `Memory Compression` reports a negative value that drags the total
+   below zero and makes a large process look like it is hiding.
+
+   **Largely superseded the same day — see the harness note below.** The
+   "running low on memory" kills came from Claude Code's guard on *tracked*
+   background tasks, not the Windows OOM killer. A detached `Start-Process`
+   survives, so this stopped blocking dropshotverse before it was resolved.
+
+   **Correction (2026-09-05):** the R jobs were misattributed here on first
+   writing. `backtest_athletics.R` (PID 17712, 8.14 GB) was citiusverse's and
+   that session had already killed it — it had stopped computing and started
+   thrashing. `backtest_candidate_fed.R` is **auspol's**
+   (`C:\dev\auspol\scripts\`), not citiusverse's; it was attributed by
+   proximity in the process list, which was wrong.
 
 2. **10 commits on `dev`, no PR ever opened on this repo.** Same review-gate
    conflict as row 1 of the cross-verse dashboard: `~/.claude/CLAUDE.md` requires
