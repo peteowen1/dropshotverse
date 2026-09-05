@@ -5,6 +5,26 @@ project has ever touched: 2,654 tour-level completed matches in 2026, of which
 2,196 join to bookmaker odds. No 2026 row influenced training, feature
 construction, hyperparameters, or the K choice under test.
 
+**Window: 2026-01-04 to 2026-05-25 only** (Jan 535, Feb 657, Mar 523, Apr 398,
+May 541). NOT January to August, as this ticket and the session first said.
+`elo_compact.build_compact()` reads `raw/github` CSVs, which stop at
+2026-06-02; the 1,309 tour-level TML bridge rows covering June to 2026-08-24
+were never in the cache and so were never in the test.
+
+Worth recording how that hid: the odds file runs to 2026-08-24, so the join
+reported 82.7% coverage and looked healthy. **A join coverage percentage
+measures the overlap it was given, not the overlap you intended** - it cannot
+see rows that never entered the frame at all. Same failure shape as the
+Pinnacle column below: the check passed because it was measuring the wrong
+thing.
+
+Neither conclusion changes - 2,654 matches over five months is a real test and
+both results were decisive - but the window excludes the entire grass swing and
+the North American hard-court swing, so it is a clay-and-indoor-heavy sample.
+Re-running against the bridge rows would widen it to ~3,900 and is cheap; it
+needs `build_compact()` to consume `bridge_tennismylife.load_matches_with_bridge`
+rather than the raw CSV glob.
+
 This is the measurement deferred since 2026-08-29, when `RESUME-beat-elo.md`'s
 round-11 stop-point flag first recorded that the 2024-25 holdout had been
 revealed too many times to be an unbiased estimate of anything.
