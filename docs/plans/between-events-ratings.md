@@ -83,8 +83,10 @@ the one number this plan is missing; everything else is known.
 
 - The world number 1 on each tour is top 3 by both Elo and BT.
 - A player who has not played in 52 weeks is absent.
-- `ratings_as_of` is within a week of today on every refresh, else the
-  bridge broke and the alarm must say so.
+- `ratings_as_of` advances whenever a new tournament enters the bridge;
+  more than 21 days without movement is logged as a warning (off-season is
+  legitimate), and the hourly alarm warns when the table itself is more than
+  three days old.
 
 ## Status 2026-09-07
 
