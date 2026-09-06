@@ -106,7 +106,11 @@ def main() -> None:
                    ll_model=logloss(te["p_model"], te["y"]),
                    ll_market=logloss(te["p_mkt"], te["y"]),
                    ll_blend=logloss(pb, te["y"]),
-                   ece_model=ece(te["p_model"], te["y"]), ece_blend=ece(pb, te["y"]))
+                   ece_model=ece(te["p_model"], te["y"]), ece_blend=ece(pb, te["y"]),
+                   # the market's OWN calibration. Without it, "the blend beats
+                   # the market" cannot be told apart from "the de-vigged market
+                   # is slightly miscalibrated and the blend corrects it".
+                   ece_market=ece(te["p_mkt"], te["y"]))
         rec["gain_vs_model"] = rec["ll_model"] - rec["ll_blend"]
         rec["gap_vs_market"] = rec["ll_blend"] - rec["ll_market"]
         rows.append(rec)
@@ -119,12 +123,21 @@ def main() -> None:
     res = pd.DataFrame(rows)
     log("\n=== blend scorecard ===")
     log(res[["year", "n", "w", "ll_model", "ll_market", "ll_blend",
-             "gain_vs_model", "gap_vs_market"]].to_string(index=False))
+             "gain_vs_model", "gap_vs_market", "ece_model", "ece_market",
+             "ece_blend"]].to_string(index=False))
     mean_gain = float(res["gain_vs_model"].mean())
     log(f"\nmean w {res['w'].mean():.3f}  |  mean gain on the model {mean_gain:+.5f}  |  "
         f"mean gap to market {res['gap_vs_market'].mean():+.5f}")
     log(f"beats the model in {int((res['gain_vs_model'] > 0).sum())}/{len(res)} years; "
         f"beats the market in {int((res['gap_vs_market'] < 0).sum())}/{len(res)}")
+    log(f"mean ECE: model {res['ece_model'].mean():.4f}  market {res['ece_market'].mean():.4f}  "
+        f"blend {res['ece_blend'].mean():.4f}")
+    # 2020 is COVID-shortened (n=1,931) and is the biggest single contributor to
+    # the market-beating mean; the shipped-config scorecard already flags it as a
+    # regime rather than a triumph, so the same scrutiny applies here.
+    ex = res[res["year"] != 2020]
+    log(f"leaving 2020 out: mean gain on model {ex['gain_vs_model'].mean():+.5f}, "
+        f"mean gap to market {ex['gap_vs_market'].mean():+.5f} (n={len(ex)} folds)")
 
     log("\n=== pre-registered rules ===")
     won = int((res["gain_vs_model"] >= 0.015).sum())
@@ -149,6 +162,10 @@ def main() -> None:
     log("  A market-conditioned pre-match model therefore cannot carry the draw simulation;")
     log("  it can only improve the single-match product.")
 
+    if OUT.exists():
+        log(f"\n{OUT.name} already exists; this measurement informs a product call "
+            f"and is scored once. Delete it deliberately to re-measure.")
+        raise SystemExit(2)
     res.to_parquet(OUT, index=False)
     log(f"\nwrote {OUT}")
     log("MARKET_BLEND_COMPLETE")

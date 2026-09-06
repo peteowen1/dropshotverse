@@ -123,10 +123,22 @@ applied to that year. 2019 is a fit year only, so six test folds.
 | 2025 | 4,145 | 0.549 | 0.59418 | 0.59550 | 0.59102 | +0.00316 | -0.00449 |
 | **mean** | | **0.516** | 0.58822 | 0.58731 | **0.58332** | **+0.00491** | **-0.00400** |
 
+Mean ECE across the same folds: model 0.0185, market 0.0177, blend 0.0197.
+
 **The blend beats the model in 6 of 6 years and beats the market in 6 of 6**,
-by 0.0049 and 0.0040 respectively. The fitted weight sits at 0.52, near an even
-split, which says the model carries real signal the market does not: if the two
-were collinear w would run to 1 and the gain would vanish.
+by 0.0049 and 0.0040 respectively. Leaving out 2020, the COVID-shortened fold
+that contributes the largest single market-beating margin, it still beats the
+model by 0.0054 and the market by 0.0032 in all five remaining years.
+
+**Is beating the market real, or is the de-vigged market simply miscalibrated
+and the blend correcting it?** Checked, because the two look identical in a
+log-loss table. Mean ECE over the six folds: **market 0.0177, model 0.0185,
+blend 0.0197**. The market is the best-calibrated of the three and the blend
+is the worst, so the blend is not winning by fixing a market bias - it wins on
+log-loss while being less well calibrated, which means it wins on sharpness.
+That is discriminating information the model holds and the market does not
+price. The fitted weight of 0.52 says the same thing from the other side: two
+collinear signals would drive w to 1 and the gain to nothing.
 
 **The two pre-registered rules disagree, and that is the interesting part.**
 
