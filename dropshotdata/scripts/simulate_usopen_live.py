@@ -224,7 +224,9 @@ def main() -> None:
         draws[tour] = d
         metas[f"{tour}:2026-usopen"] = {"date0": DATE0, "field_uids": sorted(set(d["bracket"]))}
 
-    all_snaps = stu.build_snapshots(metas, df=df)
+    # Snapshot cache (ticket 40): the replay is a pure function of the field,
+    # DATE0 and the rows before it, so a same-day rerun loads it from disk.
+    all_snaps = stu.build_snapshots(metas, df=df, cache_dir=DD / "tune_scratch" / "snapshot_cache")
 
     out = {}
     for tour in ("atp", "wta"):

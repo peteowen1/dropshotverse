@@ -43,6 +43,7 @@ os.environ.setdefault("DSV_TIER_WEIGHT", "1.0")
 os.environ.setdefault("DSV_CLIP_REINFLATE_K", "0.5")
 
 import numpy as np
+import pandas as pd
 
 import hierarchical_model as hm
 from simulate_tournament import STAGE_ORDER, build_random_bracket, load_tournament_field
@@ -185,7 +186,21 @@ def simulate_bracket(bracket: list[str], snapshot: dict, surface: str, best_of: 
     return stage_reached
 
 
-def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None) -> dict[str, dict[str, "hm.PlayerState"]]:
+def snapshot_fingerprint(df: "pd.DataFrame", date0) -> str:
+    """Hash of every archive+bridge row that can influence a snapshot at
+    `date0`: the rows before it, in order, on the columns the replay reads.
+    ~1-2 s on 1.2M rows. A corrected TML row or a new archive vintage changes
+    it; a same-day rerun does not."""
+    import hashlib
+    cols = ["date", "winner_uid", "loser_uid", "surface", "has_points", "w_svpt", "w_won",
+            "l_svpt", "l_won", "total_games_w", "total_games_l", "tourney_level", "tour", "level_file"]
+    sub = df.loc[df["date"] < date0, [c for c in cols if c in df.columns]]
+    h = pd.util.hash_pandas_object(sub, index=False).values
+    return hashlib.sha256(h.tobytes()).hexdigest()[:16] + f"_{len(sub)}"
+
+
+def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None,
+                    cache_dir: "Path | None" = None) -> dict[str, dict[str, "hm.PlayerState"]]:
     """Single pass over the archive, snapshotting each tournament's field's
     pre-tournament state the moment the replay reaches that tournament's
     start date - far cheaper than N separate truncated run() calls, and
@@ -197,11 +212,38 @@ def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None) ->
     forecast that needs current ratings) instead of the plain cached
     archive - backtests against real historical ground truth should NOT
     pass a bridged df (that would leak synthetic/future-sourced data into a
-    validation), only a genuine forward-looking use case should."""
+    validation), only a genuine forward-looking use case should.
+
+    `cache_dir` (ticket 40): the replay is a pure function of (field, date0,
+    rows before date0), and the live sim called it with the same inputs every
+    30 minutes at ~60-100 s a time. When set, each tournament's snapshot is
+    pickled under cache_dir keyed by tournament key, date0 and a fingerprint
+    of the rows before date0; a hit skips the replay entirely. Opt-in, so
+    backtests that pass many cutoffs are unaffected."""
     log = lambda m: print(m, flush=True)
     if df is None:
         log("loading prepared archive...")
         df, _dropped = hm.load_prepared(use_cache=True)
+
+    cached: dict = {}
+    cache_paths: dict = {}
+    if cache_dir is not None:
+        import pickle
+        cache_dir = Path(cache_dir)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        for key, meta in tournaments_meta.items():
+            fp = snapshot_fingerprint(df, meta["date0"])
+            safe = key.replace(":", "_").replace("/", "_")
+            path = cache_dir / f"{safe}_{pd.Timestamp(meta['date0']).date()}_{fp}.pkl"
+            cache_paths[key] = path
+            if path.exists():
+                with open(path, "rb") as fh:
+                    cached[key] = pickle.load(fh)   # nosec: our own cache, written by this function
+        if cached:
+            log(f"snapshot cache: {len(cached)}/{len(tournaments_meta)} tournament(s) loaded from {cache_dir}")
+        tournaments_meta = {k: v for k, v in tournaments_meta.items() if k not in cached}
+        if not tournaments_meta:
+            return cached
 
     pending: dict = {}
     for key, meta in tournaments_meta.items():
@@ -303,6 +345,13 @@ def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None) ->
                 snapshots[key] = {uid: clone_state(players[uid]) for uid in field_by_key[key] if uid in players}
 
     log(f"replay done: {time.time()-t0:.0f}s, {len(snapshots)}/{len(tournaments_meta)} tournaments snapshotted")
+    if cache_dir is not None:
+        import pickle
+        for key, snap in snapshots.items():
+            with open(cache_paths[key], "wb") as fh:
+                pickle.dump(snap, fh, protocol=pickle.HIGHEST_PROTOCOL)
+        log(f"snapshot cache: wrote {len(snapshots)} to {cache_dir}")
+    snapshots.update(cached)
     return snapshots
 
 

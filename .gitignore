@@ -35,3 +35,6 @@ dropshotdata/blog/us_open_2026_drawonly.json
 # wrangler's local cache/temp dir (created wherever it's invoked from)
 .wrangler/
 dropshotdata/raw/wta_api/
+
+# ticket 40: pickled hier-state snapshots keyed by date0 + data fingerprint; a cache, regenerated on miss
+dropshotdata/tune_scratch/snapshot_cache*/

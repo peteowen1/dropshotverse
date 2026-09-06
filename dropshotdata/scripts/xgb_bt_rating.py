@@ -303,12 +303,17 @@ def build_pairwise_features_base(field_uids: list[str], ptab: pd.DataFrame, tour
     pairs_i, pairs_j = [], []
     recs = []
     atp_not_grass = (tour == "atp") and (surface != "Grass")
+    # Plain dicts instead of ptab.loc[] inside the 128x127 loop: the Series
+    # indexing was 6.6M calls and 11% of a live run (ticket 40). Values are
+    # the same objects the Series held; verified identical by
+    # tune_scratch/verify_perf_live_path.py.
+    rows = {uid: dict(zip(ptab.columns, vals)) for uid, vals in zip(ptab.index, ptab.itertuples(index=False, name=None))}
     for i in field_uids:
-        pi = ptab.loc[i]
+        pi = rows[i]
         for j in field_uids:
             if i == j:
                 continue
-            pj = ptab.loc[j]
+            pj = rows[j]
             p1, p2 = stu.predict_p1_p2(pi["state"], pj["state"], surface)
             p1c, p2c = min(max(p1, 1e-9), 1 - 1e-9), min(max(p2, 1e-9), 1 - 1e-9)
             hier_dmean_diff = np.log(p1c / (1 - p1c)) - np.log(p2c / (1 - p2c))
