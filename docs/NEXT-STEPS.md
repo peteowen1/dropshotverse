@@ -156,7 +156,10 @@ Still open from those reviews, in the order they are worth doing:
    matters: 2022-2025 were used to select this config, so only 2019-2021 are
    clean for it. Run a candidate with
    `python walk_forward_yearly.py --label X --drop feature`.
-4. **W1 MEASURED 2026-09-07, awaiting Pete's call, not more work.** Blending
+4. ~~**W1 — condition on the bookmaker price.**~~ **MEASURED AND REJECTED
+   2026-09-07 (D-15).** Pete: no bookmaker odds in the model at all. Prices
+   stay a benchmark only. Do not reopen on size; size was not the objection.
+   The measurement is kept and is worth knowing: blending
    the bookmaker price in beats the model in 6 of 6 years AND beats the market
    in 6 of 6, by 0.0049 and 0.0040, at a fitted weight of 0.52. It passes the
    charter's rule and fails the critique's own W1 rule, whose 0.015 bar was

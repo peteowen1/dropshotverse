@@ -150,10 +150,16 @@ and only before any later pairing is known. So this cannot carry the
 tournament projection, the wall chart or the title odds. It improves the
 single-match product only.
 
-**Recommendation, and it is Pete's call rather than the charter's.** The gain
-is real, consistent and small, and w near 0.5 means roughly half of any
-published number would be the bookmaker's opinion rather than the model's.
-That is an editorial decision about what the site is claiming to be, not only
-an accuracy decision, and the critique itself says the copy would have to
-state that prices are an input. Recorded as measured and not shipped.
+**REJECTED 2026-09-07 (D-15), on product grounds, not accuracy grounds.** The
+gain is real and consistent, and it is not being taken: at w near 0.5, roughly
+half of every published number would be the bookmaker's opinion carrying this
+site's name. Pete's call, verbatim: "I don't want to use bookmakers odds at all
+in our model." So prices keep the single job they already had, which is the
+benchmark in this scorecard, and W1 is closed. It should not be reopened on
+new evidence about its size, because size was never the objection.
+
+The measurement is kept because it answers something worth knowing anyway: at
+w=0.52 the model is carrying about half the information in the blend, which
+means its features hold real signal the market does not price. A model that
+was merely a noisy copy of the market would have driven w to 1.
 
