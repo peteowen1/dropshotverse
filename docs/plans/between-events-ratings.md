@@ -106,3 +106,28 @@ the one number this plan is missing; everything else is known.
 - **Staleness is a warning, not a gate:** the tour-level bridge brings
   nothing for five to seven weeks in the off-season.
 
+## Option B status 2026-09-07: built, waiting for the field
+
+- `scripts/simulate_wta_event.py --group 1020` and `.github/workflows/event-forecast.yml`
+  (manual dispatch: group id, year, sims, allow_partial, dry_run). Regenerates
+  Elo, fetches the entry list fresh, simulates seeding-consistent brackets
+  with the byes a 96 draw implies (128 slots, 32 byes opposite seeds 1 to
+  32, a bye always loses, unfilled slots play like the weakest entrant),
+  checks anchors, upserts the event into `tennis/upcoming_predictions.parquet`
+  on R2 keyed by `tournament_id` (`2026-1020`, the archive's own id shape).
+- Smoke test on 2026-09-07 against the live data: 76/76 entrants resolved,
+  0 seeded, 20 slots unfilled, anchors PASS, provisional top four Sabalenka
+  20.8%, Gauff 18.0%, Swiatek 15.9%, Rybakina 14.8% at 3,000 sims. Not
+  published: the script refuses an incomplete or unseeded field without
+  `--allow-partial`.
+- **Run for real around 2026-09-23**: dispatch `event-forecast.yml` with
+  group 1020 once the field shows 96 entrants and 32 seeds. Bump
+  `TENNIS_LIVE_UNTIL` in the ITG worker for the event window if the live
+  projection is wanted for Beijing (that needs a live draw feed, which is a
+  separate piece of work; the pre-draw forecast does not).
+- **Blog side**: a page that reads `upcoming_predictions.parquet` by
+  `tournament_id`. Schema: tournament_id, tournament_name, year, tour, surface,
+  level, draw_size, start_date, player_id, player_name, seed, p_r64..p_title,
+  field_status, source (locked/provisional), ratings_as_of, updated_at.
+  Belongs with inthegame-blog#660.
+

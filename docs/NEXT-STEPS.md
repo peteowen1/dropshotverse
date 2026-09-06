@@ -37,6 +37,9 @@
    published. Blog side: date label fixed on inthegame-blog dev; the
    finished-event hero is **inthegame-blog#660** (ITG session). Then option B,
    a Beijing forecast (field seeds ~2026-09-23).
+   **Option B built 2026-09-07**: `simulate_wta_event.py` + `event-forecast.yml`
+   publish any WTA event's pre-draw forecast to `upcoming_predictions.parquet`;
+   the blog page for it goes with #660.
    Plan: [plans/between-events-ratings.md](plans/between-events-ratings.md).
 3. ~~**Live sim: five measured fixes**~~ — **DONE 2026-09-06**: 270 s to 68 s
    steady state (127 s on a cold snapshot cache), every function verified
@@ -73,9 +76,11 @@
 - **2026-09-13** — US Open men's final. `live-projection.yml` has no expiry.
   The laptop tasks run to **2026-09-16 12:00 local** (2026-09-15 22:00 New
   York); the point capture still depends on the laptop.
-- **~2026-09-23** — re-run `fetch_wta_upcoming.py --fetch 1020` for the China
-  Open (Beijing, starts 2026-09-30). On 09-06 the field was 76 of 96 and
-  0 seeded; a forecast now would be over a partial, unseeded field.
+- **~2026-09-23** — dispatch `event-forecast.yml` with group `1020` for the
+  China Open (Beijing, starts 2026-09-30) once the field shows 96 entrants
+  and 32 seeds. On 09-07 it was 76 of 96 and 0 seeded; the pipeline is built
+  and smoke-tested, and refuses to publish a partial field without
+  `allow_partial`.
 - **After the final** — `event_status = complete` lets the site render a
   result; the freshness alarm downgrades stale-while-complete to a note.
 

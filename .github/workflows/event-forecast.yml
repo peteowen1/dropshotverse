@@ -1,0 +1,127 @@
+# Forecast an upcoming WTA event from its entry list (option B,
+# docs/plans/between-events-ratings.md). Manual: dispatch with the WTA
+# tournamentGroup id once the field is complete and seeded (for a WTA 1000 that
+# is about a week before the start; Beijing 2026 = 1020, starts 2026-09-30).
+#
+# Runs after a fresh Elo regeneration so the ratings are current, pulls the
+# entry list from api.wtatennis.com (one fetch, cached, not a poll), simulates
+# seeding-consistent brackets with byes, checks anchors, and upserts the event
+# into tennis/upcoming_predictions.parquet on R2. The locked US Open tables are
+# never touched. allow_partial writes a forecast tagged "provisional" over an
+# incomplete or unseeded field; use it for a look, not for the site.
+
+name: Event forecast (WTA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      group_id:
+        description: WTA tournamentGroup id (Beijing = 1020)
+        required: true
+        default: "1020"
+      year:
+        description: season
+        default: "2026"
+      sims:
+        description: simulations
+        default: "20000"
+      allow_partial:
+        description: write even if the field is incomplete or unseeded (tagged provisional)
+        type: boolean
+        default: false
+      dry_run:
+        description: build and check but do not upload
+        type: boolean
+        default: false
+
+concurrency:
+  group: event-forecast
+  cancel-in-progress: false
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ARCHIVE_TAG: sackmann-archive
+      INPUTS_TAG: model-inputs-2026-09
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install pandas numpy xgboost pyarrow
+
+      - name: Fetch archive and model inputs from Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dropshotdata/raw dropshotdata/tune_scratch dropshotdata/blog
+          gh release download "$ARCHIVE_TAG" --pattern sackmann_archive_raw.tar.gz --dir dropshotdata/raw
+          tar -xzf dropshotdata/raw/sackmann_archive_raw.tar.gz -C dropshotdata/raw
+          rm dropshotdata/raw/sackmann_archive_raw.tar.gz
+          gh release download "$INPUTS_TAG" --dir dropshotdata/tune_scratch
+          (cd dropshotdata/tune_scratch && unzip -q xgb_bagged_model_cache_v2_setgame.zip && rm xgb_bagged_model_cache_v2_setgame.zip)
+          test "$(find dropshotdata/raw/github -name '*.csv' | wc -l)" -gt 400
+
+      - name: Regenerate Elo with the current bridge
+        working-directory: dropshotdata/scripts
+        run: python regen_elo_raw_with_bridge.py
+
+      - name: Fetch the calendar and entry list
+        working-directory: dropshotdata/scripts
+        shell: bash
+        run: |
+          python fetch_wta_upcoming.py --from "${{ inputs.year }}-01-01" --to "${{ inputs.year }}-12-31" \
+            --fetch "${{ inputs.group_id }}" --year "${{ inputs.year }}"
+
+      - name: Simulate
+        working-directory: dropshotdata/scripts
+        shell: bash
+        run: |
+          extra=""
+          if [ "${{ inputs.allow_partial }}" = "true" ]; then extra="--allow-partial"; fi
+          python simulate_wta_event.py --group "${{ inputs.group_id }}" --year "${{ inputs.year }}" \
+            --sims "${{ inputs.sims }}" --no-refetch $extra
+
+      - name: Validate
+        shell: bash
+        env:
+          EVENT_ID: ${{ inputs.year }}-${{ inputs.group_id }}
+        run: |
+          python - <<'EOF'
+          import os
+          import pandas as pd
+          d = pd.read_parquet("dropshotdata/blog/upcoming_predictions.parquet")
+          print(d.shape, "events:", sorted(d["tournament_id"].unique()))
+          ev = d[d["tournament_id"] == os.environ["EVENT_ID"]]
+          print(ev.iloc[0][["tournament_name", "start_date", "field_status", "source", "ratings_as_of"]].to_string())
+          print(ev.nlargest(8, "p_title")[["player_name", "seed", "p_title", "p_f"]].to_string(index=False))
+          EOF
+
+      - uses: actions/setup-node@v7
+        if: ${{ !inputs.dry_run }}
+        with:
+          node-version: "20"
+
+      - name: Upload upcoming_predictions.parquet to R2
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Cloudflare secrets not set"; exit 1
+          fi
+          npm install -g wrangler
+          for attempt in 1 2 3; do
+            wrangler r2 object put inthegame-data/tennis/upcoming_predictions.parquet --file dropshotdata/blog/upcoming_predictions.parquet --cache-control "public, max-age=300" --remote && break
+            echo "::warning::upload attempt $attempt failed"; sleep $(( 2 ** attempt ))
+            [ $attempt -eq 3 ] && exit 1
+          done
