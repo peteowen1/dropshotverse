@@ -97,6 +97,11 @@ def level_code(level: str, draw: int) -> str:
     raise SystemExit(f"unmapped WTA level {level!r}; add it to level_code() with an archive check")
 
 
+def expected_seeds(draw: int) -> int:
+    """Tour convention: 8 seeds to a 32 draw, 16 to a 64, 32 to a 96 or 128."""
+    return 8 if draw <= 32 else 16 if draw <= 64 else 32
+
+
 def load_entrants(group_id: int, year: int, refetch: bool) -> list[dict]:
     path = REF / f"wta_{group_id}_{year}_entrants.json"
     if refetch or not path.exists():
@@ -171,7 +176,9 @@ def random_bracket_with_byes(field_uids: list[str], seed_map: dict[str, int], n_
     rng.shuffle(unseeded)
     free = [i for i in range(n_slots) if bracket[i] is None]
     rng.shuffle(free)
-    assert len(unseeded) <= len(free) - bye_left, "draw size too small for the entry list"
+    if len(unseeded) > len(free) - bye_left:
+        raise SystemExit(f"entry list ({len(field_uids)} entrants) does not fit the {n_slots - n_byes} main-draw "
+                         f"slots: alternates or unwithdrawn entrants still listed; re-run nearer the event")
     for i in free:
         if bye_left > 0:
             bracket[i] = BYE
@@ -252,7 +259,7 @@ def main() -> None:
     n_tbd = max(0, draw - len(field_uids))
     log(f"field: {len(field_uids)} entrants of {draw}, {n_seeds} seeded, {n_tbd} slots still to be filled, "
         f"{len(meta['synthetic'])} unrated (synthetic uid): {meta['synthetic'][:6]}")
-    complete = n_tbd == 0 and n_seeds >= min(32, n_byes or 32)
+    complete = n_tbd == 0 and n_seeds >= expected_seeds(draw)
     if not complete and not args.allow_partial:
         raise SystemExit("field is not complete and seeded yet; re-run nearer the event, or pass "
                          "--allow-partial for a provisional forecast")
