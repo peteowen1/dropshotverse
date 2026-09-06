@@ -178,6 +178,21 @@ def build_name_to_uid(df) -> dict[str, str]:
                 for k in _alt_keys(name)]
     if alt_rows:
         alt = pd.DataFrame(alt_rows, columns=["key", "uid", "date"])
+        # An alt key that reaches more than one PLAYER is dropped, not resolved
+        # most-recent-wins. Over the real archive 269 keys are ambiguous, e.g.
+        # "ahmedomar" is both Ahmed Ben Omar and Omar Ahmed, and "adrianalopez"
+        # is both Adriana Lopez and Adriana Coltorti Lopez. Picking one would
+        # attribute a real player's whole rating history to a different real
+        # player, silently and plausibly - strictly worse than the NEW_ mint
+        # this fallback exists to avoid, because a NEW_ mint is loud and flat
+        # 1500 while a wrong match looks right. Review of 05f9232, 2026-09-07.
+        n_keys = alt["key"].nunique()
+        uid_per_key = alt.groupby("key")["uid"].nunique()
+        ambiguous = set(uid_per_key.index[uid_per_key > 1])
+        if ambiguous:
+            print(f"[build_name_to_uid] dropped {len(ambiguous)} of {n_keys} alt keys that reach "
+                  f"more than one player (e.g. {sorted(ambiguous)[:3]})")
+            alt = alt[~alt["key"].isin(ambiguous)]
         alt = alt.loc[alt.groupby("key", sort=False)["date"].idxmax()]
         out[_ALT] = dict(zip(alt["key"], alt["uid"]))
     else:

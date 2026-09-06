@@ -13,7 +13,7 @@ import shutil
 import subprocess
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -22,6 +22,10 @@ BLOG_DIR = _common.BLOG
 BUCKET_PREFIX = "inthegame-data/tennis"
 # Public read side of the same bucket (check_blog_data_freshness.py uses it too).
 PUBLIC_URL = "https://pub-ee4bf5b599a047f9ac2b9facc1587008.r2.dev/tennis/"
+
+
+RUN_START = datetime.now(timezone.utc)
+BUILT_THIS_RUN_MIN = 30   # generous: the sim takes ~1 min, the .cmd runs this straight after
 
 
 def log(m: str) -> None:
@@ -73,12 +77,26 @@ def main() -> None:
         key = f"{BUCKET_PREFIX}/{f.name}"
         # FABLE-redteam-2026-09-07 F1: never overwrite a newer copy on R2.
         local_mtime = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc)
-        remote_lm = r2_last_modified(f.name)
-        if remote_lm is not None and local_mtime < remote_lm:
+        # A file this run just built is ALWAYS uploaded, without consulting R2.
+        # The skip exists for files this run did not produce (the ratings and
+        # locked-prediction tables); applying it to the live tables too made the
+        # live path depend on the laptop clock agreeing with R2's, and a clock
+        # that drifts behind (NTP lapse after sleep is the usual way) would have
+        # made every freshly built file look stale and silently frozen the live
+        # odds mid-event. RUN_START comes from the same clock as st_mtime, so
+        # skew cancels. Review of 05f9232, 2026-09-07.
+        if local_mtime >= RUN_START - timedelta(minutes=BUILT_THIS_RUN_MIN):
+            log(f"uploading {key} ({f.stat().st_size:,} bytes, built by this run)...")
+        elif (remote_lm := r2_last_modified(f.name)) is not None and local_mtime < remote_lm:
+            # NB the R2 timestamp is when the object was last WRITTEN, which
+            # may be a re-upload of stale content, not when that content was
+            # computed. Same trap as the GitHub release date gotcha in
+            # C:/dev/CLAUDE.md: this line reads as reassurance either way.
             log(f"skipping {key}: local copy {local_mtime:%Y-%m-%d %H:%M:%S}Z is older than "
                 f"R2 copy {remote_lm:%Y-%m-%d %H:%M:%S}Z (not built by this run)")
             continue
-        log(f"uploading {key} ({f.stat().st_size:,} bytes)...")
+        else:
+            log(f"uploading {key} ({f.stat().st_size:,} bytes)...")
         # encoding/errors explicit: wrangler's own banner has a unicode emoji
         # that crashes the default cp1252 decode on Windows otherwise
         # (confirmed - upload itself succeeds, only output-capture crashed).
