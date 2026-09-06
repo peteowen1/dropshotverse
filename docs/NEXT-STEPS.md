@@ -9,24 +9,26 @@
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
 >   [issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md).
-> - The live US Open projection publishes from the laptop task AND from
->   GitHub Actions (D-13). GitHub's cron fires sporadically (see Awaiting
->   Pete 1), so the laptop stays primary through the final.
+> - The live US Open projection publishes from the laptop task; GitHub
+>   Actions is the backup, dispatched by the ITG Worker only when R2 goes
+>   stale (D-13, D-14). The Worker needs a PAT first (Awaiting Pete 1).
 > - `main` is real: PRs #8-#12 merged 2026-09-06, each reviewed.
 
 ## Awaiting Pete
 
-1. **Keep the laptop task `DropshotverseUSOpenLiveSim` for now; GitHub's
-   cron is not delivering the cadence.** First scheduled runs were green
-   (projection 09:35 UTC, alarm 09:26), but in the two hours after that
-   GitHub fired the 30-minute projection cron **once** and the hourly alarm
-   **once**; the 10:00/10:30/11:00/11:30 and 10:17/11:17 ticks never ran.
-   The alarm sits on the same scheduler, so it cannot be trusted to notice
-   the producer going quiet. Decision for Pete: keep the laptop through the
-   final (2026-09-13) with Actions as backup, or add a reliable external
-   trigger (a Cloudflare Worker cron calling `workflow_dispatch`, the ITG
-   Worker already has crons). Recommendation: keep the laptop through the
-   final; revisit the trigger before Beijing. #4 stays open for this.
+1. **Mint the GitHub token that lets the ITG Worker trigger the Actions
+   producer (D-14).** GitHub's own cron fired once in two hours, and a
+   Windows-runner `*/30` cron would burn ~500 billed minutes a day against
+   the 2,000-minute free allowance, so the schedule is removed. The ITG
+   Worker's existing `*/30` cron now calls `workflow_dispatch` ONLY when R2's
+   `tennis/live_predictions.parquet` is >40 min old and only until
+   `TENNIS_LIVE_UNTIL` (2026-09-16T02:00Z, in `worker/wrangler.toml`). It
+   needs a **fine-grained PAT**: github.com/settings/personal-access-tokens,
+   repository access = `peteowen1/dropshotverse` only, permission
+   **Actions: read and write**, expiry short. Then in
+   `C:\dev\inthegame-blog\worker`: `wrangler secret put GITHUB_DISPATCH_TOKEN`.
+   Until then the Worker logs "token not set" and the laptop is the only
+   producer. Keep `DropshotverseUSOpenLiveSim` through the final regardless.
 2. **Do not publish a "we match the market" claim** (D-4, a recommendation):
    the 0.00073 gap is from a burnt holdout, and the 2026 forward test puts the
    honest gap at 0.0247 with 38% accuracy when dissenting.
@@ -73,9 +75,11 @@
 
 ## Recently landed (2026-09-06)
 
-- **Live projection runs from GitHub Actions** (D-13): `live-projection.yml`
-  every 30 min from the `sackmann-archive` and `model-inputs-2026-09`
-  Releases; `check-freshness.yml` hourly on the public R2 URL, no secrets.
+- **Live projection can run from GitHub Actions** (D-13): `live-projection.yml`
+  from the `sackmann-archive` and `model-inputs-2026-09` Releases, proven end
+  to end. Its cron was removed the same day (D-14): GitHub fired it once in
+  two hours and a Windows runner every 30 min would exhaust the free minutes
+  in four days. `check-freshness.yml` stays hourly (ubuntu, seconds per run).
 - **Five PRs merged** (#8-#12). Review findings fixed before merge: the live
   sim and the point-table build printed anchor FAILs and published anyway;
   both now refuse the write. Per-column coverage gate on the point table.
