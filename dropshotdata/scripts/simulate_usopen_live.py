@@ -52,6 +52,12 @@ SURFACE = "Hard"
 OUT_DIR = Path(__file__).resolve().parent.parent / "blog"
 N_SIMS_DEFAULT = 20000
 
+# Fixed integer seeds, one per tour - the same convention every other simulator
+# in this repo uses. This previously seeded off hash(str), which Python salts
+# per process (PYTHONHASHSEED), so no published refresh could be reproduced and
+# part of every "the number moved" was seed churn rather than the bracket.
+TOUR_SEED = {"atp": 0, "wta": 1}
+
 
 def log(m: str) -> None:
     print(m, flush=True)
@@ -110,7 +116,7 @@ def run_tour(tour: str, draw: dict, snap: dict, models: list, cat_levels: dict,
                                                h2h, DATE0, cat_levels, models, STAGE_ORDER[:-1])
 
     idx = {u: k for k, u in enumerate(field_uids)}
-    rng = np.random.default_rng(hash(tour + "usopen-live") % 100000)
+    rng = np.random.default_rng(TOUR_SEED[tour])
     counts = {uid: {s: 0 for s in STAGE_ORDER} for uid in field_uids}
     for _ in range(n_sims):
         reached = simulate_from_state(bracket, draw["results"], draw["event"], idx,
@@ -126,27 +132,63 @@ def run_tour(tour: str, draw: dict, snap: dict, models: list, cat_levels: dict,
             run += counts[uid][s]
             cum[s] = run / n_sims
         probs[uid] = cum
+    # Elimination comes from the feed (who actually lost), never from a stage
+    # probability. A player knocked out in R2 still has P(reach R64) == 1.0.
+    eliminated = {u for u in field_uids if u in draw["losers"]}
+    # round_matrices/idx are carried out so the pairwise probabilities can be
+    # PUBLISHED. They were built here, used to run the simulation, and thrown
+    # away -- which is the whole of dropshotverse#6: the blog replays the draw
+    # from bt_rating, a single number that is the row-mean of this matrix at one
+    # fixed context (REFERENCE_SURFACE/REFERENCE_ROUND), so it cannot reproduce
+    # the model's own match odds. Publishing the matrix closes that gap.
     return {"field_uids": field_uids, "names": names, "seed_map": seed_map,
-            "probs": probs, "n_done": n_done}
+            "round_matrices": round_matrices, "idx": idx,
+            "probs": probs, "n_done": n_done, "eliminated": eliminated}
 
 
 def report(label: str, res: dict, top_n: int = 12) -> None:
     probs, names, seeds = res["probs"], res["names"], res["seed_map"]
+    out = res["eliminated"]
     order = sorted(res["field_uids"], key=lambda u: -probs[u]["W"])
     log(f"\n=== {label} - title probability, LIVE "
-        f"({res['n_done']} matches decided) ===")
+        f"({res['n_done']} matches decided, {len(out)} players out) ===")
     log(f"{'#':>3} {'player':<26} {'seed':>4} {'title':>7} {'final':>7} {'semi':>7} {'status':>9}")
     for i, uid in enumerate(order[:top_n], 1):
         sd = seeds.get(uid)
         sd = "-" if sd is None else str(int(sd))
-        alive = "OUT" if probs[uid]["W"] == 0 and probs[uid]["R64"] == 0 else ""
+        alive = "OUT" if uid in out else ""
         log(f"{i:>3} {names.get(uid, uid):<26} {sd:>4} {probs[uid]['W']:>6.1%} "
             f"{probs[uid]['F']:>7.1%} {probs[uid]['SF']:>7.1%} {alive:>9}")
 
-    # anchor: anyone already eliminated must have exactly zero title probability
-    eliminated = [u for u in res["field_uids"] if probs[u]["W"] > 0 and probs[u]["R64"] == 0]
+    # Anchor 1: a player the feed says has LOST must hold zero title probability.
+    # This can genuinely fail - if a completed result were not applied (a
+    # match_id the simulator addresses differently from the feed, say), the
+    # loser would keep advancing in simulation and show a non-zero title
+    # chance. The previous form of this check tested W > 0 and R64 == 0, which
+    # is unsatisfiable for cumulative probabilities and so always printed PASS.
+    zombies = [u for u in res["field_uids"] if u in out and probs[u]["W"] > 0]
     log(f"  anchor: no eliminated player holds title probability -> "
-        f"{'PASS' if not eliminated else 'FAIL ' + str(eliminated[:3])}")
+        f"{'PASS' if not zombies else 'FAIL ' + str([names.get(u, u) for u in zombies[:3]])}")
+    failures = []
+    if zombies:
+        failures.append("eliminated player holds title probability")
+
+    # Anchor 2: exactly one player wins, so title probability must sum to 1.
+    total = sum(probs[u]["W"] for u in res["field_uids"])
+    log(f"  anchor: title probabilities sum to 1.0 -> {total:.4f} "
+        f"{'PASS' if abs(total - 1.0) < 1e-6 else 'FAIL'}")
+    if abs(total - 1.0) >= 1e-6:
+        failures.append(f"title probabilities sum to {total:.4f}")
+
+    # Anchor 3: survivors and the elimination set must partition the field.
+    alive_n = len(res["field_uids"]) - len(out)
+    expected_alive = len(res["field_uids"]) - res["n_done"]
+    log(f"  anchor: {alive_n} alive vs {expected_alive} expected from "
+        f"{res['n_done']} decided -> "
+        f"{'PASS' if alive_n == expected_alive else 'FAIL'}")
+    if alive_n != expected_alive:
+        failures.append(f"{alive_n} alive vs {expected_alive} expected")
+    return failures
 
 
 def main() -> None:
@@ -175,7 +217,10 @@ def main() -> None:
             raise SystemExit(f"{tour}: draw failed verification, refusing to simulate "
                              f"on a bracket we cannot trust: {problems[:3]}")
         if args.ignore_results:
-            d["results"] = {}          # real bracket, clean slate - diagnostic arm
+            # real bracket, clean slate - diagnostic arm. `losers` must be
+            # cleared alongside `results` or the report would call players out
+            # in an arm that is pretending nothing has been played.
+            d["results"], d["losers"] = {}, set()
         draws[tour] = d
         metas[f"{tour}:2026-usopen"] = {"date0": DATE0, "field_uids": sorted(set(d["bracket"]))}
 
@@ -186,13 +231,21 @@ def main() -> None:
         snap = all_snaps.get(f"{tour}:2026-usopen", {})
         out[tour] = run_tour(tour, draws[tour], snap, models, cat_levels,
                              playstyle_full, age_table, args.sims)
-    report("MEN'S SINGLES", out["atp"])
-    report("WOMEN'S SINGLES", out["wta"])
+    # The anchors used to be printed and ignored, so a failing one reached R2
+    # with exit 0 and the .cmd wrapper's errorlevel guard never fired. A FAIL
+    # now refuses the write, same as a draw that fails verification above:
+    # the site keeps the last good projection rather than publishing a wrong one.
+    failures = {"atp": report("MEN'S SINGLES", out["atp"]),
+                "wta": report("WOMEN'S SINGLES", out["wta"])}
+    failures = {t: f for t, f in failures.items() if f}
+    if failures:
+        raise SystemExit(f"anchor check FAILED, refusing to write or publish: {failures}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     payload = {t: {"names": r["names"],
                    "seed_map": {k: int(v) for k, v in r["seed_map"].items()},
-                   "probs": r["probs"], "n_done": r["n_done"]}
+                   "probs": r["probs"], "n_done": r["n_done"],
+                   "eliminated": sorted(r["eliminated"])}   # same fact as the parquet column
                for t, r in out.items()}
     payload["_meta"] = {"generated_at": datetime.now(timezone.utc).isoformat(),
                         "n_sims": args.sims,
@@ -214,6 +267,20 @@ def main() -> None:
     now = datetime.now(timezone.utc).isoformat()
     for tour, r in out.items():
         q = draw_mod.quarters(draws[tour]["bracket"])
+        # event_status lets the site render a FINISHED event as a result rather
+        # than as a live projection. Without it a completed tournament keeps
+        # rendering as a forecast forever once the scheduled task's trigger
+        # expires (2026-09-14), and nothing alarms - a frozen parquet is still a
+        # structurally valid parquet, so ITG's validator keeps passing on stale
+        # data. Computed per tour because the two finals are on different days.
+        n_total = len(r["field_uids"]) - 1          # 128-draw -> 127 matches
+        status = "complete" if r["n_done"] >= n_total else "live"
+        champion = None
+        if status == "complete":
+            still_in = [u for u in r["field_uids"] if u not in r["eliminated"]]
+            champion = r["names"].get(still_in[0]) if len(still_in) == 1 else None
+        log(f"  [{tour}] event_status={status} ({r['n_done']}/{n_total} decided)"
+            + (f", champion {champion}" if champion else ""))
         for uid in r["field_uids"]:
             p = r["probs"][uid]
             rows.append({
@@ -225,14 +292,64 @@ def main() -> None:
                 "p_r16": round(p["R16"], 4), "p_qf": round(p["QF"], 4),
                 "p_sf": round(p["SF"], 4), "p_f": round(p["F"], 4),
                 "p_title": round(p["W"], 4),
-                # still alive == has not yet lost; R64==0 means eliminated in R1
-                "eliminated": bool(p["R64"] == 0.0),
+                # out == the feed reports them losing a match. NOT derivable
+                # from a stage probability: these are cumulative, so an R2
+                # loser still has p_r64 == 1.0.
+                "eliminated": bool(uid in r["eliminated"]),
                 "matches_decided": r["n_done"],
+                "matches_total": n_total,
+                "event_status": status,
+                "champion": champion,
                 "source": "live", "ratings_as_of": str(DATE0.date()), "updated_at": now,
             })
     pq = OUT_DIR / "live_predictions.parquet"
     pd.DataFrame(rows).sort_values(["tour", "p_title"], ascending=[True, False]).to_parquet(pq, index=False)
     log(f"wrote {pq} ({len(rows)} rows)")
+
+    # --- pairwise match probabilities (dropshotverse#6) --------------------
+    #
+    # The model's OWN answer to "does A beat B", per round, which is what the
+    # simulation above actually runs on. Until now only bt_rating shipped, and
+    # that is np.nanmean of this matrix's antisymmetric part at one fixed
+    # context -- an average over the whole field. An average cannot say WHO you
+    # are good against, so no single-number replay of it can reproduce these
+    # odds. On 2026-09-04 the blog's simulator sat 13 points from the published
+    # p_title on Alexander Zverev because of exactly that.
+    #
+    # Every ORDERED pair is stored, not just i<j. build_round_pred_matrices'
+    # output is not guaranteed antisymmetric -- xgb_bt_rating.py explicitly
+    # antisymmetrises with (L - L.T)/2 before taking its row means, which it
+    # would not need to do if the raw matrix already were -- so halving the file
+    # would silently discard the asymmetry rather than compress it. The measured
+    # asymmetry is reported below so its size is known rather than assumed.
+    prows = []
+    asym_max = 0.0
+    for tour, r in out.items():
+        uids, idx_t = r["field_uids"], r["idx"]
+        for stage, M in r["round_matrices"].items():
+            arr = np.asarray(M, dtype=float)
+            # How far from p_ij + p_ji == 1 this round's matrix sits. A number
+            # near zero means a half-matrix would have been safe; a large one
+            # means storing both directions was necessary.
+            off = np.abs(arr + arr.T - 1.0)
+            np.fill_diagonal(off, 0.0)
+            asym_max = max(asym_max, float(np.nanmax(off)))
+            for a in uids:
+                ia = idx_t[a]
+                for b in uids:
+                    if a == b:
+                        continue
+                    prows.append({
+                        "tournament_id": "2026-usopen", "tour": tour, "round": stage,
+                        "player_id_a": a, "player_id_b": b,
+                        "p_a_beats_b": round(float(arr[ia, idx_t[b]]), 5),
+                        "ratings_as_of": str(DATE0.date()), "updated_at": now,
+                    })
+    ppq = OUT_DIR / "pairwise.parquet"
+    pd.DataFrame(prows).to_parquet(ppq, index=False)
+    log(f"wrote {ppq} ({len(prows):,} rows, {ppq.stat().st_size / 1e6:.1f} MB)")
+    log(f"  max |p_ij + p_ji - 1| across every round = {asym_max:.4f} "
+        f"({'antisymmetric to rounding' if asym_max < 0.01 else 'genuinely asymmetric - storing both directions was required'})")
 
 
 if __name__ == "__main__":

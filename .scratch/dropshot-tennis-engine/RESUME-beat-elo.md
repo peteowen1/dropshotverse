@@ -1,5 +1,23 @@
 # RESUME HERE — goal: BEAT THE MARKET's log-loss on the 2024-25 holdout
 
+> **STALE FROM ROUND 11 ONWARD — read this first (added 2026-09-05).**
+>
+> The round-by-round log below stops at round 11 and its narrative still quotes a
+> **0.0127** gap to market. Later work (the granularity sweep, config D) closed
+> that to **0.00073**, with WTA actually beating the market on the holdout. Trust
+> `reports/xgboost-shipped.md` for current numbers, not the prose here.
+>
+> **The 2024-25 holdout is retired from candidate screening.** This file's own
+> round-11 stop-point flag became policy on 2026-09-05: it has been revealed at
+> least a dozen times and is no longer an unbiased estimate of anything. Rounds
+> 12-14 screened on the 2022-23 tune window and did not score it once. The 2026
+> season (Jan-Aug, Pinnacle odds present, never touched by any decision) is
+> reserved as the final test.
+>
+> Rounds 12-14 are NOT logged below. They live in
+> `issues/35-fitness-and-retirement-scoring.md`, and the verse now has a proper
+> docs hub at `docs/` (HOME / NEXT-STEPS / DECISIONS) — start there.
+
 **Canonical reproduction script: `dropshotdata/scripts/train_best_model.py`**
 — rebuilds the current best model (Arm G, 5-seed bagged, gap 0.00073) end to
 end from the raw archive + the frozen v25 hierarchical config. Consolidates

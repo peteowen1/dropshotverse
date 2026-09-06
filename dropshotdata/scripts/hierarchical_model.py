@@ -369,66 +369,86 @@ def p_game(p: float) -> float:
 
 
 def p_tiebreak(p_a_serve: float, p_b_serve: float) -> float:
-    """P(A wins a 7-point tiebreak), A serves point 1, then alternating pairs."""
-    # server sequence for points 1,2,3,4,5,6,7,... : A,B,B,A,A,B,B,A,A,...
-    def server_is_a(pt_idx: int) -> bool:
-        if pt_idx == 0:
-            return True
-        block = (pt_idx - 1) // 2
-        return block % 2 == 1
+    """P(A wins a 7-point tiebreak), A serves point 1, then alternating pairs.
 
+    Newton & Keller eqs. 13-16 (ticket 05 section 1b): forward DP to the
+    absorbing scores, then an EXACT geometric tail from 6-6.
+
+    Previously the tail was approximated by running the DP to a 24-point cap
+    and splitting whatever mass was still tied 50/50, on the reasoning that
+    "both players' serve probabilities roughly cancel over a long alternating
+    tail". They do not: the tail favours the stronger server, and the coin flip
+    handed the weaker player half of it. That cost up to 8.0e-4 on the tiebreak
+    and, because a set at 6-6 resolves through here, fed straight into p_set.
+    """
+    # A serves point t (1-based) iff (t-1) mod 4 in {0, 3}: A,B,B,A,A,B,B,...
     states: dict[tuple[int, int], float] = {(0, 0): 1.0}
-    final = 0.0
-    for pt in range(24):                       # generous cap; 7-6 tails handled below
-        nxt: dict[tuple[int, int], float] = {}
-        a_serves = server_is_a(pt)
+    win_a = 0.0
+    p66 = 0.0
+    for t in range(1, 14):                  # 12 points reach 7-5 or 6-6; 13 is slack
+        a_serves = (t - 1) % 4 in (0, 3)
         pa = p_a_serve if a_serves else (1 - p_b_serve)
+        nxt: dict[tuple[int, int], float] = {}
         for (a, b), pr in states.items():
-            if (a >= 7 or b >= 7) and abs(a - b) >= 2:
-                continue
-            for winner, w in ((0, pa), (1, 1 - pa)):
-                na, nb = (a + 1, b) if winner == 0 else (a, b + 1)
+            for (na, nb), w in (((a + 1, b), pa), ((a, b + 1), 1 - pa)):
                 prob = pr * w
                 if prob == 0:
                     continue
-                if (na >= 7 or nb >= 7) and abs(na - nb) >= 2:
-                    if na > nb:
-                        final += prob
-                elif na >= 6 and nb >= 6:
-                    nxt[(na, nb)] = nxt.get((na, nb), 0.0) + prob   # deuce-like tail
+                if na == 7 and nb <= 5:
+                    win_a += prob
+                elif nb == 7 and na <= 5:
+                    pass                    # B wins outright
+                elif na == 6 and nb == 6:
+                    p66 += prob             # hand to the geometric tail below
                 else:
                     nxt[(na, nb)] = nxt.get((na, nb), 0.0) + prob
         states = nxt
         if not states:
             break
-    # remaining mass at 6-6+ tied deltas: treat as a fair coin from here (both
-    # players' serve probabilities roughly cancel over a long alternating tail)
-    tail = sum(states.values())
-    if tail > 0:
-        final += tail * 0.5
-    return final
+    if states:      # unreachable: every path absorbs by point 12
+        raise AssertionError(f"p_tiebreak left unresolved states: {states}")
+
+    # From 6-6 each 2-point block (A serves, then B) either ends it or returns
+    # to a tie with probability r. A takes the block outright with pa*(1-pb).
+    r = p_a_serve * p_b_serve + (1 - p_a_serve) * (1 - p_b_serve)
+    if 1 - r <= 0.0:
+        # Degenerate: both hold every point (1,1) or both lose every point
+        # (0,0), so no block ever resolves and the tail is undefined. Reachable
+        # because sigmoid() clamps to exactly 0.0/1.0 beyond +/-35. Split it.
+        return win_a + p66 * 0.5
+    return win_a + p66 * (p_a_serve * (1 - p_b_serve) / (1 - r))
 
 
 def p_set_full(p_a_serve: float, p_b_serve: float, a_serves_first: bool
               ) -> dict[tuple[int, int], float]:
-    """Ticket 21 full-DP: the SAME game-by-game DP p_set has always run, but
-    returning the complete terminal-score distribution {(games_a, games_b):
-    probability} instead of collapsing it to the scalar P(A wins). p_set()
-    below is now a thin wrapper (sum over a>b) - an exact refactor, verified
-    bit-identical to the pre-refactor scalar implementation by
-    stress_test_safety.py's dedicated reproduction, not a rewrite of the
-    underlying math (including its existing 7-6 quirk, preserved as-is: the
-    original only ever credited the "A wins" mass at 6-6, using the regular-
-    game pa/(1-pa) transition weight together with the tiebreak probability;
-    this mirrors that exactly by also recording the complementary "B wins"
-    mass at (6,7) so the returned distribution is a real, normalized
-    probability distribution rather than a one-sided partial sum).
+    """Game-by-game DP returning the complete terminal-score distribution
+    {(games_a, games_b): probability}. p_set() is a thin wrapper (sum over
+    a > b); regime B uses the full distribution to score a SPECIFIC observed
+    set score (e.g. exactly 6-4), not just win/loss.
 
-    This is what lets regime B score the probability of a SPECIFIC observed
-    set score (e.g. exactly 6-4), not just win/loss - the richer likelihood
-    ticket 21 asked for."""
+    6-6 resolution (Newton & Keller eq. 10, ticket 05 section 1c):
+
+        P_A^set = sum_j P(6,j) + P(7,5) + P(6,6) * P_A^tiebreak
+
+    At 6-6 a TIEBREAK is played. There is no 13th game. The DP used to play
+    one anyway and then multiply by the tiebreak probability, so the mass
+    reaching (7,6) was P(6,6)*[pa*tb + (1-pa)*(1-tb)] instead of P(6,6)*tb -
+    and the second term credited A with B's tiebreak share. Two consequences,
+    both measured against the closed form:
+
+      * it compressed the favourite's set probability by up to 5.7pp, and
+      * the 13th game's server depends on `a_serves_first`, so p_set varied by
+        up to 5.1pp with serve order. Newton & Keller section 3.3 PROVE set-win
+        probability is independent of who serves first; p_match's
+        q = 0.5*(q1+q2) symmetrisation was averaging away a violation rather
+        than a genuine asymmetry.
+
+    The previous docstring described this as a "7-6 quirk, preserved as-is"
+    for the ticket 21 refactor. It was a defect, and stress_test_safety.py
+    certified it by comparing the DP to a verbatim copy of itself."""
     outcomes: dict[tuple[int, int], float] = {}
     states: dict[tuple[int, int], float] = {(0, 0): 1.0}
+    tb = p_tiebreak(p_a_serve, p_b_serve)   # hoisted: was recomputed per state
     for _ in range(13):
         nxt: dict[tuple[int, int], float] = {}
         for (a, b), pr in states.items():
@@ -442,16 +462,9 @@ def p_set_full(p_a_serve: float, p_b_serve: float, a_serves_first: bool
                     continue
                 if (na >= 6 or nb >= 6) and abs(na - nb) >= 2 and max(na, nb) <= 7:
                     outcomes[(na, nb)] = outcomes.get((na, nb), 0.0) + prob
-                elif na == 7 or nb == 7:
-                    # 7-6: decided by tiebreak. Server of the tiebreak alternates
-                    # normally; approximate with the tiebreak function using the
-                    # POINT probabilities (not game probabilities). Same
-                    # transition weighting as the pre-refactor scalar p_set -
-                    # preserved exactly, not corrected, per this ticket's scope.
-                    tb = p_tiebreak(p_a_serve, p_b_serve)
-                    credit_a = prob * (tb if na == 7 else (1 - tb))
-                    outcomes[(7, 6)] = outcomes.get((7, 6), 0.0) + credit_a
-                    outcomes[(6, 7)] = outcomes.get((6, 7), 0.0) + (prob - credit_a)
+                elif na == 6 and nb == 6:
+                    outcomes[(7, 6)] = outcomes.get((7, 6), 0.0) + prob * tb
+                    outcomes[(6, 7)] = outcomes.get((6, 7), 0.0) + prob * (1 - tb)
                 else:
                     nxt[(na, nb)] = nxt.get((na, nb), 0.0) + prob
         states = nxt

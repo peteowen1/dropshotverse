@@ -1,0 +1,1026 @@
+[
+ {
+  "section": 1,
+  "slot": 1,
+  "seed": "1",
+  "country": "",
+  "name": "Aryna Sabalenka",
+  "uid": "wta:214544"
+ },
+ {
+  "section": 1,
+  "slot": 2,
+  "seed": "",
+  "country": "COL",
+  "name": "Camila Osorio",
+  "uid": "wta:215785"
+ },
+ {
+  "section": 1,
+  "slot": 3,
+  "seed": "",
+  "country": "MEX",
+  "name": "Renata Zarazúa",
+  "uid": "wta:213887"
+ },
+ {
+  "section": 1,
+  "slot": 4,
+  "seed": "Q",
+  "country": "",
+  "name": "Polina Iatcenko",
+  "uid": "wta:223325"
+ },
+ {
+  "section": 1,
+  "slot": 5,
+  "seed": "PR",
+  "country": "JPN",
+  "name": "Aoi Ito",
+  "uid": "wta:256684"
+ },
+ {
+  "section": 1,
+  "slot": 6,
+  "seed": "",
+  "country": "ESP",
+  "name": "Oksana Selekhmeteva",
+  "uid": "wta:221407"
+ },
+ {
+  "section": 1,
+  "slot": 7,
+  "seed": "",
+  "country": "UZB",
+  "name": "Kamilla Rakhimova",
+  "uid": "wta:215872"
+ },
+ {
+  "section": 1,
+  "slot": 8,
+  "seed": "27",
+  "country": "CZE",
+  "name": "Barbora Krejčíková",
+  "uid": "wta:206252"
+ },
+ {
+  "section": 1,
+  "slot": 9,
+  "seed": "20",
+  "country": "POL",
+  "name": "Maja Chwalińska",
+  "uid": "wta:216081"
+ },
+ {
+  "section": 1,
+  "slot": 10,
+  "seed": "",
+  "country": "USA",
+  "name": "Taylor Townsend",
+  "uid": "wta:203501"
+ },
+ {
+  "section": 1,
+  "slot": 11,
+  "seed": "WC",
+  "country": "AUS",
+  "name": "Taylah Preston",
+  "uid": "wta:223194"
+ },
+ {
+  "section": 1,
+  "slot": 12,
+  "seed": "",
+  "country": "USA",
+  "name": "Alycia Parks",
+  "uid": "wta:219917"
+ },
+ {
+  "section": 1,
+  "slot": 13,
+  "seed": "",
+  "country": "BEL",
+  "name": "Hanne Vandewinkel",
+  "uid": "wta:243420"
+ },
+ {
+  "section": 1,
+  "slot": 14,
+  "seed": "",
+  "country": "CZE",
+  "name": "Karolína Plíšková",
+  "uid": "wta:201662"
+ },
+ {
+  "section": 1,
+  "slot": 15,
+  "seed": "",
+  "country": "UKR",
+  "name": "Daria Snigur",
+  "uid": "wta:220750"
+ },
+ {
+  "section": 1,
+  "slot": 16,
+  "seed": "15",
+  "country": "",
+  "name": "Diana Shnaider",
+  "uid": "wta:223670"
+ },
+ {
+  "section": 2,
+  "slot": 1,
+  "seed": "11",
+  "country": "UKR",
+  "name": "Marta Kostyuk",
+  "uid": "wta:216146"
+ },
+ {
+  "section": 2,
+  "slot": 2,
+  "seed": "Q",
+  "country": "AUS",
+  "name": "Storm Hunter",
+  "uid": "wta:204411"
+ },
+ {
+  "section": 2,
+  "slot": 3,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Sloane Stephens",
+  "uid": "wta:201585"
+ },
+ {
+  "section": 2,
+  "slot": 4,
+  "seed": "",
+  "country": "DEN",
+  "name": "Clara Tauson",
+  "uid": "wta:220704"
+ },
+ {
+  "section": 2,
+  "slot": 5,
+  "seed": "",
+  "country": "AUS",
+  "name": "Kimberly Birrell",
+  "uid": "wta:214040"
+ },
+ {
+  "section": 2,
+  "slot": 6,
+  "seed": "",
+  "country": "CRO",
+  "name": "Petra Marčinko",
+  "uid": "wta:238075"
+ },
+ {
+  "section": 2,
+  "slot": 7,
+  "seed": "",
+  "country": "USA",
+  "name": "McCartney Kessler",
+  "uid": "wta:220520"
+ },
+ {
+  "section": 2,
+  "slot": 8,
+  "seed": "18",
+  "country": "",
+  "name": "Ekaterina Alexandrova",
+  "uid": "wta:206420"
+ },
+ {
+  "section": 2,
+  "slot": 9,
+  "seed": "29",
+  "country": "USA",
+  "name": "Ann Li (tennis)",
+  "uid": "wta:215983"
+ },
+ {
+  "section": 2,
+  "slot": 10,
+  "seed": "",
+  "country": "CRO",
+  "name": "Antonia Ružić",
+  "uid": "wta:222045"
+ },
+ {
+  "section": 2,
+  "slot": 11,
+  "seed": "",
+  "country": "AUS",
+  "name": "Talia Gibson",
+  "uid": "wta:221883"
+ },
+ {
+  "section": 2,
+  "slot": 12,
+  "seed": "",
+  "country": "CRO",
+  "name": "Donna Vekić",
+  "uid": "wta:202499"
+ },
+ {
+  "section": 2,
+  "slot": 13,
+  "seed": "Q",
+  "country": "USA",
+  "name": "Elvina Kalieva",
+  "uid": "wta:220722"
+ },
+ {
+  "section": 2,
+  "slot": 14,
+  "seed": "",
+  "country": "THA",
+  "name": "Lanlana Tararudee",
+  "uid": "wta:222290"
+ },
+ {
+  "section": 2,
+  "slot": 15,
+  "seed": "",
+  "country": "USA",
+  "name": "Katie Volynets",
+  "uid": "wta:220465"
+ },
+ {
+  "section": 2,
+  "slot": 16,
+  "seed": "6",
+  "country": "CZE",
+  "name": "Linda Nosková",
+  "uid": "wta:222328"
+ },
+ {
+  "section": 3,
+  "slot": 1,
+  "seed": "3",
+  "country": "USA",
+  "name": "Jessica Pegula",
+  "uid": "wta:202468"
+ },
+ {
+  "section": 3,
+  "slot": 2,
+  "seed": "",
+  "country": "ROU",
+  "name": "Elena-Gabriela Ruse",
+  "uid": "wta:211817"
+ },
+ {
+  "section": 3,
+  "slot": 3,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Venus Williams",
+  "uid": "wta:200748"
+ },
+ {
+  "section": 3,
+  "slot": 4,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Sofia Kenin",
+  "uid": "wta:213550"
+ },
+ {
+  "section": 3,
+  "slot": 5,
+  "seed": "PR",
+  "country": "THA",
+  "name": "Mananchaya Sawangkaew",
+  "uid": "wta:216566"
+ },
+ {
+  "section": 3,
+  "slot": 6,
+  "seed": "",
+  "country": "HUN",
+  "name": "Panna Udvardy",
+  "uid": "wta:215910"
+ },
+ {
+  "section": 3,
+  "slot": 7,
+  "seed": "",
+  "country": "CHN",
+  "name": "Shuai Zhang",
+  "uid": "wta:201533"
+ },
+ {
+  "section": 3,
+  "slot": 8,
+  "seed": "31",
+  "country": "CAN",
+  "name": "Leylah Fernandez",
+  "uid": "wta:220367"
+ },
+ {
+  "section": 3,
+  "slot": 9,
+  "seed": "19",
+  "country": "ITA",
+  "name": "Jasmine Paolini",
+  "uid": "wta:211148"
+ },
+ {
+  "section": 3,
+  "slot": 10,
+  "seed": "",
+  "country": "SLO",
+  "name": "Veronika Erjavec",
+  "uid": "wta:220662"
+ },
+ {
+  "section": 3,
+  "slot": 11,
+  "seed": "Q",
+  "country": "ITA",
+  "name": "Lucrezia Stefanini",
+  "uid": "wta:214593"
+ },
+ {
+  "section": 3,
+  "slot": 12,
+  "seed": "",
+  "country": "UKR",
+  "name": "Dayana Yastremska",
+  "uid": "wta:215035"
+ },
+ {
+  "section": 3,
+  "slot": 13,
+  "seed": "",
+  "country": "SUI",
+  "name": "Viktorija Golubic",
+  "uid": "wta:203530"
+ },
+ {
+  "section": 3,
+  "slot": 14,
+  "seed": "",
+  "country": "FRA",
+  "name": "Diane Parry",
+  "uid": "wta:220348"
+ },
+ {
+  "section": 3,
+  "slot": 15,
+  "seed": "",
+  "country": "AUT",
+  "name": "Julia Grabher",
+  "uid": "wta:211814"
+ },
+ {
+  "section": 3,
+  "slot": 16,
+  "seed": "16",
+  "country": "ROU",
+  "name": "Sorana Cîrstea",
+  "uid": "wta:201514"
+ },
+ {
+  "section": 4,
+  "slot": 1,
+  "seed": "9",
+  "country": "UKR",
+  "name": "Elina Svitolina",
+  "uid": "wta:202494"
+ },
+ {
+  "section": 4,
+  "slot": 2,
+  "seed": "",
+  "country": "ARG",
+  "name": "Solana Sierra",
+  "uid": "wta:221333"
+ },
+ {
+  "section": 4,
+  "slot": 3,
+  "seed": "",
+  "country": "AUS",
+  "name": "Maya Joint",
+  "uid": "wta:233741"
+ },
+ {
+  "section": 4,
+  "slot": 4,
+  "seed": "",
+  "country": "",
+  "name": "Liudmila Samsonova",
+  "uid": "wta:214643"
+ },
+ {
+  "section": 4,
+  "slot": 5,
+  "seed": "",
+  "country": "COL",
+  "name": "Emiliana Arango",
+  "uid": "wta:215306"
+ },
+ {
+  "section": 4,
+  "slot": 6,
+  "seed": "",
+  "country": "CHN",
+  "name": "Wang Xinyu",
+  "uid": null
+ },
+ {
+  "section": 4,
+  "slot": 7,
+  "seed": "",
+  "country": "",
+  "name": "Anna Blinkova",
+  "uid": "wta:215020"
+ },
+ {
+  "section": 4,
+  "slot": 8,
+  "seed": "21",
+  "country": "",
+  "name": "Anna Kalinskaya",
+  "uid": "wta:214939"
+ },
+ {
+  "section": 4,
+  "slot": 9,
+  "seed": "26",
+  "country": "USA",
+  "name": "Emma Navarro",
+  "uid": "wta:215613"
+ },
+ {
+  "section": 4,
+  "slot": 10,
+  "seed": "PR",
+  "country": "FRA",
+  "name": "Loïs Boisson",
+  "uid": "wta:222391"
+ },
+ {
+  "section": 4,
+  "slot": 11,
+  "seed": "Q",
+  "country": "NED",
+  "name": "Anouk Koevermans",
+  "uid": "wta:222017"
+ },
+ {
+  "section": 4,
+  "slot": 12,
+  "seed": "",
+  "country": "USA",
+  "name": "Caty McNally",
+  "uid": "wta:216083"
+ },
+ {
+  "section": 4,
+  "slot": 13,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Carol Young Suh Lee",
+  "uid": "wta:221803"
+ },
+ {
+  "section": 4,
+  "slot": 14,
+  "seed": "",
+  "country": "GBR",
+  "name": "Katie Boulter",
+  "uid": "wta:211107"
+ },
+ {
+  "section": 4,
+  "slot": 15,
+  "seed": "",
+  "country": "AUT",
+  "name": "Sinja Kraus",
+  "uid": "wta:221257"
+ },
+ {
+  "section": 4,
+  "slot": 16,
+  "seed": "7",
+  "country": "CZE",
+  "name": "Karolína Muchová",
+  "uid": "wta:214096"
+ },
+ {
+  "section": 5,
+  "slot": 1,
+  "seed": "5",
+  "country": "",
+  "name": "Mirra Andreeva",
+  "uid": "wta:259799"
+ },
+ {
+  "section": 5,
+  "slot": 2,
+  "seed": "",
+  "country": "INA",
+  "name": "Janice Tjen",
+  "uid": "wta:222145"
+ },
+ {
+  "section": 5,
+  "slot": 3,
+  "seed": "Q",
+  "country": "CZE",
+  "name": "Gabriela Knutson",
+  "uid": "wta:213873"
+ },
+ {
+  "section": 5,
+  "slot": 4,
+  "seed": "",
+  "country": "GER",
+  "name": "Eva Lys",
+  "uid": "wta:220332"
+ },
+ {
+  "section": 5,
+  "slot": 5,
+  "seed": "",
+  "country": "CZE",
+  "name": "Nikola Bartůňková",
+  "uid": "wta:223360"
+ },
+ {
+  "section": 5,
+  "slot": 6,
+  "seed": "",
+  "country": "EGY",
+  "name": "Mayar Sherif",
+  "uid": "wta:210886"
+ },
+ {
+  "section": 5,
+  "slot": 7,
+  "seed": "",
+  "country": "GER",
+  "name": "Tatjana Maria",
+  "uid": "wta:213583"
+ },
+ {
+  "section": 5,
+  "slot": 8,
+  "seed": "30",
+  "country": "LAT",
+  "name": "Jeļena Ostapenko",
+  "uid": "wta:211533"
+ },
+ {
+  "section": 5,
+  "slot": 9,
+  "seed": "24",
+  "country": "AUT",
+  "name": "Anastasia Potapova",
+  "uid": "wta:215713"
+ },
+ {
+  "section": 5,
+  "slot": 10,
+  "seed": "",
+  "country": "CZE",
+  "name": "Tereza Valentová",
+  "uid": "wta:238184"
+ },
+ {
+  "section": 5,
+  "slot": 11,
+  "seed": "Q",
+  "country": "NED",
+  "name": "Arantxa Rus",
+  "uid": "wta:201551"
+ },
+ {
+  "section": 5,
+  "slot": 12,
+  "seed": "WC",
+  "country": "FRA",
+  "name": "Léolia Jeanjean",
+  "uid": "wta:206417"
+ },
+ {
+  "section": 5,
+  "slot": 13,
+  "seed": "",
+  "country": "AUT",
+  "name": "Lilli Tagger",
+  "uid": "wta:260172"
+ },
+ {
+  "section": 5,
+  "slot": 14,
+  "seed": "",
+  "country": "GER",
+  "name": "Tamara Korpatsch",
+  "uid": "wta:211337"
+ },
+ {
+  "section": 5,
+  "slot": 15,
+  "seed": "",
+  "country": "USA",
+  "name": "Ashlyn Krueger",
+  "uid": "wta:221909"
+ },
+ {
+  "section": 5,
+  "slot": 16,
+  "seed": "10",
+  "country": "USA",
+  "name": "Amanda Anisimova",
+  "uid": "wta:216153"
+ },
+ {
+  "section": 6,
+  "slot": 1,
+  "seed": "14",
+  "country": "USA",
+  "name": "Iva Jovic",
+  "uid": "wta:260300"
+ },
+ {
+  "section": 6,
+  "slot": 2,
+  "seed": "",
+  "country": "POL",
+  "name": "Magdalena Fręch",
+  "uid": "wta:211684"
+ },
+ {
+  "section": 6,
+  "slot": 3,
+  "seed": "",
+  "country": "POL",
+  "name": "Magda Linette",
+  "uid": "wta:202663"
+ },
+ {
+  "section": 6,
+  "slot": 4,
+  "seed": "Q",
+  "country": "GBR",
+  "name": "Francesca Jones (tennis)",
+  "uid": "wta:215936"
+ },
+ {
+  "section": 6,
+  "slot": 5,
+  "seed": "",
+  "country": "UKR",
+  "name": "Oleksandra Oliynykova",
+  "uid": "wta:220716"
+ },
+ {
+  "section": 6,
+  "slot": 6,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Reese Brantmeier",
+  "uid": "wta:222034"
+ },
+ {
+  "section": 6,
+  "slot": 7,
+  "seed": "Q",
+  "country": "USA",
+  "name": "Mary Stoiana",
+  "uid": "wta:223168"
+ },
+ {
+  "section": 6,
+  "slot": 8,
+  "seed": "17",
+  "country": "PHI",
+  "name": "Alexandra Eala",
+  "uid": "wta:223253"
+ },
+ {
+  "section": 6,
+  "slot": 9,
+  "seed": "28",
+  "country": "CZE",
+  "name": "Sara Bejlek",
+  "uid": "wta:239383"
+ },
+ {
+  "section": 6,
+  "slot": 10,
+  "seed": "",
+  "country": "ESP",
+  "name": "Cristina Bucșa",
+  "uid": "wta:213710"
+ },
+ {
+  "section": 6,
+  "slot": 11,
+  "seed": "",
+  "country": "UKR",
+  "name": "Anhelina Kalinina",
+  "uid": "wta:211843"
+ },
+ {
+  "section": 6,
+  "slot": 12,
+  "seed": "Q",
+  "country": "JPN",
+  "name": "Himeno Sakatsume",
+  "uid": "wta:221124"
+ },
+ {
+  "section": 6,
+  "slot": 13,
+  "seed": "",
+  "country": "AUS",
+  "name": "Daria Kasatkina",
+  "uid": "wta:214082"
+ },
+ {
+  "section": 6,
+  "slot": 14,
+  "seed": "",
+  "country": "ESP",
+  "name": "Paula Badosa",
+  "uid": "wta:211651"
+ },
+ {
+  "section": 6,
+  "slot": 15,
+  "seed": "",
+  "country": "TUR",
+  "name": "Zeynep Sönmez",
+  "uid": "wta:220309"
+ },
+ {
+  "section": 6,
+  "slot": 16,
+  "seed": "4",
+  "country": "USA",
+  "name": "Coco Gauff",
+  "uid": "wta:221103"
+ },
+ {
+  "section": 7,
+  "slot": 1,
+  "seed": "8",
+  "country": "POL",
+  "name": "Iga Świątek",
+  "uid": "wta:216347"
+ },
+ {
+  "section": 7,
+  "slot": 2,
+  "seed": "",
+  "country": "CHN",
+  "name": "Wang Xiyu",
+  "uid": "wta:216016"
+ },
+ {
+  "section": 7,
+  "slot": 3,
+  "seed": "PR",
+  "country": "ARG",
+  "name": "Nadia Podoroska",
+  "uid": "wta:206408"
+ },
+ {
+  "section": 7,
+  "slot": 4,
+  "seed": "",
+  "country": "SUI",
+  "name": "Simona Waltert",
+  "uid": "wta:215899"
+ },
+ {
+  "section": 7,
+  "slot": 5,
+  "seed": "Q",
+  "country": "GBR",
+  "name": "Harriet Dart",
+  "uid": "wta:211279"
+ },
+ {
+  "section": 7,
+  "slot": 6,
+  "seed": "",
+  "country": "USA",
+  "name": "Peyton Stearns",
+  "uid": "wta:220548"
+ },
+ {
+  "section": 7,
+  "slot": 7,
+  "seed": "",
+  "country": "FRA",
+  "name": "Elsa Jacquemot",
+  "uid": "wta:221039"
+ },
+ {
+  "section": 7,
+  "slot": 8,
+  "seed": "25",
+  "country": "CZE",
+  "name": "Marie Bouzková",
+  "uid": "wta:213631"
+ },
+ {
+  "section": 7,
+  "slot": 9,
+  "seed": "22",
+  "country": "USA",
+  "name": "Madison Keys",
+  "uid": "wta:201619"
+ },
+ {
+  "section": 7,
+  "slot": 10,
+  "seed": "",
+  "country": "",
+  "name": "Alina Korneeva",
+  "uid": "wta:252499"
+ },
+ {
+  "section": 7,
+  "slot": 11,
+  "seed": "Q",
+  "country": "CZE",
+  "name": "Lucie Havlíčková",
+  "uid": "wta:222980"
+ },
+ {
+  "section": 7,
+  "slot": 12,
+  "seed": "",
+  "country": "HUN",
+  "name": "Anna Bondár",
+  "uid": "wta:214388"
+ },
+ {
+  "section": 7,
+  "slot": 13,
+  "seed": "Q",
+  "country": "CHN",
+  "name": "Zheng Qinwen",
+  "uid": "wta:221012"
+ },
+ {
+  "section": 7,
+  "slot": 14,
+  "seed": "Q",
+  "country": "",
+  "name": "Kristina Liutova",
+  "uid": "wta:269714"
+ },
+ {
+  "section": 7,
+  "slot": 15,
+  "seed": "",
+  "country": "KAZ",
+  "name": "Yulia Putintseva",
+  "uid": "wta:201709"
+ },
+ {
+  "section": 7,
+  "slot": 16,
+  "seed": "12",
+  "country": "SUI",
+  "name": "Belinda Bencic",
+  "uid": "wta:202505"
+ },
+ {
+  "section": 8,
+  "slot": 1,
+  "seed": "13",
+  "country": "JPN",
+  "name": "Naomi Osaka",
+  "uid": "wta:211768"
+ },
+ {
+  "section": 8,
+  "slot": 2,
+  "seed": "",
+  "country": "",
+  "name": "Anastasia Zakharova",
+  "uid": "wta:220435"
+ },
+ {
+  "section": 8,
+  "slot": 3,
+  "seed": "",
+  "country": "ITA",
+  "name": "Elisabetta Cocciaretto",
+  "uid": "wta:220714"
+ },
+ {
+  "section": 8,
+  "slot": 4,
+  "seed": "",
+  "country": "CZE",
+  "name": "Kateřina Siniaková",
+  "uid": "wta:211701"
+ },
+ {
+  "section": 8,
+  "slot": 5,
+  "seed": "Q",
+  "country": "SLO",
+  "name": "Tamara Zidanšek",
+  "uid": "wta:214461"
+ },
+ {
+  "section": 8,
+  "slot": 6,
+  "seed": "",
+  "country": "UZB",
+  "name": "Maria Timofeeva",
+  "uid": "wta:221237"
+ },
+ {
+  "section": 8,
+  "slot": 7,
+  "seed": "",
+  "country": "ESP",
+  "name": "Kaitlin Quevedo",
+  "uid": "wta:259733"
+ },
+ {
+  "section": 8,
+  "slot": 8,
+  "seed": "23",
+  "country": "BEL",
+  "name": "Elise Mertens",
+  "uid": "wta:210722"
+ },
+ {
+  "section": 8,
+  "slot": 9,
+  "seed": "32",
+  "country": "GRE",
+  "name": "Maria Sakkari",
+  "uid": "wta:206289"
+ },
+ {
+  "section": 8,
+  "slot": 10,
+  "seed": "Q",
+  "country": "USA",
+  "name": "Robin Montgomery",
+  "uid": "wta:221905"
+ },
+ {
+  "section": 8,
+  "slot": 11,
+  "seed": "",
+  "country": "UKR",
+  "name": "Yuliia Starodubtseva",
+  "uid": "wta:263857"
+ },
+ {
+  "section": 8,
+  "slot": 12,
+  "seed": "",
+  "country": "GER",
+  "name": "Ella Seidel",
+  "uid": "wta:230870"
+ },
+ {
+  "section": 8,
+  "slot": 13,
+  "seed": "",
+  "country": "CZE",
+  "name": "Darja Vidmanova",
+  "uid": "wta:221307"
+ },
+ {
+  "section": 8,
+  "slot": 14,
+  "seed": "",
+  "country": "ESP",
+  "name": "Jéssica Bouzas Maneiro",
+  "uid": "wta:222601"
+ },
+ {
+  "section": 8,
+  "slot": 15,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Thea Frodin",
+  "uid": "wta:264140"
+ },
+ {
+  "section": 8,
+  "slot": 16,
+  "seed": "2",
+  "country": "KAZ",
+  "name": "Elena Rybakina",
+  "uid": "wta:214981"
+ }
+]

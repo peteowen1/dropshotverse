@@ -15,10 +15,20 @@ import urllib.request
 import urllib.error
 
 REPO = "Aneeshers/tennis-sackmann-archive"
-GH_TREE_JSON = r"C:\Users\peteo\AppData\Local\Temp\claude\C--dev-dropshotverse\da4071a3-f79b-4a5c-89ac-53452c974648\scratchpad\gh_tree.json"
-HF_TREE_JSON = r"C:\Users\peteo\AppData\Local\Temp\claude\C--dev-dropshotverse\da4071a3-f79b-4a5c-89ac-53452c974648\scratchpad\hf_tree.json"
 GH_COMMIT = "83733587353df8a41f2fd4f516147d5aa83f5a8d"
 HF_COMMIT_META = "8ac86f7c62889b5d5c4cfec4c6403edcb8c5d993"
+
+# The file listings are fetched, not read from disk. They used to be read from
+# two JSON files saved in a Claude Code session scratchpad under %TEMP%, keyed
+# by that session's UUID. That directory has since been cleared, so this script
+# - the one that acquires the ENTIRE base archive every model in this repo is
+# built on - could not run at all, and nothing said so until someone tried.
+#
+# Fetching them removes the dependency rather than relocating it. Both endpoints
+# are pinned: GitHub to GH_COMMIT, so the listing cannot drift even if the repo
+# moves; HuggingFace to main, which HF_COMMIT_META records the expected head of.
+GH_TREE_URL = f"https://api.github.com/repos/{REPO}/git/trees/{GH_COMMIT}?recursive=1"
+HF_TREE_URL = f"https://huggingface.co/api/datasets/{REPO}/tree/main?recursive=1"
 
 OUT_ROOT = r"C:\dev\dropshotverse\dropshotdata"
 GH_OUT = os.path.join(OUT_ROOT, "raw", "github")
@@ -29,14 +39,30 @@ GH_RAW_BASE = f"https://raw.githubusercontent.com/{REPO}/{GH_COMMIT}/"
 HF_RAW_BASE = f"https://huggingface.co/datasets/{REPO}/resolve/main/"
 
 
+def _fetch_json(url, what):
+    req = urllib.request.Request(url, headers={"User-Agent": "dropshotverse-archive-freeze/1.0",
+                                               "Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        raise SystemExit(f"could not fetch the {what} file listing ({type(e).__name__}: {e}).\n"
+                         f"  {url}\n"
+                         "Without a listing there is nothing to download, so stopping here rather "
+                         "than freezing a partial archive.")
+
+
 def load_gh_files():
-    d = json.load(open(GH_TREE_JSON, encoding="utf-8"))
+    d = _fetch_json(GH_TREE_URL, "GitHub")
+    if d.get("truncated"):
+        raise SystemExit("GitHub truncated the recursive tree listing - it is incomplete, and "
+                         "freezing from it would silently drop files. Page the API instead.")
     return {t["path"]: {"size": t.get("size", 0), "blob_sha": t["sha"]}
             for t in d["tree"] if t["type"] == "blob"}
 
 
 def load_hf_files():
-    d = json.load(open(HF_TREE_JSON, encoding="utf-8"))
+    d = _fetch_json(HF_TREE_URL, "HuggingFace")
     return {t["path"]: {"size": t.get("size", 0), "oid": t.get("oid"), "lfs": bool(t.get("lfs"))}
             for t in d if t["type"] == "file"}
 

@@ -44,3 +44,79 @@ check what's unusual about their kappa/surface-variance state at prediction
 time (thin history? recent surface-var-floor interaction? something else
 ticket 18's fix didn't cover?), same investigative pattern that found
 ticket 18's original bug.
+
+## 2026-09-04: one hypothesis ELIMINATED, and the 0.724 baseline was wrong
+
+`p_set` had been resolving 6-6 by playing a 13th game and then multiplying
+by the tiebreak probability, so the mass reaching (7,6) was
+`P(6,6) * [pa*tb + (1-pa)*(1-tb)]` instead of `P(6,6) * tb` - and the second
+term credited A with B's share of the tiebreak. Measured against the closed
+forms already written down in `05-point-model-literature.md` sections 1a-1c:
+
+* `p_set` off by up to **5.7pp**, always compressing toward 0.5
+* `p_set` varied by up to **5.1pp with who served first**, violating the
+  Newton & Keller section 3.3 result that set-win probability is independent
+  of serve order. `p_match`'s `q = 0.5*(q1+q2)` was averaging that violation
+  away rather than symmetrising a genuine asymmetry.
+* separately, `p_tiebreak` approximated the 6-6 tail by running to a 24-point
+  cap and splitting the remainder 50/50 ("serve probabilities roughly cancel"
+  - they do not; the tail favours the stronger server), worth up to 8.0e-4.
+
+Both fixed. Verified against the literature closed forms and, for the
+tiebreak tail, against a 400k-trial simulation independent of both
+implementations. `stress_test_safety.py` now checks p_game/p_tiebreak/p_set
+against those closed forms plus the serve-order identity; suite is 49/0.
+
+**Why this made the reported number worse, and why that is the point.**
+Re-scored on the frozen v25 posterior state, same 10,680-match holdout
+(reconstruction validated to 4.4e-16 against the stored `p_winner_hier`):
+
+| | log-loss | Brier | acc | mean p | p<10% | p<1% |
+|---|---|---|---|---|---|---|
+| stored v25 | 0.72388 | 0.23613 | 65.19% | 0.6149 | 6.02% | 0.777% |
+| fixed math | **0.77070** | 0.24265 | **65.19%** | 0.6175 | 8.02% | 1.292% |
+
+Accuracy is identical to two decimals - the fix reorders nothing, it only
+sharpens. By bucket it IMPROVES the confident-and-right region (p>=0.65:
+-0.027, -0.008) and worsens the confident-and-wrong region (p<0.35: +0.147,
++0.443, +0.966).
+
+So the 6-6 defect was an **undiagnosed shrinkage of up to 5.7pp applied to
+every match**, partially masking this ticket's overconfidence. That is a
+worse version of the flat probability floor Pete explicitly rejected here -
+same effect, applied blindly, including to the genuinely lopsided matchups a
+floor would have wrecked, and with nobody aware of it. Tabilo over Djokovic
+goes 0.016% -> 0.003%.
+
+**Consequences for this ticket:**
+
+1. The 0.72388 baseline was flattered by a bug. The honest v25 number on this
+   holdout is 0.77070. Any comparison built on 0.724 inherits the error.
+2. The tiebreak math is ELIMINATED as a cause. The overconfidence is in the
+   variance/uncertainty mechanism, exactly where this ticket said it was.
+   One hypothesis down, the original next step unchanged.
+3. A refit would change NOTHING. Traced after first writing the opposite here:
+   the state-update path calls `adf_update` on point counts (`w_svpt`/
+   `w_won`), never `p_set_full`. The only caller that would is
+   `adf_update_full_dp`, gated behind `DSV_REGIME_B_FULL_DP`, which defaults
+   to `"0"` and is set nowhere in the repo. So `p_set`/`p_match` are called
+   in exactly one place, line 1061, to produce `p_winner_hier`. The +0.047 is
+   the whole and final effect, not an upper bound pending a refit.
+
+## What this fix does and does not reach
+
+`p_winner_hier` is the ONLY output affected, and nothing consumes it - it is
+the retired standalone predictor this ticket is about.
+
+XGBoost consumes three hier-derived features (`hier_dmean_diff`,
+`hier_dvar_diff`, `hier_dvar_sum`), all built from the posterior state
+`d1_mean`/`d1_var`/`d2_mean`/`d2_var`. That state comes from the `adf_update`
+path, which this fix does not touch. So the live model is unaffected now AND
+after any feature rebuild - not merely "unaffected until a rebuild", which is
+what this note claimed before the call graph was checked.
+
+The fix becomes load-bearing the moment anyone sets
+`DSV_REGIME_B_FULL_DP=1`, since that path scores observed set scorelines
+through `set_outcome_dist_for_d` -> `p_set_full`. Turning that on with the
+old maths would have fed a systematically compressed likelihood into every
+state update.

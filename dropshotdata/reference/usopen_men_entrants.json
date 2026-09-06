@@ -1,0 +1,1026 @@
+[
+ {
+  "section": 1,
+  "slot": 1,
+  "seed": "1",
+  "country": "GER",
+  "name": "Alexander Zverev",
+  "uid": "atp:100644"
+ },
+ {
+  "section": 1,
+  "slot": 2,
+  "seed": "",
+  "country": "ITA",
+  "name": "Lorenzo Sonego",
+  "uid": "atp:132283"
+ },
+ {
+  "section": 1,
+  "slot": 3,
+  "seed": "",
+  "country": "FRA",
+  "name": "Quentin Halys",
+  "uid": "atp:111460"
+ },
+ {
+  "section": 1,
+  "slot": 4,
+  "seed": "",
+  "country": "ARG",
+  "name": "Facundo Díaz Acosta",
+  "uid": "atp:207680"
+ },
+ {
+  "section": 1,
+  "slot": 5,
+  "seed": "Q",
+  "country": "BUL",
+  "name": "Grigor Dimitrov",
+  "uid": "atp:105777"
+ },
+ {
+  "section": 1,
+  "slot": 6,
+  "seed": "",
+  "country": "AUS",
+  "name": "Alexei Popyrin",
+  "uid": "atp:200615"
+ },
+ {
+  "section": 1,
+  "slot": 7,
+  "seed": "",
+  "country": "GER",
+  "name": "Yannick Hanfmann",
+  "uid": "atp:105870"
+ },
+ {
+  "section": 1,
+  "slot": 8,
+  "seed": "25",
+  "country": "CHI",
+  "name": "Alejandro Tabilo",
+  "uid": "atp:126214"
+ },
+ {
+  "section": 1,
+  "slot": 9,
+  "seed": "21",
+  "country": "ITA",
+  "name": "Luciano Darderi",
+  "uid": "atp:209260"
+ },
+ {
+  "section": 1,
+  "slot": 10,
+  "seed": "Q",
+  "country": "GBR",
+  "name": "Harry Wendelken",
+  "uid": "atp:207784"
+ },
+ {
+  "section": 1,
+  "slot": 11,
+  "seed": "Q",
+  "country": "CZE",
+  "name": "Dalibor Svrčina",
+  "uid": "atp:207494"
+ },
+ {
+  "section": 1,
+  "slot": 12,
+  "seed": "",
+  "country": "FRA",
+  "name": "Valentin Royer",
+  "uid": "atp:208316"
+ },
+ {
+  "section": 1,
+  "slot": 13,
+  "seed": "WC",
+  "country": "AUS",
+  "name": "Dane Sweeny",
+  "uid": "atp:208013"
+ },
+ {
+  "section": 1,
+  "slot": 14,
+  "seed": "",
+  "country": "FRA",
+  "name": "Corentin Moutet",
+  "uid": "atp:144895"
+ },
+ {
+  "section": 1,
+  "slot": 15,
+  "seed": "",
+  "country": "GBR",
+  "name": "Arthur Fery",
+  "uid": "atp:209259"
+ },
+ {
+  "section": 1,
+  "slot": 16,
+  "seed": "13",
+  "country": "ITA",
+  "name": "Lorenzo Musetti",
+  "uid": "atp:207518"
+ },
+ {
+  "section": 2,
+  "slot": 1,
+  "seed": "12",
+  "country": "ESP",
+  "name": "Rafael Jódar",
+  "uid": "atp:212588"
+ },
+ {
+  "section": 2,
+  "slot": 2,
+  "seed": "PR",
+  "country": "AUS",
+  "name": "Thanasi Kokkinakis",
+  "uid": "atp:106423"
+ },
+ {
+  "section": 2,
+  "slot": 3,
+  "seed": "",
+  "country": "HUN",
+  "name": "Fábián Marozsán",
+  "uid": "atp:206681"
+ },
+ {
+  "section": 2,
+  "slot": 4,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Michael Zheng",
+  "uid": "atp:210116"
+ },
+ {
+  "section": 2,
+  "slot": 5,
+  "seed": "",
+  "country": "USA",
+  "name": "Zachary Svajda",
+  "uid": "atp:208260"
+ },
+ {
+  "section": 2,
+  "slot": 6,
+  "seed": "",
+  "country": "GER",
+  "name": "Daniel Altmaier",
+  "uid": "atp:127157"
+ },
+ {
+  "section": 2,
+  "slot": 7,
+  "seed": "",
+  "country": "ARG",
+  "name": "Juan Manuel Cerúndolo",
+  "uid": "atp:207678"
+ },
+ {
+  "section": 2,
+  "slot": 8,
+  "seed": "19",
+  "country": "NOR",
+  "name": "Casper Ruud",
+  "uid": "atp:134770"
+ },
+ {
+  "section": 2,
+  "slot": 9,
+  "seed": "31",
+  "country": "BEL",
+  "name": "Zizou Bergs",
+  "uid": "atp:200267"
+ },
+ {
+  "section": 2,
+  "slot": 10,
+  "seed": "PR",
+  "country": "ESP",
+  "name": "Carlos Taberner",
+  "uid": "atp:126535"
+ },
+ {
+  "section": 2,
+  "slot": 11,
+  "seed": "",
+  "country": "NED",
+  "name": "Jesper de Jong",
+  "uid": "atp:207411"
+ },
+ {
+  "section": 2,
+  "slot": 12,
+  "seed": "Q",
+  "country": "ITA",
+  "name": "Francesco Passaro",
+  "uid": "atp:208859"
+ },
+ {
+  "section": 2,
+  "slot": 13,
+  "seed": "",
+  "country": "GBR",
+  "name": "Jan Choinski",
+  "uid": "atp:123828"
+ },
+ {
+  "section": 2,
+  "slot": 14,
+  "seed": "",
+  "country": "NED",
+  "name": "Botic van de Zandschulp",
+  "uid": "atp:122298"
+ },
+ {
+  "section": 2,
+  "slot": 15,
+  "seed": "Q",
+  "country": "ITA",
+  "name": "Andrea Guerrieri",
+  "uid": "atp:200462"
+ },
+ {
+  "section": 2,
+  "slot": 16,
+  "seed": "6",
+  "country": "AUS",
+  "name": "Alex de Minaur",
+  "uid": "atp:200282"
+ },
+ {
+  "section": 3,
+  "slot": 1,
+  "seed": "3",
+  "country": "CAN",
+  "name": "Félix Auger-Aliassime",
+  "uid": "atp:200000"
+ },
+ {
+  "section": 3,
+  "slot": 2,
+  "seed": "",
+  "country": "AUS",
+  "name": "Rinky Hijikata",
+  "uid": "atp:208014"
+ },
+ {
+  "section": 3,
+  "slot": 3,
+  "seed": "",
+  "country": "ARG",
+  "name": "Román Andrés Burruchaga",
+  "uid": "atp:208882"
+ },
+ {
+  "section": 3,
+  "slot": 4,
+  "seed": "",
+  "country": "",
+  "name": "Karen Khachanov",
+  "uid": "atp:111575"
+ },
+ {
+  "section": 3,
+  "slot": 5,
+  "seed": "",
+  "country": "SVK",
+  "name": "Alex Molčan",
+  "uid": "atp:144684"
+ },
+ {
+  "section": 3,
+  "slot": 6,
+  "seed": "",
+  "country": "FRA",
+  "name": "Benjamin Bonzi",
+  "uid": "atp:126127"
+ },
+ {
+  "section": 3,
+  "slot": 7,
+  "seed": "",
+  "country": "USA",
+  "name": "Marcos Giron",
+  "uid": "atp:106218"
+ },
+ {
+  "section": 3,
+  "slot": 8,
+  "seed": "32",
+  "country": "PER",
+  "name": "Ignacio Buse",
+  "uid": "atp:209860"
+ },
+ {
+  "section": 3,
+  "slot": 9,
+  "seed": "17",
+  "country": "CZE",
+  "name": "Jakub Menšík",
+  "uid": "atp:210150"
+ },
+ {
+  "section": 3,
+  "slot": 10,
+  "seed": "LL",
+  "country": "JPN",
+  "name": "Shintaro Mochizuki",
+  "uid": "atp:208278"
+ },
+ {
+  "section": 3,
+  "slot": 11,
+  "seed": "Q",
+  "country": "AUT",
+  "name": "Jurij Rodionov",
+  "uid": "atp:200514"
+ },
+ {
+  "section": 3,
+  "slot": 12,
+  "seed": "",
+  "country": "FRA",
+  "name": "Giovanni Mpetshi Perricard",
+  "uid": "atp:208659"
+ },
+ {
+  "section": 3,
+  "slot": 13,
+  "seed": "",
+  "country": "PAR",
+  "name": "Adolfo Daniel Vallejo",
+  "uid": "atp:209226"
+ },
+ {
+  "section": 3,
+  "slot": 14,
+  "seed": "WC",
+  "country": "FRA",
+  "name": "Gaël Monfils",
+  "uid": "atp:104792"
+ },
+ {
+  "section": 3,
+  "slot": 15,
+  "seed": "",
+  "country": "POR",
+  "name": "Nuno Borges (tennis)",
+  "uid": "atp:132686"
+ },
+ {
+  "section": 3,
+  "slot": 16,
+  "seed": "14",
+  "country": "USA",
+  "name": "Learner Tien",
+  "uid": "atp:210530"
+ },
+ {
+  "section": 4,
+  "slot": 1,
+  "seed": "9",
+  "country": "USA",
+  "name": "Taylor Fritz",
+  "uid": "atp:126203"
+ },
+ {
+  "section": 4,
+  "slot": 2,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Darwin Blanch",
+  "uid": "atp:210464"
+ },
+ {
+  "section": 4,
+  "slot": 3,
+  "seed": "",
+  "country": "ITA",
+  "name": "Mattia Bellucci",
+  "uid": "atp:208233"
+ },
+ {
+  "section": 4,
+  "slot": 4,
+  "seed": "Q",
+  "country": "HUN",
+  "name": "Zsombor Piros",
+  "uid": "atp:200436"
+ },
+ {
+  "section": 4,
+  "slot": 5,
+  "seed": "",
+  "country": "ARG",
+  "name": "Camilo Ugo Carabelli",
+  "uid": "atp:200116"
+ },
+ {
+  "section": 4,
+  "slot": 6,
+  "seed": "",
+  "country": "GER",
+  "name": "Jan-Lennard Struff",
+  "uid": "atp:105526"
+ },
+ {
+  "section": 4,
+  "slot": 7,
+  "seed": "PR",
+  "country": "AUT",
+  "name": "Filip Misolic",
+  "uid": "atp:209209"
+ },
+ {
+  "section": 4,
+  "slot": 8,
+  "seed": "24",
+  "country": "ARG",
+  "name": "Francisco Cerúndolo",
+  "uid": "atp:202103"
+ },
+ {
+  "section": 4,
+  "slot": 9,
+  "seed": "28",
+  "country": "BEL",
+  "name": "Alexander Blockx",
+  "uid": "atp:210696"
+ },
+ {
+  "section": 4,
+  "slot": 10,
+  "seed": "Q",
+  "country": "CHI",
+  "name": "Tomás Barrios Vera",
+  "uid": "atp:144642"
+ },
+ {
+  "section": 4,
+  "slot": 11,
+  "seed": "PR",
+  "country": "CHN",
+  "name": "Shang Juncheng",
+  "uid": "atp:209992"
+ },
+ {
+  "section": 4,
+  "slot": 12,
+  "seed": "",
+  "country": "ARG",
+  "name": "Marco Trungelliti",
+  "uid": "atp:105477"
+ },
+ {
+  "section": 4,
+  "slot": 13,
+  "seed": "Q",
+  "country": "USA",
+  "name": "Nishesh Basavareddy",
+  "uid": "atp:210460"
+ },
+ {
+  "section": 4,
+  "slot": 14,
+  "seed": "Q",
+  "country": "AUS",
+  "name": "Tristan Schoolkate",
+  "uid": "atp:209262"
+ },
+ {
+  "section": 4,
+  "slot": 15,
+  "seed": "",
+  "country": "ARG",
+  "name": "Francisco Comesaña",
+  "uid": "atp:207681"
+ },
+ {
+  "section": 4,
+  "slot": 16,
+  "seed": "5",
+  "country": "ITA",
+  "name": "Flavio Cobolli",
+  "uid": "atp:207925"
+ },
+ {
+  "section": 5,
+  "slot": 1,
+  "seed": "7",
+  "country": "",
+  "name": "Daniil Medvedev",
+  "uid": "atp:106421"
+ },
+ {
+  "section": 5,
+  "slot": 2,
+  "seed": "Q",
+  "country": "FRA",
+  "name": "Hugo Gaston",
+  "uid": "atp:200384"
+ },
+ {
+  "section": 5,
+  "slot": 3,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Sebastian Gorzny",
+  "uid": "atp:210478"
+ },
+ {
+  "section": 5,
+  "slot": 4,
+  "seed": "",
+  "country": "BEL",
+  "name": "Raphaël Collignon",
+  "uid": "atp:209920"
+ },
+ {
+  "section": 5,
+  "slot": 5,
+  "seed": "",
+  "country": "ESP",
+  "name": "Jaume Munar",
+  "uid": "atp:144719"
+ },
+ {
+  "section": 5,
+  "slot": 6,
+  "seed": "",
+  "country": "FRA",
+  "name": "Térence Atmane",
+  "uid": "atp:209279"
+ },
+ {
+  "section": 5,
+  "slot": 7,
+  "seed": "",
+  "country": "JPN",
+  "name": "Sho Shimabukuro",
+  "uid": "atp:200647"
+ },
+ {
+  "section": 5,
+  "slot": 8,
+  "seed": "26",
+  "country": "FRA",
+  "name": "Arthur Rinderknech",
+  "uid": "atp:126239"
+ },
+ {
+  "section": 5,
+  "slot": 9,
+  "seed": "22",
+  "country": "MON",
+  "name": "Valentin Vacherot",
+  "uid": "atp:200473"
+ },
+ {
+  "section": 5,
+  "slot": 10,
+  "seed": "",
+  "country": "USA",
+  "name": "Aleksandar Kovacevic (tennis)",
+  "uid": "atp:206499"
+ },
+ {
+  "section": 5,
+  "slot": 11,
+  "seed": "",
+  "country": "POL",
+  "name": "Kamil Majchrzak",
+  "uid": "atp:111794"
+ },
+ {
+  "section": 5,
+  "slot": 12,
+  "seed": "",
+  "country": "SRB",
+  "name": "Hamad Medjedovic",
+  "uid": "atp:209098"
+ },
+ {
+  "section": 5,
+  "slot": 13,
+  "seed": "",
+  "country": "AUS",
+  "name": "Aleksandar Vukic",
+  "uid": "atp:126846"
+ },
+ {
+  "section": 5,
+  "slot": 14,
+  "seed": "Q",
+  "country": "JPN",
+  "name": "Rei Sakamoto",
+  "uid": "atp:210536"
+ },
+ {
+  "section": 5,
+  "slot": 15,
+  "seed": "",
+  "country": "USA",
+  "name": "Martin Damm (born 2003)",
+  "uid": "atp:102093"
+ },
+ {
+  "section": 5,
+  "slot": 16,
+  "seed": "11",
+  "country": "USA",
+  "name": "Frances Tiafoe",
+  "uid": "atp:126207"
+ },
+ {
+  "section": 6,
+  "slot": 1,
+  "seed": "16",
+  "country": "USA",
+  "name": "Brandon Nakashima",
+  "uid": "atp:206909"
+ },
+ {
+  "section": 6,
+  "slot": 2,
+  "seed": "",
+  "country": "ARG",
+  "name": "Sebastián Báez",
+  "uid": "atp:202104"
+ },
+ {
+  "section": 6,
+  "slot": 3,
+  "seed": "",
+  "country": "USA",
+  "name": "Alex Michelsen",
+  "uid": "atp:210506"
+ },
+ {
+  "section": 6,
+  "slot": 4,
+  "seed": "Q",
+  "country": "ITA",
+  "name": "Federico Cinà",
+  "uid": "atp:210748"
+ },
+ {
+  "section": 6,
+  "slot": 5,
+  "seed": "",
+  "country": "ESP",
+  "name": "Daniel Mérida",
+  "uid": null
+ },
+ {
+  "section": 6,
+  "slot": 6,
+  "seed": "",
+  "country": "HUN",
+  "name": "Márton Fucsovics",
+  "uid": "atp:105916"
+ },
+ {
+  "section": 6,
+  "slot": 7,
+  "seed": "",
+  "country": "CRO",
+  "name": "Marin Čilić",
+  "uid": "atp:105227"
+ },
+ {
+  "section": 6,
+  "slot": 8,
+  "seed": "23",
+  "country": "",
+  "name": "Andrey Rublev",
+  "uid": "atp:126094"
+ },
+ {
+  "section": 6,
+  "slot": 9,
+  "seed": "27",
+  "country": "ARG",
+  "name": "Tomás Martín Etcheverry",
+  "uid": "atp:144869"
+ },
+ {
+  "section": 6,
+  "slot": 10,
+  "seed": "",
+  "country": "CZE",
+  "name": "Vít Kopřiva",
+  "uid": "atp:200240"
+ },
+ {
+  "section": 6,
+  "slot": 11,
+  "seed": "",
+  "country": "ESP",
+  "name": "Martín Landaluce",
+  "uid": "atp:212021"
+ },
+ {
+  "section": 6,
+  "slot": 12,
+  "seed": "LL",
+  "country": "GBR",
+  "name": "Jacob Fearnley",
+  "uid": "atp:207985"
+ },
+ {
+  "section": 6,
+  "slot": 13,
+  "seed": "",
+  "country": "ITA",
+  "name": "Matteo Berrettini",
+  "uid": "atp:126610"
+ },
+ {
+  "section": 6,
+  "slot": 14,
+  "seed": "WC",
+  "country": "SUI",
+  "name": "Stan Wawrinka",
+  "uid": "atp:104527"
+ },
+ {
+  "section": 6,
+  "slot": 15,
+  "seed": "",
+  "country": "ARG",
+  "name": "Mariano Navone",
+  "uid": "atp:208363"
+ },
+ {
+  "section": 6,
+  "slot": 16,
+  "seed": "4",
+  "country": "SRB",
+  "name": "Novak Djokovic",
+  "uid": "atp:104925"
+ },
+ {
+  "section": 7,
+  "slot": 1,
+  "seed": "8",
+  "country": "USA",
+  "name": "Ben Shelton",
+  "uid": "atp:210097"
+ },
+ {
+  "section": 7,
+  "slot": 2,
+  "seed": "",
+  "country": "NED",
+  "name": "Tallon Griekspoor",
+  "uid": "atp:134868"
+ },
+ {
+  "section": 7,
+  "slot": 3,
+  "seed": "",
+  "country": "BIH",
+  "name": "Damir Džumhur",
+  "uid": "atp:106000"
+ },
+ {
+  "section": 7,
+  "slot": 4,
+  "seed": "",
+  "country": "POL",
+  "name": "Hubert Hurkacz",
+  "uid": "atp:128034"
+ },
+ {
+  "section": 7,
+  "slot": 5,
+  "seed": "",
+  "country": "SRB",
+  "name": "Miomir Kecmanović",
+  "uid": "atp:200175"
+ },
+ {
+  "section": 7,
+  "slot": 6,
+  "seed": "",
+  "country": "CAN",
+  "name": "Denis Shapovalov",
+  "uid": "atp:133430"
+ },
+ {
+  "section": 7,
+  "slot": 7,
+  "seed": "",
+  "country": "FRA",
+  "name": "Luca Van Assche",
+  "uid": "atp:209414"
+ },
+ {
+  "section": 7,
+  "slot": 8,
+  "seed": "29",
+  "country": "GBR",
+  "name": "Cameron Norrie",
+  "uid": "atp:111815"
+ },
+ {
+  "section": 7,
+  "slot": 9,
+  "seed": "18",
+  "country": "CZE",
+  "name": "Jiří Lehečka",
+  "uid": "atp:208103"
+ },
+ {
+  "section": 7,
+  "slot": 10,
+  "seed": "",
+  "country": "ESP",
+  "name": "Pablo Carreno Busta",
+  "uid": "atp:105807"
+ },
+ {
+  "section": 7,
+  "slot": 11,
+  "seed": "Q",
+  "country": "GBR",
+  "name": "Toby Samuel",
+  "uid": "atp:210389"
+ },
+ {
+  "section": 7,
+  "slot": 12,
+  "seed": "",
+  "country": "CZE",
+  "name": "Tomáš Macháč",
+  "uid": "atp:207830"
+ },
+ {
+  "section": 7,
+  "slot": 13,
+  "seed": "Q",
+  "country": "RSA",
+  "name": "Lloyd Harris (tennis)",
+  "uid": "atp:144750"
+ },
+ {
+  "section": 7,
+  "slot": 14,
+  "seed": "WC",
+  "country": "USA",
+  "name": "Jack Kennedy (tennis)",
+  "uid": "atp:213605"
+ },
+ {
+  "section": 7,
+  "slot": 15,
+  "seed": "",
+  "country": "GRE",
+  "name": "Stefanos Tsitsipas",
+  "uid": "atp:126774"
+ },
+ {
+  "section": 7,
+  "slot": 16,
+  "seed": "10",
+  "country": "FRA",
+  "name": "Arthur Fils",
+  "uid": "atp:209950"
+ },
+ {
+  "section": 8,
+  "slot": 1,
+  "seed": "15",
+  "country": "KAZ",
+  "name": "Alexander Bublik",
+  "uid": "atp:122330"
+ },
+ {
+  "section": 8,
+  "slot": 2,
+  "seed": "WC",
+  "country": "USA",
+  "name": "J. J. Wolf",
+  "uid": "atp:200670"
+ },
+ {
+  "section": 8,
+  "slot": 3,
+  "seed": "",
+  "country": "ARG",
+  "name": "Thiago Agustín Tirante",
+  "uid": "atp:202058"
+ },
+ {
+  "section": 8,
+  "slot": 4,
+  "seed": "",
+  "country": "FRA",
+  "name": "Adrian Mannarino",
+  "uid": "atp:105173"
+ },
+ {
+  "section": 8,
+  "slot": 5,
+  "seed": "",
+  "country": "CRO",
+  "name": "Dino Prižmić",
+  "uid": "atp:209976"
+ },
+ {
+  "section": 8,
+  "slot": 6,
+  "seed": "",
+  "country": "KAZ",
+  "name": "Alexander Shevchenko (tennis)",
+  "uid": "atp:207686"
+ },
+ {
+  "section": 8,
+  "slot": 7,
+  "seed": "Q",
+  "country": "HKG",
+  "name": "Coleman Wong",
+  "uid": "atp:209409"
+ },
+ {
+  "section": 8,
+  "slot": 8,
+  "seed": "20",
+  "country": "USA",
+  "name": "Tommy Paul (tennis)",
+  "uid": "atp:126205"
+ },
+ {
+  "section": 8,
+  "slot": 9,
+  "seed": "30",
+  "country": "ITA",
+  "name": "Matteo Arnaldi",
+  "uid": "atp:208286"
+ },
+ {
+  "section": 8,
+  "slot": 10,
+  "seed": "",
+  "country": "AUS",
+  "name": "James Duckworth (tennis)",
+  "uid": "atp:105902"
+ },
+ {
+  "section": 8,
+  "slot": 11,
+  "seed": "",
+  "country": "CHN",
+  "name": "Wu Yibing",
+  "uid": "atp:200059"
+ },
+ {
+  "section": 8,
+  "slot": 12,
+  "seed": "",
+  "country": "AUS",
+  "name": "Adam Walton",
+  "uid": "atp:200443"
+ },
+ {
+  "section": 8,
+  "slot": 13,
+  "seed": "",
+  "country": "POR",
+  "name": "Jaime Faria",
+  "uid": "atp:210262"
+ },
+ {
+  "section": 8,
+  "slot": 14,
+  "seed": "",
+  "country": "USA",
+  "name": "Jenson Brooksby",
+  "uid": "atp:202385"
+ },
+ {
+  "section": 8,
+  "slot": 15,
+  "seed": "",
+  "country": "",
+  "name": "Roman Safiullin",
+  "uid": "atp:126128"
+ },
+ {
+  "section": 8,
+  "slot": 16,
+  "seed": "2",
+  "country": "ESP",
+  "name": "Carlos Alcaraz",
+  "uid": "atp:207989"
+ }
+]

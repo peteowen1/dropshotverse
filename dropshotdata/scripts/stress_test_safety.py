@@ -164,48 +164,97 @@ check("3yr-layoff return match not overconfident vs an average opponent",
      p_mc <= 0.95,
      f"MC-averaged p(returner wins)={p_mc:.4f} (ceiling 0.95) after 3yr layoff from tight prior")
 
-# ---- reproduction 6 (ticket 21 full-DP): p_set_full refactor must be
-# bit-identical to the pre-refactor scalar p_set implementation. p_set is
-# used by regime A's eval-time prediction too (p_match), so any drift here
-# would silently change v25's already-reported numbers, not just the new
-# regime-B machinery this ticket adds.
-def _reference_p_set(p_a_serve, p_b_serve, a_serves_first):
-    """Verbatim copy of p_set's pre-refactor body (ticket 21), kept
-    self-contained so this check doesn't just compare the refactor to
-    itself."""
-    states = {(0, 0): 1.0}
-    final = 0.0
-    for _ in range(13):
+# ---- reproduction 6: the point/game/set recursions must match the PUBLISHED
+# closed forms (O'Malley 2008; Newton & Keller eqs. 6-16), written out in
+# issues/05-point-model-literature.md sections 1a-1c.
+#
+# This check used to compare p_set against a verbatim copy of its own
+# pre-refactor body, to prove the ticket 21 refactor changed nothing. It
+# proved exactly that - and both sides were wrong the same way, so the check
+# passed while p_set was off by up to 5.7pp. A test that compares code to its
+# own history can only detect drift, never error. These compare against the
+# literature instead.
+def _ref_p_game(p):
+    """1a: p^4(15 - 34p + 28p^2 - 8p^3)/(1 - 2p + 2p^2)."""
+    return p**4 * (15 - 34*p + 28*p*p - 8*p**3) / (1 - 2*p + 2*p*p)
+
+
+def _ref_p_tiebreak(pa, pb):
+    """1b: 8x8 forward DP + exact geometric tail from 6-6.
+    A serves point t (1-based) iff (t-1) mod 4 in {0, 3}."""
+    states, win_a, p66 = {(0, 0): 1.0}, 0.0, 0.0
+    for t in range(1, 14):
+        pt_a = pa if (t - 1) % 4 in (0, 3) else (1 - pb)
         nxt = {}
-        for (a, b), pr in states.items():
-            game_idx = a + b
-            a_serves_game = (game_idx % 2 == 0) == a_serves_first
-            pa = p_game(p_a_serve) if a_serves_game else 1 - p_game(p_b_serve)
-            for winner, w in ((0, pa), (1, 1 - pa)):
-                na, nb = (a + 1, b) if winner == 0 else (a, b + 1)
-                prob = pr * w
-                if prob == 0:
+        for (i, j), pr in states.items():
+            for (ni, nj), w in (((i+1, j), pt_a), ((i, j+1), 1 - pt_a)):
+                q = pr * w
+                if q == 0.0:
                     continue
-                if (na >= 6 or nb >= 6) and abs(na - nb) >= 2 and max(na, nb) <= 7:
-                    final += prob if na > nb else 0.0
-                elif na == 7 or nb == 7:
-                    tb = p_tiebreak(p_a_serve, p_b_serve)
-                    final += prob * (tb if na == 7 else (1 - tb))
+                if ni == 7 and nj <= 5:
+                    win_a += q
+                elif nj == 7 and ni <= 5:
+                    pass
+                elif ni == 6 and nj == 6:
+                    p66 += q
                 else:
-                    nxt[(na, nb)] = nxt.get((na, nb), 0.0) + prob
+                    nxt[(ni, nj)] = nxt.get((ni, nj), 0.0) + q
         states = nxt
         if not states:
             break
-    final += sum(states.values()) * 0.5
-    return final
+    r = pa*pb + (1 - pa)*(1 - pb)
+    return win_a + p66 * (pa*(1 - pb) / (1 - r))
 
 
-maxdiff = 0.0
-for pa_, pb_ in [(0.5, 0.5), (0.65, 0.55), (0.9, 0.3), (0.1, 0.95), (0.62, 0.58), (0.99, 0.01)]:
-    for first_ in (True, False):
-        maxdiff = max(maxdiff, abs(_reference_p_set(pa_, pb_, first_) - p_set(pa_, pb_, first_)))
-check("p_set_full refactor bit-identical to pre-refactor p_set",
-     maxdiff < 1e-9, f"max diff across 12 combos = {maxdiff:.2e}")
+def _ref_p_set(pa, pb, a_serves_first):
+    """1c: P_A^set = sum_j P(6,j) + P(7,5) + P(6,6) * P_A^tiebreak.
+    At 6-6 a tiebreak is played; there is no 13th game."""
+    ga, gb, tb = _ref_p_game(pa), _ref_p_game(pb), _ref_p_tiebreak(pa, pb)
+    states, win_a, p66 = {(0, 0): 1.0}, 0.0, 0.0
+    for t in range(1, 14):
+        pg_a = ga if ((t % 2 == 1) == a_serves_first) else (1 - gb)
+        nxt = {}
+        for (i, j), pr in states.items():
+            for (ni, nj), w in (((i+1, j), pg_a), ((i, j+1), 1 - pg_a)):
+                q = pr * w
+                if q == 0.0:
+                    continue
+                if (ni == 6 and nj <= 4) or (ni == 7 and nj == 5):
+                    win_a += q
+                elif (nj == 6 and ni <= 4) or (nj == 7 and ni == 5):
+                    pass
+                elif ni == 6 and nj == 6:
+                    p66 += q
+                else:
+                    nxt[(ni, nj)] = nxt.get((ni, nj), 0.0) + q
+        states = nxt
+        if not states:
+            break
+    return win_a + p66 * tb
+
+
+_GRID = [(0.65, 0.55), (0.62, 0.58), (0.75, 0.55), (0.70, 0.60), (0.72, 0.61), (0.80, 0.50)]
+
+maxdiff = max(abs(p_game(p_) - _ref_p_game(p_))
+              for p_ in (0.50, 0.55, 0.60, 0.62, 0.65, 0.70, 0.75, 0.80))
+check("p_game matches the O'Malley closed form",
+     maxdiff < 1e-12, f"max diff across 8 values = {maxdiff:.2e}")
+
+maxdiff = max(abs(p_tiebreak(pa_, pb_) - _ref_p_tiebreak(pa_, pb_)) for pa_, pb_ in _GRID)
+check("p_tiebreak matches Newton-Keller eq. 13 (exact 6-6 geometric tail)",
+     maxdiff < 1e-9, f"max diff across {len(_GRID)} combos = {maxdiff:.2e}")
+
+maxdiff = max(abs(p_set(pa_, pb_, f_) - _ref_p_set(pa_, pb_, f_))
+              for pa_, pb_ in _GRID for f_ in (True, False))
+check("p_set matches Newton-Keller eq. 10 (6-6 resolves by tiebreak, not a 13th game)",
+     maxdiff < 1e-9, f"max diff across {2*len(_GRID)} combos = {maxdiff:.2e}")
+
+# Newton & Keller section 3.3 PROVE set-win probability does not depend on who
+# serves first. p_match symmetrises over serve order, which masked the old
+# violation; this asserts the identity directly on p_set.
+maxdiff = max(abs(p_set(pa_, pb_, True) - p_set(pa_, pb_, False)) for pa_, pb_ in _GRID)
+check("p_set is independent of who serves first (Newton-Keller 3.3)",
+     maxdiff < 1e-9, f"max |first=True - first=False| = {maxdiff:.2e}")
 
 # ---- reproduction 7 (ticket 21 full-DP): p_set_full's outcome distribution
 # must be a real, normalized probability distribution (sums to 1) - a
@@ -543,6 +592,39 @@ check("round_rank: unrecognized label triggers a warning",
 check("round_rank: 'f' normalizes to the same rank as 'F'",
      hm.round_rank(pd.Series(["f"])).iloc[0] == hm.round_rank(pd.Series(["F"])).iloc[0],
      f"f rank={hm.round_rank(pd.Series(['f'])).iloc[0]}, F rank={hm.round_rank(pd.Series(['F'])).iloc[0]}")
+
+# ---- dropshotverse#7: the pairwise match matrix must be antisymmetric.
+# p(A beats B) + p(B beats A) == 1 is an invariant of the problem, not of the
+# model: XGBoost scores each ordered pair independently, so nothing enforced
+# it and the two directions disagreed by up to 0.54, with 836 pairs naming the
+# same player favourite BOTH ways. Caught only because someone tried to halve
+# a published file on the assumption it held.
+from simulate_tournament_xgb import antisymmetrise as _antisym
+
+_rng21 = np.random.default_rng(21)
+_n21 = 40
+_raw21 = _rng21.uniform(0.02, 0.98, size=(_n21, _n21))   # deliberately asymmetric
+np.fill_diagonal(_raw21, np.nan)
+_fix21 = _antisym(_raw21)
+_off21 = ~np.eye(_n21, dtype=bool)
+_sums21 = (_fix21 + _fix21.T)[_off21]
+
+check("antisymmetrise: p_ij + p_ji == 1 off the diagonal",
+     np.nanmax(np.abs(_sums21 - 1.0)) < 1e-12,
+     f"max |sum-1| over {_off21.sum()} ordered pairs = {np.nanmax(np.abs(_sums21 - 1.0)):.2e}")
+
+check("antisymmetrise: never names the same player favourite both ways",
+     int(((_fix21 > 0.5) & (_fix21.T > 0.5))[_off21].sum()) == 0,
+     f"raw input had {int(((_raw21 > 0.5) & (_raw21.T > 0.5))[_off21].sum())} such pairs, output has "
+     f"{int(((_fix21 > 0.5) & (_fix21.T > 0.5))[_off21].sum())}")
+
+check("antisymmetrise: preserves ordering of an already-symmetric matrix",
+     np.allclose(_antisym(_fix21)[_off21], _fix21[_off21], atol=1e-12),
+     "idempotent on an already-antisymmetric matrix")
+
+check("antisymmetrise: output stays a valid probability",
+     bool(np.nanmin(_fix21) > 0.0 and np.nanmax(_fix21) < 1.0),
+     f"range [{np.nanmin(_fix21):.2e}, {np.nanmax(_fix21):.6f}]")
 
 print(f"\n{'ALL PASS' if not FAILURES else 'FAILURES: ' + str(FAILURES)}")
 sys.exit(1 if FAILURES else 0)

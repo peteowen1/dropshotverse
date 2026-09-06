@@ -32,13 +32,40 @@ from xgb_bt_rating import TOURNAMENTS, build_h2h_dict, build_pairwise_features_b
 SCRATCH = DD / "tune_scratch"
 
 
+def antisymmetrise(M: np.ndarray) -> np.ndarray:
+    """Force p_ij + p_ji == 1 by averaging the two orientations on the logit
+    scale. Diagonal is left as-is (NaN in a round-robin matrix, never read).
+
+    dropshotverse#7: the model predicts each ordered pair independently, so
+    the two directions disagreed - by 0.035 on average, up to 0.54, and with
+    a systematic -0.024 lean against whoever sat in slot A. This is the
+    invariant the problem has and the model does not."""
+    L = np.log(M / (1 - M))
+    return 1.0 / (1.0 + np.exp(-(L - L.T) / 2.0))
+
+
 def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: str, surface: str, best_of: int,
                               tourney_level: str, h2h: dict, date0, cat_levels: dict,
                               models: list, rounds: list[str]) -> dict[str, np.ndarray]:
     """One full round-robin prediction pass per round value. Features other
     than `round` are identical across rounds (frozen pre-tournament state),
     so the shared base feature matrix is built once and only the `round`
-    categorical changes per pass."""
+    categorical changes per pass.
+
+    Predictions are ANTISYMMETRISED (dropshotverse#7). The model is fed a
+    vector built from an ordered pair, so swapping the two players gives a
+    different vector rather than a mirrored one and nothing ties the two
+    predictions together: p(A beats B) + p(B beats A) did not sum to 1, by
+    0.035 on average and up to 0.54, and for 836 pairs BOTH orientations
+    named the same player favourite. The lean is systematic, not orientation
+    noise - mean(p_ij + p_ji - 1) = -0.024, i.e. occupying slot A cost about
+    2.4 points regardless of who you were.
+
+    Enforcing it costs nothing: the matrix already holds both directions, so
+    this is a transform on predictions already made, not a model change or a
+    retrain. xgb_bt_rating.py and build_blog_data.py already apply the same
+    (L - L.T)/2 before taking BT row means; it was never applied at source.
+    """
     n = len(field_uids)
     idx = {u: k for k, u in enumerate(field_uids)}
     base, pairs_i_uid, pairs_j_uid = build_pairwise_features_base(field_uids, ptab, tour, surface, best_of,
@@ -55,7 +82,7 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
         p = np.clip(np.mean([m.predict(dmat) for m in models], axis=0), 1e-9, 1 - 1e-9)
         M = np.full((n, n), np.nan)
         M[pairs_i, pairs_j] = p
-        matrices[rnd] = M
+        matrices[rnd] = antisymmetrise(M)
     return matrices
 
 
