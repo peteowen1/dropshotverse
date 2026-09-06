@@ -59,7 +59,8 @@
    (`C:\dev\auspol\scripts\`), not citiusverse's; it was attributed by
    proximity in the process list, which was wrong.
 
-2. **28 commits on `dev`, no PR ever opened on this repo** (was 10 when first written). Same review-gate
+2. **[PR #8](https://github.com/peteowen1/dropshotverse/pull/8) is open, `dev` -> `main`, reviewed, awaiting Pete's merge** (opened 2026-09-06 after a two-reviewer Sonnet pass; merging closes #6 and #7). Original blocker text follows.
+   **30 commits on `dev`, no PR ever opened on this repo** (was 10 when first written). Same review-gate
    conflict as row 1 of the cross-verse dashboard: `~/.claude/CLAUDE.md` requires
    a reviewer-agent pass before any PR, and sessions have been running with
    agents disabled. `main` has never received anything since it was created
