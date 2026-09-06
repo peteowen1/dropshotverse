@@ -68,11 +68,11 @@ All five shipped, each verified identical to the old code on the live inputs
 | fix | before | after |
 |---|---:|---:|
 | 1 `build_name_to_id` (both tours) | 88 s | 7 s (the CSV reads) |
-| 2 `build_snapshots` | 56 s | 2.5 s on a cache hit; keyed by field key, date0 and a hash of every row before date0 |
+| 2 `build_snapshots` | 56 s | 2.5 s on a cache hit; keyed by tournament, date0, a hash of every row before date0 and a hash of the field (review finding: the field was missing at first) |
 | 3 `build_name_to_uid` | 11-23 s | 2-3 s |
 | 4 `build_pairwise_features_base` (both tours) | 17 s | 10 s (the rest is `hm.p_match`) |
 | 5 `build_playstyle_features` | 13 s | 7 s |
-| **full run, 20,000 sims** | **270 s** | **127 s cold cache, 68 s steady state** |
+| **full run, 20,000 sims** | **270 s (276 s re-measured)** | **127 s cold cache, 68 s steady state; both output parquets identical to the old run's, seeds being fixed** |
 
 Not done: the prepare-cache bypass (rank 6, ~20 s) and `p_match` in the
 pairwise loop. Both are next if the runner time matters; neither is worth it
