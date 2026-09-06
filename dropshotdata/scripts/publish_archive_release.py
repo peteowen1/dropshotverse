@@ -62,7 +62,7 @@ def build_matches_parquet(out: Path) -> tuple[int, int]:
     Kept deliberately close to that function rather than 'all CSVs': publishing
     a superset would invite a consumer to load rows the model never trains on.
     """
-    frames, n_files = [], 0
+    frames, n_files, skipped = [], 0, []
     for tour in ("atp", "wta"):
         pats = [f"{tour}_matches_[0-9]*.csv",
                 f"{tour}_matches_qual_chall_[0-9]*.csv",
@@ -73,6 +73,7 @@ def build_matches_parquet(out: Path) -> tuple[int, int]:
                     df = pd.read_csv(p, low_memory=False)
                 except Exception as e:                       # noqa: BLE001
                     log(f"  SKIP unreadable {p.name}: {e}")
+                    skipped.append(p.name)
                     continue
                 if not len(df):
                     continue
@@ -90,6 +91,12 @@ def build_matches_parquet(out: Path) -> tuple[int, int]:
         if all_df[c].dtype == object:
             all_df[c] = all_df[c].astype("string")
     all_df.to_parquet(out, index=False, compression="zstd")
+    # A skipped CSV was one log line scrolled past before the release went up,
+    # and the row-count anchor in main() is wide enough to miss a whole year.
+    # This copy is the project's only one, so a partial freeze is refused.
+    if skipped:
+        raise SystemExit(f"{len(skipped)} of {n_files + len(skipped)} CSVs were "
+                         f"unreadable, refusing to publish a partial archive: {skipped}")
     return n_files, len(all_df)
 
 
@@ -163,10 +170,15 @@ removes that single point of failure and lets CI run without a 1.8 GB local tree
         log(f"  {f.name}  {sha256(f)}")
 
     log(f"\ncreating release {TAG} on {REPO} ...")
-    r = subprocess.run([gh, "release", "create", TAG, str(pq), str(tgz),
-                        "--repo", REPO, "--title", TITLE,
-                        "--notes-file", str(STAGE / "notes.md")],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        r = subprocess.run([gh, "release", "create", TAG, str(pq), str(tgz),
+                            "--repo", REPO, "--title", TITLE,
+                            "--notes-file", str(STAGE / "notes.md")],
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=30 * 60)
+    except subprocess.TimeoutExpired:
+        raise SystemExit("gh release create did not finish in 30 minutes; "
+                         "check the network and whether a partial release exists")
     if r.returncode != 0:
         log(r.stdout)
         log(r.stderr)

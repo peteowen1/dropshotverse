@@ -160,8 +160,8 @@ def report(tour_label: str, result: dict, top_n: int = 15) -> None:
 
 def main() -> None:
     n_sims = 5000
-    models, cat_levels, playstyle_full = train_bagged_model()
-
+    # Checked before training so an incomplete checkout fails in a second,
+    # not after the bagged fit.
     missing = [str(p) for p in ENTRANTS.values() if not p.exists()]
     if missing:
         raise SystemExit(
@@ -169,6 +169,7 @@ def main() -> None:
             "\nThese are committed reference inputs under dropshotdata/reference/."
             "\nIf they are absent the checkout is incomplete - do not regenerate them"
             " from a scratch directory, which is how this dependency was lost before.")
+    models, cat_levels, playstyle_full = train_bagged_model()
 
     all_field_uids_probe = set()
     for path in ENTRANTS.values():

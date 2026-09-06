@@ -169,11 +169,16 @@ def report(label: str, res: dict, top_n: int = 12) -> None:
     zombies = [u for u in res["field_uids"] if u in out and probs[u]["W"] > 0]
     log(f"  anchor: no eliminated player holds title probability -> "
         f"{'PASS' if not zombies else 'FAIL ' + str([names.get(u, u) for u in zombies[:3]])}")
+    failures = []
+    if zombies:
+        failures.append("eliminated player holds title probability")
 
     # Anchor 2: exactly one player wins, so title probability must sum to 1.
     total = sum(probs[u]["W"] for u in res["field_uids"])
     log(f"  anchor: title probabilities sum to 1.0 -> {total:.4f} "
         f"{'PASS' if abs(total - 1.0) < 1e-6 else 'FAIL'}")
+    if abs(total - 1.0) >= 1e-6:
+        failures.append(f"title probabilities sum to {total:.4f}")
 
     # Anchor 3: survivors and the elimination set must partition the field.
     alive_n = len(res["field_uids"]) - len(out)
@@ -181,6 +186,9 @@ def report(label: str, res: dict, top_n: int = 12) -> None:
     log(f"  anchor: {alive_n} alive vs {expected_alive} expected from "
         f"{res['n_done']} decided -> "
         f"{'PASS' if alive_n == expected_alive else 'FAIL'}")
+    if alive_n != expected_alive:
+        failures.append(f"{alive_n} alive vs {expected_alive} expected")
+    return failures
 
 
 def main() -> None:
@@ -223,8 +231,15 @@ def main() -> None:
         snap = all_snaps.get(f"{tour}:2026-usopen", {})
         out[tour] = run_tour(tour, draws[tour], snap, models, cat_levels,
                              playstyle_full, age_table, args.sims)
-    report("MEN'S SINGLES", out["atp"])
-    report("WOMEN'S SINGLES", out["wta"])
+    # The anchors used to be printed and ignored, so a failing one reached R2
+    # with exit 0 and the .cmd wrapper's errorlevel guard never fired. A FAIL
+    # now refuses the write, same as a draw that fails verification above:
+    # the site keeps the last good projection rather than publishing a wrong one.
+    failures = {"atp": report("MEN'S SINGLES", out["atp"]),
+                "wta": report("WOMEN'S SINGLES", out["wta"])}
+    failures = {t: f for t, f in failures.items() if f}
+    if failures:
+        raise SystemExit(f"anchor check FAILED, refusing to write or publish: {failures}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     payload = {t: {"names": r["names"],

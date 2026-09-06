@@ -209,6 +209,27 @@ def main() -> None:
     log(f"  A1 replay check: enforced per match above "
         f"({len(frames):,} passed, {len(failed):,} excluded)")
 
+    # A2/A3 were printed and then ignored on first writing; a transposed
+    # PointServer/PointWinner would have printed FAIL and shipped anyway.
+    problems = []
+    if rate > tol:
+        problems.append(f"A2 serve-constant violation rate {rate:.3%} > {tol:.1%}")
+    if served_won <= 0.55:
+        problems.append(f"A3 server wins only {served_won:.1%} of points")
+
+    # Coverage, not presence: the per-file loop above fills any missing KEEP
+    # column with "" so the union never fails on shape. A column the feed
+    # never populated would land 100% empty and pass every check below it.
+    log("\n=== column coverage ===")
+    for c in KEEP:
+        empty = float((d[c].astype(str).str.strip() == "").mean())
+        log(f"  {c:<16} {1 - empty:6.1%} populated")
+        if empty >= 0.999:
+            problems.append(f"column {c} is {empty:.1%} empty after union")
+    if problems:
+        raise SystemExit("corpus-level anchor FAILED, refusing to write "
+                         f"{OUT.name}: {problems}")
+
     d.to_parquet(OUT, index=False)
     log(f"\nwrote {OUT} ({len(d):,} rows)")
 

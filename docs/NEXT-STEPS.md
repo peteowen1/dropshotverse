@@ -146,6 +146,13 @@
 
 ## Known and NOT chased
 
+- **`check_blog_data_freshness.py` still runs from nothing (found by the
+  2026-09-06 review).** It reads the local parquet the sim just wrote, so
+  putting it in `refresh_usopen_live.cmd` would always pass. It needs its own
+  schedule AND somewhere to report to; a scheduled task that exits 1 into a
+  log nobody reads is not an alarm. The honest home is the ops health-check
+  workflow reading the public R2 URL, which is #4 territory and needs Pete's
+  Cloudflare secrets.
 - **`DropshotverseUSOpenCapture` returns exit 1 intermittently.** Cause looks
   clear from the log: it runs a **full 595-match backfill on every invocation**
   (~50 minutes) while scheduled **every 5 minutes**, so runs overlap. Harmless
