@@ -162,18 +162,24 @@ def random_bracket_with_byes(field_uids: list[str], seed_map: dict[str, int], n_
         if bracket[partner] is None:
             bracket[partner] = BYE
             bye_left -= 1
+    # Everything else at random: leftover byes (only when the field has fewer
+    # seeds than byes, i.e. a provisional run), then unseeded entrants, then
+    # TBD for slots the entry list has not filled. Random rather than
+    # first-free so leftover byes do not cluster at the top of the draw and
+    # meet each other.
     unseeded = [u for u in field_uids if u not in seed_map]
     rng.shuffle(unseeded)
-    for i in range(n_slots):
-        if bracket[i] is None:
-            if bye_left > 0:
-                bracket[i] = BYE
-                bye_left -= 1
-            elif unseeded:
-                bracket[i] = unseeded.pop()
-            else:
-                bracket[i] = TBD
-    assert not unseeded, f"{len(unseeded)} entrants left unplaced: draw size too small for the entry list"
+    free = [i for i in range(n_slots) if bracket[i] is None]
+    rng.shuffle(free)
+    assert len(unseeded) <= len(free) - bye_left, "draw size too small for the entry list"
+    for i in free:
+        if bye_left > 0:
+            bracket[i] = BYE
+            bye_left -= 1
+        elif unseeded:
+            bracket[i] = unseeded.pop()
+        else:
+            bracket[i] = TBD
     return bracket  # type: ignore[return-value]
 
 
