@@ -87,6 +87,28 @@ old and only until `TENNIS_LIVE_UNTIL`. Laptop stays primary through the
 final. Needs a fine-grained PAT from Pete. inthegame-blog
 `worker/src/index.js`, `maybeTriggerTennisProjection`.
 
+**D-15 — 2026-09-07: bookmaker prices are a BENCHMARK ONLY and never a model
+input. Pete's call, on product grounds, and it closes W1.** The measurement was
+run first and is recorded in
+[plans/validation-charter.md](plans/validation-charter.md): blending the price
+in beats the model in 6 of 6 years and beats the market in 6 of 6, by 0.0049
+and 0.0040, at a fitted weight of 0.52. It is a real gain and it is rejected
+anyway, because at w=0.52 roughly half of every number the site published
+would be the bookmaker's opinion carrying our name. Pete: "I don't want to use
+bookmakers odds at all in our model."
+
+Consequences to hold onto:
+
+- `raw/odds/` stays exactly where it is and keeps doing the one job it has:
+  the benchmark in the walk-forward scorecard. Nothing to delete.
+- The project goal (D-5) is calibration parity with the market. The scorecard
+  says the model is **0.0008** behind the bookmaker average across seven
+  years, reached on its own features. That is the honest statement of parity,
+  and it is a better story than a blend would have been.
+- Do not reopen W1 as an accuracy question. It was not rejected for being too
+  small; it was rejected for what it would make the published number mean.
+  New evidence about its size does not bear on that.
+
 ## Standing corrections
 
 - **`slot` in the entrants files is not draw position** (2/128 agreement with

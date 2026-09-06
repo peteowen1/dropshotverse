@@ -104,3 +104,74 @@ Both arms carry the same selection history, so the paired delta is meaningful
 even where the absolute level is not. Absolute gap-to-market claims should cite
 2019-2021 only, and say n=3.
 
+## Second result: W1, conditioning on the bookmaker price (2026-09-07)
+
+`tune_scratch/screen_market_blend.py`. Weight fitted out of sample: the
+charter's walk-forward supplies out-of-sample predictions for 2019-2025, then
+for each test year w is fitted on the pooled earlier out-of-sample rows and
+applied to that year. 2019 is a fit year only, so six test folds.
+
+`logit(p_blend) = w * logit(p_market) + (1 - w) * logit(p_model)`
+
+| year | n | fitted w | model | market | blend | gain on model | vs market |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2020 | 1,931 | 0.507 | 0.58709 | 0.59282 | 0.58465 | +0.00245 | -0.00817 |
+| 2021 | 4,001 | 0.454 | 0.58013 | 0.57624 | 0.57358 | +0.00656 | -0.00267 |
+| 2022 | 4,057 | 0.513 | 0.58423 | 0.58152 | 0.57856 | +0.00567 | -0.00296 |
+| 2023 | 4,145 | 0.530 | 0.59375 | 0.59025 | 0.58775 | +0.00600 | -0.00249 |
+| 2024 | 4,424 | 0.545 | 0.58995 | 0.58755 | 0.58433 | +0.00562 | -0.00322 |
+| 2025 | 4,145 | 0.549 | 0.59418 | 0.59550 | 0.59102 | +0.00316 | -0.00449 |
+| **mean** | | **0.516** | 0.58822 | 0.58731 | **0.58332** | **+0.00491** | **-0.00400** |
+
+Mean ECE across the same folds: model 0.0185, market 0.0177, blend 0.0197.
+
+**The blend beats the model in 6 of 6 years and beats the market in 6 of 6**,
+by 0.0049 and 0.0040 respectively. Leaving out 2020, the COVID-shortened fold
+that contributes the largest single market-beating margin, it still beats the
+model by 0.0054 and the market by 0.0032 in all five remaining years.
+
+**Is beating the market real, or is the de-vigged market simply miscalibrated
+and the blend correcting it?** Checked, because the two look identical in a
+log-loss table. Mean ECE over the six folds: **market 0.0177, model 0.0185,
+blend 0.0197**. The market is the best-calibrated of the three and the blend
+is the worst, so the blend is not winning by fixing a market bias - it wins on
+log-loss while being less well calibrated, which means it wins on sharpness.
+That is discriminating information the model holds and the market does not
+price. The fitted weight of 0.52 says the same thing from the other side: two
+collinear signals would drive w to 1 and the gain to nothing.
+
+**The two pre-registered rules disagree, and that is the interesting part.**
+
+- The **charter** rule passes it: better in 6 of 6 folds, mean gain 0.0049
+  against a 0.002 bar.
+- The **critique's own W1 rule** fails it: it demanded 0.015 in 5 of 7 folds
+  and got 0.015 in none, and the mean gain of 0.00491 sits just under its
+  0.005 "the signals are near-collinear, do not do the work" line.
+
+The critique's threshold was calibrated on the belief that the model was
+**0.0247** behind the market, so there was ~0.02 to recover. The scorecard
+measured that gap at **0.0008**. There was never 0.02 on the table, so a
+threshold built on it was unreachable by construction. The right reading is
+not "the blend failed" but "the target it was set was wrong". This is exactly
+what a locked scorecard is for: the estimate that justified the work was the
+thing that turned out to be wrong.
+
+**What it cannot do.** The draw simulator asks for p(A beats B) over 8,128
+unordered pairs; at most 64 first-round matches can carry a price, **0.79%**,
+and only before any later pairing is known. So this cannot carry the
+tournament projection, the wall chart or the title odds. It improves the
+single-match product only.
+
+**REJECTED 2026-09-07 (D-15), on product grounds, not accuracy grounds.** The
+gain is real and consistent, and it is not being taken: at w near 0.5, roughly
+half of every published number would be the bookmaker's opinion carrying this
+site's name. Pete's call, verbatim: "I don't want to use bookmakers odds at all
+in our model." So prices keep the single job they already had, which is the
+benchmark in this scorecard, and W1 is closed. It should not be reopened on
+new evidence about its size, because size was never the objection.
+
+The measurement is kept because it answers something worth knowing anyway: at
+w=0.52 the model is carrying about half the information in the blend, which
+means its features hold real signal the market does not price. A model that
+was merely a noisy copy of the market would have driven w to 1.
+
