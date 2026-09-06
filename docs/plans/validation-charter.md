@@ -104,3 +104,56 @@ Both arms carry the same selection history, so the paired delta is meaningful
 even where the absolute level is not. Absolute gap-to-market claims should cite
 2019-2021 only, and say n=3.
 
+## Second result: W1, conditioning on the bookmaker price (2026-09-07)
+
+`tune_scratch/screen_market_blend.py`. Weight fitted out of sample: the
+charter's walk-forward supplies out-of-sample predictions for 2019-2025, then
+for each test year w is fitted on the pooled earlier out-of-sample rows and
+applied to that year. 2019 is a fit year only, so six test folds.
+
+`logit(p_blend) = w * logit(p_market) + (1 - w) * logit(p_model)`
+
+| year | n | fitted w | model | market | blend | gain on model | vs market |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2020 | 1,931 | 0.507 | 0.58709 | 0.59282 | 0.58465 | +0.00245 | -0.00817 |
+| 2021 | 4,001 | 0.454 | 0.58013 | 0.57624 | 0.57358 | +0.00656 | -0.00267 |
+| 2022 | 4,057 | 0.513 | 0.58423 | 0.58152 | 0.57856 | +0.00567 | -0.00296 |
+| 2023 | 4,145 | 0.530 | 0.59375 | 0.59025 | 0.58775 | +0.00600 | -0.00249 |
+| 2024 | 4,424 | 0.545 | 0.58995 | 0.58755 | 0.58433 | +0.00562 | -0.00322 |
+| 2025 | 4,145 | 0.549 | 0.59418 | 0.59550 | 0.59102 | +0.00316 | -0.00449 |
+| **mean** | | **0.516** | 0.58822 | 0.58731 | **0.58332** | **+0.00491** | **-0.00400** |
+
+**The blend beats the model in 6 of 6 years and beats the market in 6 of 6**,
+by 0.0049 and 0.0040 respectively. The fitted weight sits at 0.52, near an even
+split, which says the model carries real signal the market does not: if the two
+were collinear w would run to 1 and the gain would vanish.
+
+**The two pre-registered rules disagree, and that is the interesting part.**
+
+- The **charter** rule passes it: better in 6 of 6 folds, mean gain 0.0049
+  against a 0.002 bar.
+- The **critique's own W1 rule** fails it: it demanded 0.015 in 5 of 7 folds
+  and got 0.015 in none, and the mean gain of 0.00491 sits just under its
+  0.005 "the signals are near-collinear, do not do the work" line.
+
+The critique's threshold was calibrated on the belief that the model was
+**0.0247** behind the market, so there was ~0.02 to recover. The scorecard
+measured that gap at **0.0008**. There was never 0.02 on the table, so a
+threshold built on it was unreachable by construction. The right reading is
+not "the blend failed" but "the target it was set was wrong". This is exactly
+what a locked scorecard is for: the estimate that justified the work was the
+thing that turned out to be wrong.
+
+**What it cannot do.** The draw simulator asks for p(A beats B) over 8,128
+unordered pairs; at most 64 first-round matches can carry a price, **0.79%**,
+and only before any later pairing is known. So this cannot carry the
+tournament projection, the wall chart or the title odds. It improves the
+single-match product only.
+
+**Recommendation, and it is Pete's call rather than the charter's.** The gain
+is real, consistent and small, and w near 0.5 means roughly half of any
+published number would be the bookmaker's opinion rather than the model's.
+That is an editorial decision about what the site is claiming to be, not only
+an accuracy decision, and the critique itself says the copy would have to
+state that prices are an input. Recorded as measured and not shipped.
+

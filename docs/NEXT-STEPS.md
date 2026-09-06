@@ -156,12 +156,24 @@ Still open from those reviews, in the order they are worth doing:
    matters: 2022-2025 were used to select this config, so only 2019-2021 are
    clean for it. Run a candidate with
    `python walk_forward_yearly.py --label X --drop feature`.
-4. **W1, W3, W4 are now testable.** W1 (the bookmaker price sits in the repo
-   and the published probabilities ignore it) is the largest. W3 (the live
-   simulator freezes layoff and fatigue at the draw date for every round) has
-   its own scorecard already in `simulate_tournament_xgb.py`. W4 (matches in
-   progress are simulated as unplayed) is the biggest user-visible one. Each
-   needs Pete to pick it up; each is now judgeable against the charter.
+4. **W1 MEASURED 2026-09-07, awaiting Pete's call, not more work.** Blending
+   the bookmaker price in beats the model in 6 of 6 years AND beats the market
+   in 6 of 6, by 0.0049 and 0.0040, at a fitted weight of 0.52. It passes the
+   charter's rule and fails the critique's own W1 rule, whose 0.015 bar was
+   calibrated on a market gap of 0.0247 that the scorecard measured at 0.0008
+   - the bar was unreachable because its premise was wrong. It also cannot
+   serve the draw simulation: at most 0.79% of the 8,128 pairs can carry a
+   price. So it is a real, small, single-match-only gain that would make
+   roughly half of every published number the bookmaker's opinion. That is an
+   editorial call. Detail and the table:
+   [plans/validation-charter.md](plans/validation-charter.md).
+   Script: `tune_scratch/screen_market_blend.py`.
+5. **W3 and W4 remain, and are now judgeable.** W3 (the live simulator freezes
+   layoff and fatigue at the draw date for every round) has its own
+   stage-reaching scorecard in `simulate_tournament_xgb.py`. W4 (matches in
+   progress are simulated as unplayed, so a player two sets up is published
+   near his pre-match number) is the biggest user-visible one and, unlike W1,
+   is squarely inside the product's own remit.
 
 ## Known and NOT chased
 
