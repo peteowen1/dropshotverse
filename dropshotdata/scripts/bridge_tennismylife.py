@@ -28,7 +28,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 TML_URLS = {"atp": "https://stats.tennismylife.org/data/2026.csv",
            "wta": "https://stats.tennismylife.org/data/2026_wta.csv"}
 BRIDGE_CUTOFF = pd.Timestamp("2026-05-25")   # archive's own last known date - only bridge matches strictly after this

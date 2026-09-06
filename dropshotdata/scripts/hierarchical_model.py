@@ -45,8 +45,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ARCHIVE = Path(r"C:\dev\dropshotverse\dropshotdata\raw\github")
-ELO_PARQUET = Path(r"C:\dev\dropshotverse\dropshotdata\elo_eval_predictions.parquet")
+import _common
+ARCHIVE = _common.RAW / "github"
+ELO_PARQUET = _common.DD / "elo_eval_predictions.parquet"
 # Ticket 17: eval years are now env-overridable so the SAME script produces
 # predictions for the tuning window (2022-2023) or the untouched final holdout
 # (2024-2025) without editing the file - the discipline that keeps the two
@@ -914,7 +915,7 @@ def prepare(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, int]]:
     return df, dropped
 
 
-PREPARED_CACHE_PATH = Path(r"C:\dev\dropshotverse\dropshotdata\tune_scratch\prepared_matches_cache.pkl")
+PREPARED_CACHE_PATH = _common.SCRATCH / "prepared_matches_cache.pkl"
 
 
 def load_prepared(use_cache: bool = True) -> tuple[pd.DataFrame, dict[str, int]]:
@@ -1228,9 +1229,9 @@ if __name__ == "__main__":
     # clobber ticket 10's already-reported final artifacts (the un-suffixed
     # defaults). Every sweep run writes to its own named file.
     out_preds = os.environ.get("DSV_OUT_PREDS",
-                               r"C:\dev\dropshotverse\dropshotdata\hier_eval_predictions.parquet")
+                               str(_common.DD / "hier_eval_predictions.parquet"))
     out_state = os.environ.get("DSV_OUT_STATE",
-                               r"C:\dev\dropshotverse\dropshotdata\hier_final_state.pkl")
+                               str(_common.DD / "hier_final_state.pkl"))
     preds.to_parquet(out_preds)
     log(f"wrote {out_preds}")
 

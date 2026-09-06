@@ -10,9 +10,11 @@ session that changes state.
 - **One git repo.** `dropshotdata/` is a plain directory, not a sub-repo.
   Commit from the root; `dev` for work, `main` via reviewed PR.
 - Python 3.13 at `C:\Python313\python.exe`. No R in the pipeline.
-- Every script hard-codes `C:\dev\dropshotverse\dropshotdata\...`. Running
-  from anywhere else needs that path to exist (the Actions runner uses a
-  junction). Making paths relative is queued.
+- The live-path scripts resolve `dropshotdata/` from their own location via
+  `scripts/_common.py` (`DD`, `SCRATCH`, `BLOG`, `RAW`), so they run from any
+  checkout, including the Linux Actions runner. About 20 research scripts
+  under `scripts/` and most of `tune_scratch/` still hard-code
+  `C:\dev\dropshotverse\...`; use `_common` in anything new.
 - Data and models are not in git. Two GitHub Releases carry them:
   `sackmann-archive` (raw CSVs) and `model-inputs-2026-09` (Elo replays and
   the shipped model). `dropshotdata/docs/README.md` says how to fetch them.

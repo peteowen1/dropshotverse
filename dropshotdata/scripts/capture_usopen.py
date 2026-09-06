@@ -25,7 +25,8 @@ from urllib.request import Request, urlopen
 
 BASE = "https://www.usopen.org"
 YEAR = 2026
-OUT = Path(r"C:\dev\dropshotverse\dropshotdata\raw\usopen") / str(YEAR)
+import _common
+OUT = _common.RAW / "usopen" / str(YEAR)
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
 

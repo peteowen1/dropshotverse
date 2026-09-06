@@ -46,7 +46,8 @@ from pathlib import Path
 
 import pandas as pd
 
-DEFAULT = Path(r"C:\dev\dropshotverse\dropshotdata\blog\live_predictions.parquet")
+import _common
+DEFAULT = _common.BLOG / "live_predictions.parquet"
 # The public R2 copy the site actually reads (inthegame-blog/data-loader.js
 # DATA_BASE_URL + "tennis/live_predictions.parquet"). Checking THIS copy is
 # the point: the local file is always fresh right after the sim writes it, so

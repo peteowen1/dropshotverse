@@ -52,7 +52,8 @@ from simulate_tournament_xgb import build_round_pred_matrices, simulate_frozen_x
 from xgb_bt_rating import build_h2h_dict, build_pairwise_features_base, build_player_table, load_age_table, log, \
     prep_X_d, train_bagged_model
 
-DD = r"C:\dev\dropshotverse\dropshotdata"
+import _common
+DD = str(_common.DD)
 # The entrant lists are INPUTS, so they live in the repo. They used to be read
 # from a Claude Code session scratchpad under %TEMP%, keyed by a session UUID -
 # which meant this script, the source of truth for the locked pre-tournament
