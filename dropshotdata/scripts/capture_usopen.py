@@ -94,15 +94,21 @@ def write_if_changed(directory: Path, stem: str, blob: bytes) -> bool:
     return True
 
 
-def capture_match(mid: str, tag: str = "") -> int:
+def capture_match(mid: str, tag: str = "") -> dict[str, bool]:
+    """Fetch every feed for one match. Returns which feeds were fetched in THIS
+    call (not which changed on disk): the backfill needs to know that the tape
+    it is about to call settled came from this pass, not from an earlier live
+    sweep that left a partial copy behind."""
+    fetched: dict[str, bool] = {}
     written = 0
     for name, tmpl in MATCH_FEEDS.items():
         blob = fetch(tmpl.format(y=YEAR, mid=mid))
+        fetched[name] = blob is not None
         if blob and write_if_changed(OUT / "matches" / str(mid), name, blob):
             written += 1
     if written:
         log(f"  match {mid}{tag}: {written} feed(s) written")
-    return written
+    return fetched
 
 
 def capture_reference() -> None:
@@ -145,8 +151,38 @@ def match_ids_from(blob: bytes) -> set[str]:
     return found
 
 
-def backfill() -> None:
-    log("=== BACKFILL: every match played so far ===")
+DONE_FILE = OUT / "reference" / "backfill_done.json"
+
+
+def load_done() -> set[str]:
+    """Match ids whose feeds were captured AFTER they appeared in the completed
+    index, i.e. whose tape is settled. Missing or unreadable means empty, which
+    only costs one full pass."""
+    try:
+        return set(json.loads(DONE_FILE.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError):
+        return set()
+
+
+def save_done(done: set[str]) -> None:
+    DONE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = DONE_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(sorted(done, key=int)), encoding="utf-8")
+    tmp.replace(DONE_FILE)
+
+
+def backfill(full: bool = False) -> None:
+    """Capture the settled tape of every completed match not yet captured.
+
+    Incremental by default. The first version re-fetched all ~600 matches x 6
+    feeds every hour, which at the 0.7 s courtesy delay is about an hour, and
+    because the scheduled task ignores new instances while one is running,
+    every 5-minute live sweep in that hour was dropped. Live capture was blind
+    every other hour. A match that has appeared in the completed index and been
+    captured since is final, so it is remembered in DONE_FILE and skipped.
+    `full=True` (the `backfill` CLI mode with --full) ignores that memory.
+    """
+    log("=== BACKFILL: completed matches not yet captured ===")
     capture_reference()
 
     days_blob = fetch(f"/en_US/scores/feeds/{YEAR}/completed_matches/eventDays.json")
@@ -186,14 +222,26 @@ def backfill() -> None:
         if ids:
             log(f"  day {label}: {len(ids)} match ids ({len(new)} new)")
 
-    log(f"total distinct matches to capture: {len(all_ids)}")
-    done = 0
-    for i, mid in enumerate(sorted(all_ids, key=int), 1):
-        capture_match(mid)
-        done += 1
+    done = set() if full else load_done()
+    todo = sorted(all_ids - done, key=int)
+    log(f"total distinct completed matches: {len(all_ids)}; "
+        f"{len(done & all_ids)} already settled on disk; {len(todo)} to capture")
+    captured = 0
+    for i, mid in enumerate(todo, 1):
+        fetched = capture_match(mid)
+        # Only the point tape decides whether the match is settled, and only a
+        # fetch that succeeded in THIS pass counts. A live sweep usually leaves
+        # a partial history file behind before the match completes, so checking
+        # the disk would mark a failed re-fetch as settled forever.
+        if fetched.get("history"):
+            done.add(mid)
+            captured += 1
         if i % 25 == 0:
-            log(f"  ...{i}/{len(all_ids)}")
-    log(f"=== BACKFILL COMPLETE: {done} matches ===")
+            log(f"  ...{i}/{len(todo)}")
+            save_done(done)
+    save_done(done)
+    log(f"=== BACKFILL COMPLETE: {captured} of {len(todo)} captured, "
+        f"{len(done)} settled in total ===")
 
 
 def poll(hours: float) -> None:
@@ -274,6 +322,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=["backfill", "poll", "both", "once"])
     ap.add_argument("--hours", type=float, default=8.0)
+    ap.add_argument("--full", action="store_true",
+                    help="backfill: re-capture every completed match, ignoring backfill_done.json")
     args = ap.parse_args()
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -282,7 +332,7 @@ if __name__ == "__main__":
         if args.mode == "once":
             once()
         if args.mode in ("backfill", "both"):
-            backfill()
+            backfill(full=args.full)
         if args.mode in ("poll", "both"):
             poll(args.hours)
     except KeyboardInterrupt:
