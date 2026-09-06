@@ -5,13 +5,9 @@
 
 ## Awaiting Pete
 
-**D-1 — canonical base archive.** Stay on the frozen Sackmann snapshot plus the
-TML bridge, or migrate to TML wholesale?
-[#3](https://github.com/peteowen1/dropshotverse/issues/3), open since
-2026-08-31. Required first either way: overlap-years diff, WTA-depth check,
-corruption screening, and a **50-year player-id crosswalk** — the current bridge
-resolves only ~216 recent players per tour. Everything downstream of
-2026-08-24 depends on this.
+**D-1 — canonical base archive. ANSWERED 2026-09-06, see D-11.** Kept here as a
+pointer because [#3](https://github.com/peteowen1/dropshotverse/issues/3) is
+still open on GitHub and should be closed as decided.
 
 **D-2 — the review gate.** 10 commits sit on `dev`; no PR has ever been opened
 on this repo. `~/.claude/CLAUDE.md` requires a reviewer-agent pass before a PR
@@ -69,6 +65,30 @@ All of rounds 12/13/14 screened on the 2022-23 tune window and did not score the
 holdout once. `RESUME-beat-elo.md`'s own round-11 stop-point flag is now
 policy: 2026 is reserved as the final unbiased test.
 
+**D-11 — 2026-09-06: keep the frozen Sackmann archive as the historical base and
+TML as the live bridge.** Answers D-1 / issue #3, which had been open since
+08-31 with a "50-year player-id crosswalk" queued in front of it as "the big
+piece". The crosswalk was never the gate.
+
+TML serves ATP from **1968** (the Open era boundary) but WTA only from **1990**.
+The Sackmann archive holds **61,840 tour-level WTA matches from 1968-1989**, so
+migrating wholesale discards 22 seasons of women's tennis. That is nearly
+harmless for current-form ratings, where Elo converges — and disqualifying for
+the all-time GOAT list `map.md` names as a product, which would start
+mid-Navratilova and exclude Court, King and most of Evert.
+
+Two consequences to hold onto:
+
+- The Sackmann repos have been 404 since 2026-08-27, so the historical base is
+  permanently frozen at 2026-06-02 and every future season arrives through the
+  bridge. That is a standing dependency on one volunteer-run site.
+- An ATP-only migration is technically available (TML matches Sackmann's 1968
+  start there exactly) and is not recommended: two different base archives by
+  tour would make every cross-tour comparison suspect.
+
+Detail: [issues/39](../.scratch/dropshot-tennis-engine/issues/39-tml-depth-decides-issue-3.md),
+scoping in [issues/38](../.scratch/dropshot-tennis-engine/issues/38-crosswalk-scoping.md).
+
 ## Standing corrections
 
 - **`RESUME-beat-elo.md` is stale from round 11 onward.** It still quotes a
@@ -81,3 +101,9 @@ policy: 2026 is reserved as the final unbiased test.
 - **`slot` in the entrants files is not draw position** (2/128 agreement with
   the real draw). Building a bracket on it produces a completely wrong result
   that still looks plausible.
+- **Ticket 01's "TennisMyLife's manifest has 49 ATP challenger files and zero
+  WTA" is wrong**, and shaped scope from 2026-08-27 to 2026-09-06. TML serves
+  WTA for every year from 1990. `bridge_tennismylife.py` had been pulling
+  `2026_wta.csv` successfully the whole time — the claim was contradicted by
+  this project's own running code. The real limitation is narrower and
+  different: no WTA *before* 1990.
