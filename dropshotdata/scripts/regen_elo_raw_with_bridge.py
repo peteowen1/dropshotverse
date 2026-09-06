@@ -23,7 +23,8 @@ import pandas as pd
 import elo_raw_ratings_for_xgb as erx
 from bridge_tennismylife import build_bridge, log
 
-SCRATCH = Path(r"C:\dev\dropshotverse\dropshotdata\tune_scratch")
+import _common
+SCRATCH = _common.SCRATCH
 OUT_PATH = SCRATCH / "elo_raw_ratings_full.parquet"
 BLEND = 0.0
 DECAY = 0.3

@@ -23,7 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: dropshotdata/scripts/check_blog_data_freshness.py
+          # _common.py is imported by the check since 2026-09-06 (PR #17); a
+          # one-file sparse checkout would fail at import.
+          sparse-checkout: |
+            dropshotdata/scripts/check_blog_data_freshness.py
+            dropshotdata/scripts/_common.py
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
@@ -31,3 +35,5 @@ jobs:
       - run: pip install pandas pyarrow
       - name: Fetch the public R2 copy and check it
         run: python dropshotdata/scripts/check_blog_data_freshness.py --url --max-age-hours 2
+      - name: Ratings table age (warn only; its Last-Modified lies)
+        run: python dropshotdata/scripts/check_blog_data_freshness.py --ratings --ratings-max-age-days 3
