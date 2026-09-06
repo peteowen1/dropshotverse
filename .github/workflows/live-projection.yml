@@ -39,7 +39,7 @@ jobs:
       ARCHIVE_TAG: sackmann-archive
       INPUTS_TAG: model-inputs-2026-09
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Junction C:\dev\dropshotverse -> checkout
         shell: pwsh
@@ -51,7 +51,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: pip
 
       - name: Install dependencies
         run: pip install pandas numpy xgboost pyarrow
@@ -85,7 +84,7 @@ jobs:
           done
           python dropshotdata/scripts/check_blog_data_freshness.py --path dropshotdata/blog/live_predictions.parquet
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
 

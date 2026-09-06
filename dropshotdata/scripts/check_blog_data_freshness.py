@@ -39,6 +39,7 @@ monitor, and on its own it changes nothing.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,7 +67,9 @@ def fetch_to_temp(url: str) -> Path:
                                                "User-Agent": "dropshotverse-freshness-check"})
     with urllib.request.urlopen(req, timeout=60) as r:
         blob = r.read()
-    tmp = Path(tempfile.mkstemp(suffix=".parquet")[1])
+    fd, name = tempfile.mkstemp(suffix=".parquet")
+    os.close(fd)                      # mkstemp leaves it open; Windows then refuses the unlink
+    tmp = Path(name)
     tmp.write_bytes(blob)
     return tmp
 
@@ -87,8 +90,14 @@ def main() -> int:
             log(f"FAIL: cannot fetch {args.url}: {e}")
             return 2
         log(f"url: {args.url}")
-    else:
-        p = Path(args.path)
+        try:
+            return check(p, args)
+        finally:
+            p.unlink(missing_ok=True)
+    return check(Path(args.path), args)
+
+
+def check(p: Path, args) -> int:
     if not p.exists():
         log(f"FAIL: {p} does not exist")
         return 2
