@@ -263,9 +263,12 @@ def build_playstyle_features() -> pd.DataFrame:
     .py subprocess run (own-generated cache, same trust basis documented in
     the original round-9/13 scripts this consolidates)."""
     log("step 3b: serve/return-form features (full archive, EWM span=15)...")
-    import pickle
-    with open(SCRATCH / "prepared_matches_cache.pkl", "rb") as f:
-        arc, _ = pickle.load(f)
+    # Through the loader, not a bare open() on the cache file: a fresh checkout
+    # (the Actions runner, issue #4) has the archive but no cache, and
+    # load_prepared() rebuilds it from the CSVs in ~20 s. With a valid cache
+    # this returns the same pickle the bare open() did.
+    import hierarchical_model as hm
+    arc, _ = hm.load_prepared()
     arc = arc[arc["level_file"] == "tour"].reset_index(drop=True).copy()
     arc["orig_idx"] = arc.index
     arc["serve_pct_w"] = np.where(arc["has_points"] & (arc["w_svpt"] > 0),
