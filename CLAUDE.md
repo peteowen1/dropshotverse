@@ -21,9 +21,9 @@ session that changes state.
 
 | What | Where | Cadence |
 |---|---|---|
-| Live US Open projection to R2 | `.github/workflows/live-projection.yml` | every 30 min |
+| Live US Open projection to R2 (second producer; GitHub's cron fires sporadically) | `.github/workflows/live-projection.yml` | cron `*/30`, delivered ~hourly at best |
 | Freshness alarm on the public R2 copy | `.github/workflows/check-freshness.yml` | hourly |
-| Same projection from the laptop (being retired) | task `DropshotverseUSOpenLiveSim` runs `dropshotdata/scripts/refresh_usopen_live.cmd` | every 30 min to 2026-09-16 |
+| Same projection from the laptop (primary through the 2026-09-13 final) | task `DropshotverseUSOpenLiveSim` runs `dropshotdata/scripts/refresh_usopen_live.cmd` | every 30 min to 2026-09-16 |
 | Point-by-point capture | task `DropshotverseUSOpenCapture` runs `dropshotdata/scripts/capture_usopen.py once` | every 5 min to 2026-09-16 |
 
 Logs for the laptop tasks: `dropshotdata/raw/usopen/*.log`. Times in the

@@ -9,8 +9,9 @@
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
 >   [issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md).
-> - The live US Open projection publishes from **GitHub Actions**, not the
->   laptop (D-13). An hourly freshness alarm watches the public copy.
+> - The live US Open projection publishes from the laptop task AND from
+>   GitHub Actions (D-13). GitHub's cron fires sporadically (see Awaiting
+>   Pete 1), so the laptop stays primary through the final.
 > - `main` is real: PRs #8-#12 merged 2026-09-06, each reviewed.
 
 ## Awaiting Pete
