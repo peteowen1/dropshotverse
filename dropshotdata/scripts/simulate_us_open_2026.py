@@ -203,7 +203,7 @@ def main() -> None:
 
     out = {tour: {"probs": r["probs"], "bt": r["bt"], "names": r["names"], "seed_map": r["seed_map"]}
           for tour, r in results.items()}
-    out_path = rf"{DD}\tune_scratch\us_open_2026_predictions.json"
+    out_path = str(_common.SCRATCH / "us_open_2026_predictions.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, indent=1, ensure_ascii=False)
     log(f"\nsaved -> {out_path}")
