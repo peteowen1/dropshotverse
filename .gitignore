@@ -38,3 +38,6 @@ dropshotdata/raw/wta_api/
 
 # ticket 40: pickled hier-state snapshots keyed by date0 + data fingerprint; a cache, regenerated on miss
 dropshotdata/tune_scratch/snapshot_cache*/
+
+# fetched fresh on every event-forecast run; a committed copy would only ever be stale
+dropshotdata/reference/wta_*_entrants.json

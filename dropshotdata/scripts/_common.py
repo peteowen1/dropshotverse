@@ -7,10 +7,13 @@ Actions workflow needed a junction to fake it.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
-DD = SCRIPTS.parent                 # .../dropshotdata
+# DROPSHOT_DATA_DIR lets a worktree or test run the scripts against another
+# checkout's data (a worktree has the code but none of the gitignored data).
+DD = Path(os.environ["DROPSHOT_DATA_DIR"]) if os.environ.get("DROPSHOT_DATA_DIR") else SCRIPTS.parent
 SCRATCH = DD / "tune_scratch"
 BLOG = DD / "blog"
 RAW = DD / "raw"
