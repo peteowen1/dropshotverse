@@ -106,3 +106,23 @@ not in git), and introduce one `_common.py` with `log`, `ll`, `ROUND_RANK`,
 Not checked: whether the duplicated `log`/`ll`/`prep_X` bodies have diverged;
 whether `mc_parallel.py` (sole reader of `hier_v24_eval_predictions.parquet`)
 is still run.
+
+## Cull (2026-09-06, done)
+
+- 32 scripts moved to `scripts/archive/` with a README: the 13 `train_xgb*`,
+  the 14 orphaned `tune_*`, the four they import, and `fetch_archive.py`.
+  `scripts/` went from 77 to 45 files. Three `tune_scratch` scripts that
+  import `tune_ticket21` got a second `sys.path` entry.
+- 26 unreferenced artefacts deleted from `dropshotdata/` (55 MB): the
+  `hier_v18` to `v23b`, `v26`, `v27` prediction/state pairs, the `v24`, `v25`
+  and `tuned` state pickles, `hier_fit.log`. Each was checked for a non-log
+  reader immediately before deletion. Kept: everything a script reads
+  (`hier_v26cand_*`, `hier_roundorder_*`, `hier_v24/v25_eval_predictions`,
+  `hier_final_state`, `hier_tuned_eval_predictions`) and
+  `diagnose_joined.parquet` (its writer still references it).
+- The inventory's reference counts were low: it missed six `tune_scratch`
+  importers and counted fit-log "wrote ..." lines as readers in the other
+  direction. Grep before every move; the agent's table is a starting point.
+- Not done here: `_common.py` for the duplicated helpers. It belongs with the
+  paths-relative change, which touches every file anyway.
+
