@@ -53,7 +53,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 sys.path.insert(0, str(DD / "scripts"))
 
 from ticket09_live_modes import p_match_from_state  # noqa: E402

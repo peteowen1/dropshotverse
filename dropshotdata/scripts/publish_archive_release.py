@@ -36,7 +36,8 @@ from pathlib import Path
 
 import pandas as pd
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 ARCHIVE = DD / "raw" / "github"
 STAGE = DD / "tune_scratch" / "_release_stage"
 REPO = "peteowen1/dropshotverse"

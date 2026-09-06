@@ -35,7 +35,8 @@ import sys
 import zipfile
 from pathlib import Path
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 SCRATCH = DD / "tune_scratch"
 STAGE = DD / "_release_stage_inputs"
 REPO = "peteowen1/dropshotverse"

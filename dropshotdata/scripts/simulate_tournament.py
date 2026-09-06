@@ -30,7 +30,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 STAGE_ORDER = ["R128", "R64", "R32", "R16", "QF", "SF", "F", "W"]  # W = won the final
 
 

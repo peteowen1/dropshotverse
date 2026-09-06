@@ -6,15 +6,14 @@
 #   sackmann-archive      the frozen raw archive (publish_archive_release.py)
 #   model-inputs-2026-09  Elo replays + the shipped model (publish_model_inputs_release.py)
 #
-# Runs on Windows because every script hard-codes C:\dev\dropshotverse\...
-# A junction at that path pointing at the checkout makes those paths resolve.
-# Making the paths relative is the right long-term fix and a separate change;
-# doing it mid-event on the files the local task is running from is not.
+# Runs on Linux since 2026-09-06: the live-path scripts resolve dropshotdata/
+# from their own location (scripts/_common.py), so no junction is needed and
+# the runner bills at 1x instead of Windows' 2x.
 #
 # NO `schedule:` TRIGGER, on purpose. GitHub's cron fired once in two hours
-# on 2026-09-06, and this job runs on a Windows runner (billed 2x) against a
-# 2,000-minute monthly free allowance: a `*/30` cron that GitHub did honour
-# would burn about 500 billed minutes a day. The trigger is the ITG Cloudflare
+# on 2026-09-06, and even on a Linux runner a `*/30` cron that GitHub did
+# honour would burn about 250 billed minutes a day against a 2,000-minute
+# monthly free allowance. The trigger is the ITG Cloudflare
 # Worker's */30 cron (inthegame-blog worker/src/index.js,
 # maybeTriggerTennisProjection), which calls workflow_dispatch here ONLY when
 # R2's tennis/live_predictions.parquet is more than 40 minutes old, i.e. when
@@ -37,20 +36,13 @@ concurrency:
 
 jobs:
   simulate:
-    runs-on: windows-latest
-    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       ARCHIVE_TAG: sackmann-archive
       INPUTS_TAG: model-inputs-2026-09
     steps:
       - uses: actions/checkout@v7
-
-      - name: Junction C:\dev\dropshotverse -> checkout
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force C:\dev | Out-Null
-          New-Item -ItemType Junction -Path C:\dev\dropshotverse -Target $env:GITHUB_WORKSPACE | Out-Null
-          Test-Path C:\dev\dropshotverse\dropshotdata\scripts\simulate_usopen_live.py
 
       - uses: actions/setup-python@v5
         with:

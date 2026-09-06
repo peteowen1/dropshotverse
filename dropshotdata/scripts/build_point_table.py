@@ -40,7 +40,8 @@ from pathlib import Path
 
 import pandas as pd
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 SRC = DD / "raw" / "usopen" / "2026" / "matches"
 OUT = DD / "usopen_2026_points.parquet"
 

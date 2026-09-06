@@ -48,7 +48,7 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, r"C:\dev\dropshotverse\dropshotdata\scripts")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 os.environ.setdefault("DSV_RW_VAR_PER_WEEK", "0.005")
 os.environ.setdefault("DSV_SURFACE_VAR_SCALE", "1.0")
 os.environ.setdefault("DSV_OU_THETA_PER_WEEK", "0.00001")

@@ -52,9 +52,12 @@
 4. ~~**Cull `scripts/`**~~ — **DONE 2026-09-06**: 32 superseded scripts to
    `scripts/archive/` (77 to 45 files), 26 unreferenced artefacts deleted
    (55 MB). `_common.py` deferred to the paths-relative change. Ticket 40.
-5. **Make the scripts' paths relative** so `live-projection.yml` can drop the
-   `C:\dev\dropshotverse` junction and run on Linux. Every pipeline script
-   hard-codes the absolute path. Do it between events, not during one.
+5. ~~**Make the scripts' paths relative**~~ — **DONE for the live path
+   2026-09-06**: `scripts/_common.py` carries `DD`/`SCRATCH`/`BLOG`/`RAW`
+   resolved from the file's location; 14 live-path modules use it; the
+   workflow runs on `ubuntu-latest` with no junction. Still hard-coded: ~20
+   research scripts in `scripts/` and most of `tune_scratch/`. Convert them
+   when touched, not as a project.
 6. **The surface rating is not a self-correcting rating.** `elo_baseline.py:409`
    updates it with the blended `p_w`, which at `blend=0.0` is entirely overall
    Elo, so it accumulates residuals bucketed by surface with no feedback loop

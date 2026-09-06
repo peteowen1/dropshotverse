@@ -72,7 +72,8 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
-DD = Path(r"C:\dev\dropshotverse\dropshotdata")
+import _common
+DD = _common.DD
 SCRATCH = DD / "tune_scratch"
 TRAIN_YEARS = list(range(1995, 2024))
 N_BAGS = 5

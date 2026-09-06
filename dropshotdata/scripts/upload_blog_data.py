@@ -13,7 +13,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-BLOG_DIR = Path(r"C:\dev\dropshotverse\dropshotdata\blog")
+import _common
+BLOG_DIR = _common.BLOG
 BUCKET_PREFIX = "inthegame-data/tennis"
 
 
