@@ -115,6 +115,32 @@
 
 Earlier detail: [backlog/journal-2026-09-05.md](backlog/journal-2026-09-05.md).
 
+## Red-team and methodology reviews (2026-09-07)
+
+Another Fable session left two reviews in [reviews/](reviews/) and fixed the
+two live defects itself (commit `05f9232`): the laptop uploader was clobbering
+the daily ratings table every 30 minutes (F1), and the name crosswalk missed
+two real players who were then published as unrated 1500 debutants, one of
+them given 0.9% in a match he won (F2). Verified independently here.
+
+Still open from those reviews, in the order they are worth doing:
+
+1. **F4 — head-to-head is trained on all levels and served tour-level only.**
+   Measured 2026-09-07: **70.3%** of `elo_raw_ratings_full.parquet` rows are
+   non-tour (837,348 of 1,190,554), so the served `h2h_diff` sees a much
+   smaller count than training did. The review rated this medium confidence
+   and unknown effect; the share makes it worth sizing properly. Fix sketch:
+   drop the `level_file == "tour"` filter at `xgb_bt_rating.py:208` so serve
+   time matches `build_xgb_features.py:222`.
+2. **F5 — twelve published players carry the hard-coded default age 24.0**,
+   because the age table is built from the frozen CSVs and not the bridge.
+   Publish NA when defaulted, or carry age from the bridge.
+3. **W2 — there is no repeatable out-of-time measurement left.** Yearly
+   walk-forward as the standing scorecard. This gates W1, W3 and W4, which are
+   the model work (the largest being that the bookmaker price already in the
+   repo is ignored by the published probabilities). None of these should start
+   before Pete picks one.
+
 ## Known and NOT chased
 
 - **Config D forward test** — would turn the +0.0247 upper bound into the
