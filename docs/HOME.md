@@ -4,69 +4,77 @@ Verse-level documentation for Pete's tennis analytics effort: pre-match win
 probability, tournament draw simulation, and live in-match win probability for
 ATP and WTA. Started 2026-08-27.
 
-## The three hubs
+## The hubs
 
-- [NEXT-STEPS.md](NEXT-STEPS.md) — living work queue. Sessions update this when they finish work.
+- [NEXT-STEPS.md](NEXT-STEPS.md) — living work queue.
 - [DECISIONS.md](DECISIONS.md) — decision log: awaiting Pete, and made.
-- The research record lives in [`.scratch/dropshot-tennis-engine/`](../.scratch/dropshot-tennis-engine/) — see below.
+- [plans/](plans/) — design work; [backlog/](backlog/) — narrative rolled off the queue.
+- The research record is in [`.scratch/dropshot-tennis-engine/`](../.scratch/dropshot-tennis-engine/), below.
 
 ## Git topology — a FOURTH shape, not in the C:\dev\CLAUDE.md table
 
-`C:\dev\CLAUDE.md` documents three verse topologies and calls the table "the
-trap". dropshotverse is none of them:
-
 > **dropshotverse is a SINGLE git repo.** `dropshotdata/` is an ordinary
-> directory inside it, not a sub-repo and not a submodule. There is no
-> `dropshotdata/.git`. Commit everything from the verse root; there is no
-> parent-pointer step and no `git -C` dance.
-
-Verified 2026-09-05 (`git -C dropshotverse/dropshotdata rev-parse --show-toplevel`
-returns the verse root).
+> directory inside it, not a sub-repo and not a submodule. Commit everything
+> from the verse root; there is no parent-pointer step and no `git -C` dance.
 
 ## Where the work actually is
 
 | Path | What |
 |---|---|
-| `dropshotdata/scripts/` | the pipeline — Elo, hierarchical point model, XGBoost, simulators, publishers |
-| `dropshotdata/tune_scratch/` | ~100 experiment screens. The research record; most are one-shot |
+| `dropshotdata/scripts/` | the pipeline — Elo, hierarchical point model, XGBoost, simulators, publishers, capture |
+| `dropshotdata/tune_scratch/` | ~100 experiment screens plus the derived inputs the pipeline reads. The research record; most screens are one-shot |
 | `dropshotdata/raw/github/` | the frozen Sackmann archive (see below) |
 | `dropshotdata/raw/odds/` | tennis-data.co.uk Pinnacle closing odds, 2018-2026, ATP + WTA |
+| `dropshotdata/raw/usopen/` | point-by-point capture of the 2026 US Open |
+| `dropshotdata/reference/` | committed inputs: US Open entrants lists |
 | `dropshotdata/blog/` | what gets published to R2 for inthegame-blog |
-| `.scratch/dropshot-tennis-engine/` | tickets, reports, the map, and the session log |
+| `.github/workflows/` | `live-projection.yml` (producer) and `check-freshness.yml` (alarm) |
+| `.scratch/dropshot-tennis-engine/` | tickets, reports, the charter, session logs |
 
 ## The research record (`.scratch/dropshot-tennis-engine/`)
 
-- **`map.md`** — the charter: destination, scope, and what was ruled out. Revised
-  2026-08-27 on measured evidence.
-- **`RESUME-beat-elo.md`** — the running log of the chase-the-market programme.
-  **Stale from round 11 onward** — it still quotes a 0.0127 gap that later work
-  closed to 0.00073. Trust `reports/xgboost-shipped.md` over it.
-- **`issues/`** — 35 numbered tickets, the real detail.
 - **`reports/`** — one report per model (`elo-baseline.md`,
   `hierarchical-model.md`, `xgboost-shipped.md`). **Start here** for what the
-  models are and what they score.
+  models are and what they score. The shipped report's 0.00073 gap is the
+  burnt-holdout number; the honest gap is the 2026 forward test's 0.0247
+  ([issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md)).
+- **`issues/`** — 39 numbered tickets, the real detail.
+- **`map.md`** — the charter from 2026-08-27, with a status banner.
+- **`RESUME-beat-elo.md`** — the chase-the-market log. **Stale from round 11
+  onward**; it still quotes a 0.0127 gap. Read its banner, not its prose.
 
 ## Data supply — read this before trusting a date range
 
 Jeff Sackmann's GitHub repos **went 404 on 2026-08-27**, mid-project. What
-exists is a frozen snapshot taken that day, published as a GitHub Release so it
-is not a single copy on one laptop.
+exists is a frozen snapshot taken that day, published as the
+`sackmann-archive` Release. Archive coverage ends **2026-06-02**.
 
-- Archive coverage ends **2026-06-02**.
-- A live bridge to `stats.tennismylife.org` (`scripts/bridge_tennismylife.py`)
-  carries tour-level 2026 matches from there to **2026-08-24** (1,309 rows).
-  TML carries `score` (so retirements are detectable) but **not** `minutes`.
-- So ratings are current to the week before the 2026 US Open, not stale at
-  Roland Garros as a reading of the CSV filenames alone suggests.
+A live bridge to `stats.tennismylife.org` (`scripts/bridge_tennismylife.py`)
+downloads the current season's tour-level matches on every run, so ratings are
+current to the last completed week, not stale at Roland Garros as the CSV
+filenames suggest. TML carries `score` (retirements detectable) but not
+`minutes`, and no WTA before 1990, which is why the archive stays the base
+(D-11; [#3](https://github.com/peteowen1/dropshotverse/issues/3) closed).
 
-Whether TML becomes canonical is [#3](https://github.com/peteowen1/dropshotverse/issues/3),
-still open — it needs a 50-year player-id crosswalk.
+## Releases (the data bus)
+
+| Tag | Holds | Published by |
+|---|---|---|
+| `sackmann-archive` | raw archive tarball (144 MB) + `sackmann_matches.parquet` | `scripts/publish_archive_release.py` |
+| `model-inputs-2026-09` | Elo replays, layoff table, the shipped 5-seed bag, the locked US Open forecast | `scripts/publish_model_inputs_release.py` |
+
+A fresh clone needs both: `gh release download <tag>` into `dropshotdata/raw`
+and `dropshotdata/tune_scratch`, exactly as `live-projection.yml` does.
 
 ## What is live
 
-- **US Open 2026 projections**, refreshing to R2 every 30 minutes via the
-  Windows scheduled task `DropshotverseUSOpenLiveSim` (to 2026-09-14).
-  `DropshotverseUSOpenCapture` captures point-by-point (to 2026-09-13).
+- **US Open 2026 projections** refresh to R2 every 30 minutes from GitHub
+  Actions (`live-projection.yml`, D-13). The laptop task
+  `DropshotverseUSOpenLiveSim` still runs in parallel until one scheduled
+  Actions run is green, then gets disabled.
+- **Freshness alarm**: `check-freshness.yml` reads the public R2 copy hourly
+  and fails a run, which mails Pete, if the file is stale while an event is live.
+- **Point-by-point capture**: laptop task `DropshotverseUSOpenCapture`, every
+  5 minutes to 2026-09-16 12:00 local.
 - **The ITG wall chart** — [inthegame-blog#581](https://github.com/peteowen1/inthegame-blog/issues/581),
-  shipped 2026-09-01. The blog's tennis section runs on dropshot's own pairwise
-  match model.
+  shipped 2026-09-01, runs on dropshot's own pairwise match model.

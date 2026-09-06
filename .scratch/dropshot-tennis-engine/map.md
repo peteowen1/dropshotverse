@@ -2,6 +2,15 @@
 
 Charted 2026-08-27.
 
+> **Status 2026-09-06.** This is the charter as drawn; the verse now has hubs
+> at `docs/` (HOME / NEXT-STEPS / DECISIONS) that carry current state, and
+> this file is not updated. Three things below are superseded: the "two
+> repos" shape (it is one repo, `dropshotdata/` is a directory); the
+> destination (D-5 set calibration parity, D-6 reopened "beat the market",
+> and the 2026 forward test closed it: no edge, D-10); and the "frontier
+> tickets" list (tickets run to 39). Read it for the reasoning, not the
+> status.
+
 ## Destination
 
 **Revised 2026-08-27 on measured evidence — see ticket 10.**

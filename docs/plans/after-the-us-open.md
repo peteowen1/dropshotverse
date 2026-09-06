@@ -2,6 +2,16 @@
 
 Written 2026-09-05. The live pipeline has a hard stop and nothing takes over.
 
+> **Status 2026-09-06.** Recommendations 1-3 are done: `event_status` ships in
+> the parquet, the freshness alarm runs hourly from `check-freshness.yml`, and
+> `fetch_wta_upcoming.py` fetches WTA calendars and fields. The producer moved
+> to GitHub Actions (D-13), so the deadline below no longer applies to the
+> projection; it still applies to the laptop's point capture (now
+> 2026-09-16 12:00 local). Open: recommendation 4 (what the page shows with
+> no event running) and the ATP entry-list problem. Item 5's precondition
+> (#3) was decided on 2026-09-06 (D-11). The rest of this file is the
+> original analysis, unchanged.
+
 ## The deadline
 
 `DropshotverseUSOpenLiveSim`'s trigger ends **2026-09-14T00:00:00**. As of
