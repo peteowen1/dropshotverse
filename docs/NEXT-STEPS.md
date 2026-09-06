@@ -15,10 +15,17 @@
 
 ## Awaiting Pete
 
-1. **Disable the laptop task `DropshotverseUSOpenLiveSim`** once one
-   *scheduled* Actions run is green (the proof so far is manual run
-   34012925126, every step green, 5 min 15 s). Both producers writing to R2
-   in the meantime is harmless. Closes [#4](https://github.com/peteowen1/dropshotverse/issues/4).
+1. **Keep the laptop task `DropshotverseUSOpenLiveSim` for now; GitHub's
+   cron is not delivering the cadence.** First scheduled runs were green
+   (projection 09:35 UTC, alarm 09:26), but in the two hours after that
+   GitHub fired the 30-minute projection cron **once** and the hourly alarm
+   **once**; the 10:00/10:30/11:00/11:30 and 10:17/11:17 ticks never ran.
+   The alarm sits on the same scheduler, so it cannot be trusted to notice
+   the producer going quiet. Decision for Pete: keep the laptop through the
+   final (2026-09-13) with Actions as backup, or add a reliable external
+   trigger (a Cloudflare Worker cron calling `workflow_dispatch`, the ITG
+   Worker already has crons). Recommendation: keep the laptop through the
+   final; revisit the trigger before Beijing. #4 stays open for this.
 2. **Do not publish a "we match the market" claim** (D-4, a recommendation):
    the 0.00073 gap is from a burnt holdout, and the 2026 forward test puts the
    honest gap at 0.0247 with 38% accuracy when dissenting.
