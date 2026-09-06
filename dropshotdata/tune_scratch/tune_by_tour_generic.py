@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, r"C:\dev\dropshotverse\dropshotdata\scripts")
+sys.path.insert(1, r"C:\dev\dropshotverse\dropshotdata\scripts\archive")   # tune_ticket21 moved 2026-09-06 (ticket 40)
 import tune_ticket21 as t
 
 # v25 config (RESUME-beat-elo.md)

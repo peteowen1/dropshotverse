@@ -49,10 +49,9 @@
    identical on the live inputs and the seeded end-to-end output compared.
    Left on the table: the prepare-cache bypass (~20 s) and `hm.p_match` in
    the pairwise loop. [issues/40](../.scratch/dropshot-tennis-engine/issues/40-live-sim-profile-and-redundancy.md).
-4. **Cull `scripts/`**: 27 superseded `train_xgb_*`/`tune_*` files (3,463
-   lines, no importers) to `scripts/archive/`, ~56 MB of unreferenced
-   `hier_v*` pickles/parquets deleted, one `_common.py` for the eight
-   duplicated helpers. Inventory in ticket 40. Pairs naturally with item 5.
+4. ~~**Cull `scripts/`**~~ — **DONE 2026-09-06**: 32 superseded scripts to
+   `scripts/archive/` (77 to 45 files), 26 unreferenced artefacts deleted
+   (55 MB). `_common.py` deferred to the paths-relative change. Ticket 40.
 5. **Make the scripts' paths relative** so `live-projection.yml` can drop the
    `C:\dev\dropshotverse` junction and run on Linux. Every pipeline script
    hard-codes the absolute path. Do it between events, not during one.
