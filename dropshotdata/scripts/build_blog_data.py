@@ -32,6 +32,7 @@ Does NOT include hier-derived ratings (serve/return split) - Pete's call:
 """
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timezone
 
@@ -242,7 +243,43 @@ def build_predictions_table() -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["tour", "p_title"], ascending=[True, False])
 
 
+def check_ratings_anchors(ratings: pd.DataFrame, as_of: pd.Timestamp) -> None:
+    """Structural anchors, decided before looking at the numbers. A FAIL refuses
+    the write: publishing a wrong ratings table is worse than keeping the last
+    good one (same rule as the live sim's anchors, 2026-09-06)."""
+    problems = []
+    per_tour = ratings["tour"].value_counts().to_dict()
+    for tour in ("atp", "wta"):
+        if per_tour.get(tour, 0) < 100:
+            problems.append(f"{tour}: only {per_tour.get(tour, 0)} rows (expected >= 100)")
+    if ratings["bt_rating"].isna().any() or ratings["elo_overall"].isna().any():
+        problems.append("NaN in bt_rating or elo_overall")
+    if ratings["elo_overall"].max() < 2200:
+        problems.append(f"max elo_overall {ratings['elo_overall'].max():.0f} < 2200: the table is not the top of the tour")
+    # Staleness is a WARNING, not a gate: the tour-level bridge legitimately
+    # brings nothing for five to seven weeks between the Finals and January,
+    # and the structural anchors below catch a genuinely empty or broken run.
+    age_days = (pd.Timestamp.now(tz="UTC").tz_localize(None) - as_of).days
+    if age_days > 21:
+        log(f"  WARN: ratings_as_of {as_of.date()} is {age_days} days old; off-season, or the bridge is stuck")
+    # Elo and BT must broadly agree: the top-10 by one should mostly be top-25 by the other
+    for tour in ("atp", "wta"):
+        t = ratings[ratings["tour"] == tour]
+        top_elo = set(t.nlargest(10, "elo_overall")["player_id"])
+        top_bt = set(t.nlargest(25, "bt_rating")["player_id"])
+        if len(top_elo & top_bt) < 7:
+            problems.append(f"{tour}: only {len(top_elo & top_bt)}/10 of the Elo top-10 are in the BT top-25")
+    log("  anchors: " + ("PASS" if not problems else "FAIL " + str(problems)))
+    if problems:
+        raise SystemExit(f"ratings anchors FAILED, refusing to write: {problems}")
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--ratings-only", action="store_true",
+                    help="build ratings.parquet only; leave the LOCKED predictions.parquet untouched "
+                         "(the daily refresh job, 2026-09-06)")
+    args = ap.parse_args()
     BLOG_DIR.mkdir(parents=True, exist_ok=True)
     updated_at = datetime.now(timezone.utc).isoformat()
 
@@ -276,10 +313,15 @@ def main() -> None:
 
     log("\n=== building ratings.parquet ===")
     ratings = build_ratings_table(models, cat_levels, playstyle_full, age_table, bridged_df, as_of)
+    ratings["ratings_as_of"] = as_of.strftime("%Y-%m-%d")   # the data date; the page must show THIS, not R2's Last-Modified
     ratings["updated_at"] = updated_at
+    check_ratings_anchors(ratings, as_of)
     ratings_path = BLOG_DIR / "ratings.parquet"
     ratings.to_parquet(ratings_path)
-    log(f"wrote {ratings_path} ({len(ratings):,} rows)")
+    log(f"wrote {ratings_path} ({len(ratings):,} rows, as of {as_of.date()})")
+    if args.ratings_only:
+        log("--ratings-only: predictions.parquet left untouched")
+        return
 
     log("\n=== building predictions.parquet ===")
     predictions = build_predictions_table()

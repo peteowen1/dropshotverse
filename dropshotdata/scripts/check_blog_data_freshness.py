@@ -82,7 +82,14 @@ def main() -> int:
                     help="check the published copy instead of a local file; "
                          "bare --url means the site's own R2 URL")
     ap.add_argument("--max-age-hours", type=float, default=2.0)
+    ap.add_argument("--ratings", action="store_true",
+                    help="instead: check the published ratings.parquet's own updated_at/ratings_as_of "
+                         "(warn-only, exit 0 unless unreadable); R2's Last-Modified lies for this file")
+    ap.add_argument("--ratings-max-age-days", type=float, default=3.0)
     args = ap.parse_args()
+
+    if args.ratings:
+        return check_ratings(args)
 
     if args.url:
         try:
@@ -96,6 +103,42 @@ def main() -> int:
         finally:
             p.unlink(missing_ok=True)
     return check(Path(args.path), args)
+
+
+def check_ratings(args) -> int:
+    """ratings.parquet is re-uploaded every 30 min by the live task, so its
+    Last-Modified is always fresh. The truth is inside: updated_at (build
+    time) and ratings_as_of (data date). Warn past --ratings-max-age-days;
+    exit 1 only if the file cannot be read at all."""
+    url = PUBLIC_URL.replace("live_predictions.parquet", "ratings.parquet")
+    try:
+        p = fetch_to_temp(url)
+    except Exception as e:                                   # noqa: BLE001
+        log(f"FAIL: cannot fetch {url}: {e}")
+        return 2
+    try:
+        d = pd.read_parquet(p)
+    except Exception as e:                                   # noqa: BLE001
+        log(f"FAIL: cannot read {url}: {e}")
+        return 2
+    finally:
+        p.unlink(missing_ok=True)
+    log(f"url: {url}")
+    log(f"rows: {len(d):,}  tours: {sorted(d['tour'].unique()) if 'tour' in d else '?'}")
+    built = pd.to_datetime(d["updated_at"].iloc[0], utc=True) if "updated_at" in d.columns else None
+    as_of = d["ratings_as_of"].iloc[0] if "ratings_as_of" in d.columns else None
+    log(f"built (updated_at): {built.isoformat() if built is not None else 'missing'}")
+    log(f"ratings_as_of: {as_of if as_of is not None else 'missing (pre-2026-09-06 build)'}")
+    if built is None:
+        log("WARN: no updated_at column")
+        return 0
+    age_d = (datetime.now(timezone.utc) - built.to_pydatetime()).total_seconds() / 86400
+    if age_d > args.ratings_max_age_days:
+        log(f"WARN: ratings built {age_d:.1f} days ago (limit {args.ratings_max_age_days:g}); "
+            f"the refresh job has not run, or has been failing")
+    else:
+        log(f"fresh: built {age_d:.1f} days ago")
+    return 0
 
 
 def check(p: Path, args) -> int:

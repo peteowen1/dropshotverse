@@ -1,0 +1,115 @@
+# Daily refresh of tennis/ratings.parquet (docs/plans/between-events-ratings.md).
+#
+# Until 2026-09-06 the ratings table had been built exactly once (08-29) and
+# the laptop task re-uploaded that stale file every 30 minutes, so the site
+# labelled eight-day-old ratings as updated today. This job regenerates the
+# Elo replay with the current tennismylife bridge, rebuilds ratings.parquet
+# only (predictions.parquet is the LOCKED pre-tournament forecast and is not
+# touched), checks its anchors, and uploads that one file.
+#
+# SCHEDULE IS OFF until the first dry run has timed the Elo regeneration on
+# this runner (rule: profile before scheduling). Dispatch with dry_run=true,
+# read the step timings, then uncomment the cron. GitHub's cron is best-effort;
+# at daily granularity a few hours of drift is fine, and the hourly
+# check-freshness job warns when the table is more than three days old.
+
+name: Ratings refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: build and check but do not upload
+        type: boolean
+        default: false
+  # schedule:
+  #   - cron: "0 6 * * *"
+
+concurrency:
+  group: ratings-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ARCHIVE_TAG: sackmann-archive
+      INPUTS_TAG: model-inputs-2026-09
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install pandas numpy xgboost pyarrow
+
+      - name: Fetch archive and model inputs from Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p dropshotdata/raw dropshotdata/tune_scratch dropshotdata/blog
+          gh release download "$ARCHIVE_TAG" --pattern sackmann_archive_raw.tar.gz --dir dropshotdata/raw
+          tar -xzf dropshotdata/raw/sackmann_archive_raw.tar.gz -C dropshotdata/raw
+          rm dropshotdata/raw/sackmann_archive_raw.tar.gz
+          gh release download "$INPUTS_TAG" --dir dropshotdata/tune_scratch
+          (cd dropshotdata/tune_scratch && unzip -q xgb_bagged_model_cache_v2_setgame.zip && rm xgb_bagged_model_cache_v2_setgame.zip)
+          test "$(find dropshotdata/raw/github -name '*.csv' | wc -l)" -gt 400
+
+      - name: Regenerate Elo with the current bridge (timed)
+        working-directory: dropshotdata/scripts
+        shell: bash
+        run: |
+          start=$(date +%s)
+          python regen_elo_raw_with_bridge.py
+          echo "::notice::regen_elo_raw_with_bridge took $(( $(date +%s) - start )) s"
+
+      - name: Build ratings.parquet only (timed)
+        working-directory: dropshotdata/scripts
+        shell: bash
+        run: |
+          start=$(date +%s)
+          python build_blog_data.py --ratings-only
+          echo "::notice::build_blog_data --ratings-only took $(( $(date +%s) - start )) s"
+
+      - name: Validate
+        shell: bash
+        run: |
+          test -f dropshotdata/blog/ratings.parquet || { echo "::error::ratings.parquet not produced"; exit 1; }
+          python - <<'EOF'
+          import pandas as pd
+          d = pd.read_parquet("dropshotdata/blog/ratings.parquet")
+          print(d.shape, "as of", d["ratings_as_of"].iloc[0])
+          for t in ("atp", "wta"):
+              print(t, d[d.tour == t].nlargest(5, "bt_rating")[["player_name", "elo_overall", "bt_rating"]].to_string(index=False))
+          EOF
+
+      - uses: actions/setup-node@v7
+        if: ${{ !inputs.dry_run }}
+        with:
+          node-version: "20"
+
+      - name: Upload ratings.parquet to R2
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Cloudflare secrets not set"; exit 1
+          fi
+          npm install -g wrangler
+          for attempt in 1 2 3; do
+            wrangler r2 object put inthegame-data/tennis/ratings.parquet --file dropshotdata/blog/ratings.parquet --cache-control "public, max-age=300" --remote && break
+            echo "::warning::upload attempt $attempt failed"; sleep $(( 2 ** attempt ))
+            [ $attempt -eq 3 ] && exit 1
+          done
+
+      - name: Verify the published copy
+        if: ${{ !inputs.dry_run }}
+        run: python dropshotdata/scripts/check_blog_data_freshness.py --ratings --ratings-max-age-days 1

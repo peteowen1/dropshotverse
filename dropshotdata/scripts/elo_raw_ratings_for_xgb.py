@@ -26,7 +26,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ARCHIVE = Path(r"C:\dev\dropshotverse\dropshotdata\raw\github")
+import _common
+ARCHIVE = _common.RAW / "github"
 EVAL_YEARS = (2024, 2025)
 
 K_BASE, K_SHAPE, K_MIN = 250.0, 0.4, 16.0
@@ -216,7 +217,7 @@ if __name__ == "__main__":
     fitted_final = run_elo_raw(df, best_b, 0.3)
 
     # ---- verify against the frozen parquet on tour-level eval rows
-    frozen = pd.read_parquet(r"C:\dev\dropshotverse\dropshotdata\elo_eval_predictions.parquet")
+    frozen = pd.read_parquet(_common.DD / "elo_eval_predictions.parquet")
     frozen_tour = frozen[frozen["level_file"] == "tour"][
         ["date", "tour", "winner_uid", "loser_uid", "p_winner"]]
     mine = fitted_final[(fitted_final["level_file"] == "tour") & ev][
@@ -236,7 +237,7 @@ if __name__ == "__main__":
                 "ro_winner", "ro_loser", "rs_winner", "rs_loser",
                 "n_all_winner", "n_all_loser", "n_surf_winner", "n_surf_loser",
                 "p_winner_recomputed"]
-    out_path = r"C:\dev\dropshotverse\dropshotdata\tune_scratch\elo_raw_ratings_full.parquet"
+    out_path = str(_common.SCRATCH / "elo_raw_ratings_full.parquet")
     fitted_final[out_cols].to_parquet(out_path)
     log(f"\nwrote {out_path} ({len(fitted_final):,} rows, all levels/years - caller should "
         f"filter to eval years / tour level as needed)")
