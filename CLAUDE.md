@@ -23,8 +23,8 @@ session that changes state.
 |---|---|---|
 | Live US Open projection to R2 | `.github/workflows/live-projection.yml` | every 30 min |
 | Freshness alarm on the public R2 copy | `.github/workflows/check-freshness.yml` | hourly |
-| Same projection from the laptop (being retired) | task `DropshotverseUSOpenLiveSim` runs `scripts/refresh_usopen_live.cmd` | every 30 min to 2026-09-16 |
-| Point-by-point capture | task `DropshotverseUSOpenCapture` runs `scripts/capture_usopen.py once` | every 5 min to 2026-09-16 |
+| Same projection from the laptop (being retired) | task `DropshotverseUSOpenLiveSim` runs `dropshotdata/scripts/refresh_usopen_live.cmd` | every 30 min to 2026-09-16 |
+| Point-by-point capture | task `DropshotverseUSOpenCapture` runs `dropshotdata/scripts/capture_usopen.py once` | every 5 min to 2026-09-16 |
 
 Logs for the laptop tasks: `dropshotdata/raw/usopen/*.log`. Times in the
 capture log are UTC.

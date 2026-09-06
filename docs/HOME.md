@@ -58,13 +58,9 @@ filenames suggest. TML carries `score` (retirements detectable) but not
 
 ## Releases (the data bus)
 
-| Tag | Holds | Published by |
-|---|---|---|
-| `sackmann-archive` | raw archive tarball (144 MB) + `sackmann_matches.parquet` | `scripts/publish_archive_release.py` |
-| `model-inputs-2026-09` | Elo replays, layoff table, the shipped 5-seed bag, the locked US Open forecast | `scripts/publish_model_inputs_release.py` |
-
-A fresh clone needs both: `gh release download <tag>` into `dropshotdata/raw`
-and `dropshotdata/tune_scratch`, exactly as `live-projection.yml` does.
+Two GitHub Releases carry everything not in git: `sackmann-archive` (the raw
+CSVs) and `model-inputs-2026-09` (Elo replays and the shipped model). Asset
+list and the fresh-clone commands: [`dropshotdata/docs/README.md`](../dropshotdata/docs/README.md).
 
 ## What is live
 
