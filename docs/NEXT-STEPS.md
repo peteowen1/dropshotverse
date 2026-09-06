@@ -125,13 +125,16 @@ them given 0.9% in a match he won (F2). Verified independently here.
 
 Still open from those reviews, in the order they are worth doing:
 
-1. **F4 — head-to-head is trained on all levels and served tour-level only.**
-   Measured 2026-09-07: **70.3%** of `elo_raw_ratings_full.parquet` rows are
-   non-tour (837,348 of 1,190,554), so the served `h2h_diff` sees a much
-   smaller count than training did. The review rated this medium confidence
-   and unknown effect; the share makes it worth sizing properly. Fix sketch:
-   drop the `level_file == "tour"` filter at `xgb_bt_rating.py:208` so serve
-   time matches `build_xgb_features.py:222`.
+1. ~~**F4 — head-to-head trained on all levels, served tour-level only.**~~
+   **SIZED AND FIXED 2026-09-07.** The mismatch was real and confirmed in the
+   shipped trainer (`train_best_model.py:153` counts from the unfiltered
+   parquet, 70.3% of whose rows are non-tour). Its effect on what gets
+   published is not: on the real US Open field, 18-19% of ordered pairs get a
+   different `h2h_diff` (up to 5 meetings), and the probability moves a mean
+   of **0.0017**, a p99 of 0.022 and a max of 0.041, with no player's mean win
+   probability moving more than **0.002**. Serve now matches training; treat
+   it as a correctness fix and do not expect it in any metric.
+   Measurement: `tune_scratch/screen_h2h_train_serve_skew.py`.
 2. **F5 — twelve published players carry the hard-coded default age 24.0**,
    because the age table is built from the frozen CSVs and not the bridge.
    Publish NA when defaulted, or carry age from the bridge.

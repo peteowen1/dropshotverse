@@ -201,11 +201,24 @@ def load_age_table() -> pd.DataFrame:
 def build_h2h_dict(field_uids_all: set[str]) -> dict[tuple[str, str], list]:
     """Real head-to-head history restricted to the union of all 16 fields
     (full-archive scan would be wasteful - only pool members can ever be
-    queried)."""
+    queried).
+
+    ALL LEVELS, deliberately, to match training. FABLE-redteam-2026-09-07 F4:
+    this used to filter `level_file == "tour"` while train_best_model.py:153
+    counts h2h from the unfiltered parquet ("all levels, for the fullest
+    possible H2H history"), so the model was served a systematically smaller
+    count than it learned on. 70.3% of the parquet's rows are non-tour.
+    Measured before changing it (tune_scratch/screen_h2h_train_serve_skew.py,
+    real US Open field): 18-19% of ordered pairs get a different h2h_diff, up
+    to 5 meetings, but the published probability moves a mean 0.0017 and a max
+    0.041, and no player's mean win probability moves more than 0.002. So this
+    is a correctness fix, not an accuracy one - it removes a train/serve
+    mismatch, and should not be expected to show up in any metric.
+    """
     h2h: dict[tuple[str, str], list] = {}
     for tour in ("atp", "wta"):
         elo = pd.read_parquet(SCRATCH / "elo_raw_ratings_full.parquet")
-        elo = elo[(elo["tour"] == tour) & (elo["level_file"] == "tour")]
+        elo = elo[elo["tour"] == tour]
         elo = elo[elo["winner_uid"].isin(field_uids_all) & elo["loser_uid"].isin(field_uids_all)]
         for row in elo.itertuples():
             h2h.setdefault((row.winner_uid, row.loser_uid), []).append(row.date)
