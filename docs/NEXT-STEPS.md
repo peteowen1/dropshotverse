@@ -2,9 +2,17 @@
 
 > Living queue. Sessions update this when they finish work (rule in `C:\dev\CLAUDE.md`).
 > Decision log: [DECISIONS.md](DECISIONS.md) · Vault map: [HOME.md](HOME.md)
-> Created 2026-09-05 — this verse had no docs hub until then, and appears in
-> neither `C:\dev\ECOSYSTEM.md` nor `C:\dev\vault\NEXT-STEPS.md`.
-> Last updated: 2026-09-05 — rounds 12/13/14 of the chase-the-market programme.
+> Created 2026-09-05 — this verse had no docs hub until then, and appeared in
+> neither `C:\dev\ECOSYSTEM.md` nor `C:\dev\vault\NEXT-STEPS.md` (both fixed).
+> Last updated: **2026-09-06**. Two big questions closed: the market chase is
+> settled (no edge, measured three ways) and issue #3 is decided (D-11, keep
+> Sackmann as base). WTA upcoming-tournament forecasting works end to end; the
+> in-match win-probability model has its first calibrated result.
+>
+> **Read first if you are cold:** the market question is CLOSED. Fourteen
+> rounds, three candidates taken to conclusion this session, all rejected, and
+> a clean 2026 forward test confirming no exploitable edge. Do not reopen it
+> without new data — see [issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md).
 
 ## Blocked on Pete
 
@@ -57,11 +65,12 @@
    2026-08-31. Includes the antisymmetry fix (#7), the 6-6 tiebreak fix, and
    pairwise publishing (#6).
 
-3. **[#3](https://github.com/peteowen1/dropshotverse/issues/3) — canonical base
-   archive: stay Sackmann-frozen + bridge, or move to TML?** The 50-year
-   player-id crosswalk is the real work (the current bridge covers ~216 recent
-   players per tour). Everything about data freshness past 2026-08-24 depends on
-   this.
+3. ~~**#3 canonical base archive**~~ — **DECIDED and closed 2026-09-06.** Keep
+   the frozen Sackmann archive as base, TML as live bridge. TML has ATP from
+   1968 but WTA only from 1990, and the archive holds 61,840 tour-level WTA
+   matches from 1968-1989 — losing them is harmless for current-form ratings
+   and disqualifying for the all-time GOAT list. D-11 in
+   [DECISIONS.md](DECISIONS.md).
 
 4. **[#4](https://github.com/peteowen1/dropshotverse/issues/4) — move the blog
    refresh off the local scheduled task to GitHub Actions.** Needs Cloudflare
@@ -120,7 +129,64 @@
     is no generic entry-list source. The US Open entrants were scraped from
     `usopen.org` specifically.
 
-## Recently landed (2026-09-05)
+## Live deadlines (absolute dates — you are reading this on a different day)
+
+- **2026-09-13** — US Open men's final. Both scheduled tasks now run to
+  **2026-09-16 12:00 local = 2026-09-15 22:00 New York**. Before 09-06 they
+  ended at 2026-09-14T00:00 *local*, which is 2026-09-13 **10:00 in New York** —
+  four hours before the men's final starts. Both the live projection and the
+  point capture would have frozen mid-event with nothing alarming.
+- **~2026-09-23** — re-run `fetch_wta_upcoming.py --fetch 1020` for the China
+  Open (Beijing, starts 2026-09-30). Today the field is 76 of a 96 draw and
+  **0 seeded**; qualifiers, late entries and seeding all land nearer the event.
+  A forecast run now would be over a partial, unseeded field.
+- **2026-09-16** — after the tasks expire, R2 stops refreshing. `event_status`
+  now marks a finished event so the site can render a result rather than a
+  frozen forecast, and `check_blog_data_freshness.py` fails on stale-while-live.
+  **Nothing schedules that check yet** — it changes nothing on its own.
+
+## Recently landed (2026-09-06)
+
+- **The market question is CLOSED.** Rounds 12/13/14 all rejected; the 2026
+  forward test (2,654 untouched matches, Jan-May) put the model at 0.59638
+  against the market's 0.57168, and 38.0% right when it dissents (CI
+  [32.3, 43.8]) — independently reproducing ticket 28 round 7's 44.6% on a
+  different year, feature set and benchmark.
+- **Round 14 is the cautionary tale.** The K-schedule change passed every
+  tune-window check available, including the correct paired per-fold test
+  (-0.001393, 5/5 folds, t=-5.70), and came back **+0.000029** out of sample.
+  Fold consistency removes fold noise; it does nothing about having selected
+  the point on those same folds.
+- **WTA upcoming forecasting works** (`fetch_wta_upcoming.py`): real calendar,
+  entry lists weeks ahead, 100% entrant resolution across four events.
+- **In-match WP has its first calibrated result** (ticket 37): Mode A confirmed
+  at scale (ECE 0.0471) over Mode B (0.0737), closing ticket 09's open question.
+- **`usopen_2026_points.parquet`** — 79,917 points, 503 singles matches, three
+  anchors passing.
+- **Issue #3 decided and closed**; crosswalk scoped and found not to be the
+  bottleneck for any of the three things said to block on it (ticket 38).
+
+## Known and NOT chased
+
+- **`DropshotverseUSOpenCapture` returns exit 1 intermittently.** Cause looks
+  clear from the log: it runs a **full 595-match backfill on every invocation**
+  (~50 minutes) while scheduled **every 5 minutes**, so runs overlap. Harmless
+  so far — 597/597 matches have history feeds and 93,663 points are captured —
+  but it is wasted load and the likely source of the exit code. A `--since`
+  or lock-file fix is the obvious answer.
+- **The surface rating is not a self-correcting rating.**
+  `elo_baseline.py:409` updates it with the blended `p_w`, which at `blend=0.0`
+  comes entirely from OVERALL Elo — so it accumulates overall-Elo residuals
+  bucketed by surface, with no feedback loop, drifting 2.8x wider (std 498 vs
+  180). It never reaches Elo's own prediction, but `elo_surface_diff` **is** an
+  XGBoost feature. Reproduced rather than changed; whether it should use `p_s`
+  is untested and is a real open question.
+- **Config D forward test** — would convert the +0.0247 upper bound into the
+  shipped model's actual gap. Deliberately skipped: three measurements agree
+  and a model right 38% of the time when it dissents has no edge worth sizing
+  more precisely.
+
+## Older (2026-09-05)
 
 - **Round 12 — retirement as a pre-match fitness feature: REJECTED**, after five
   phases. Phases 1-3 all produced statistically strong, correctly-signed,
