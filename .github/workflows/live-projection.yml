@@ -11,9 +11,16 @@
 # Making the paths relative is the right long-term fix and a separate change;
 # doing it mid-event on the files the local task is running from is not.
 #
-# Schedule enabled 2026-09-06 once CLOUDFLARE_R2_TOKEN and CLOUDFLARE_ACCOUNT_ID
-# landed as repo secrets. Without them the upload step fails loudly on every
-# run, so comment the cron back out before rotating or removing either secret.
+# NO `schedule:` TRIGGER, on purpose. GitHub's cron fired once in two hours
+# on 2026-09-06, and this job runs on a Windows runner (billed 2x) against a
+# 2,000-minute monthly free allowance: a `*/30` cron that GitHub did honour
+# would burn about 500 billed minutes a day. The trigger is the ITG Cloudflare
+# Worker's */30 cron (inthegame-blog worker/src/index.js,
+# maybeTriggerTennisProjection), which calls workflow_dispatch here ONLY when
+# R2's tennis/live_predictions.parquet is more than 40 minutes old, i.e. when
+# the laptop producer has gone quiet, and only until its TENNIS_LIVE_UNTIL.
+# Needs CLOUDFLARE_R2_TOKEN and CLOUDFLARE_ACCOUNT_ID as repo secrets (set
+# 2026-09-06); without them the upload step fails loudly.
 
 name: Live projection
 
@@ -23,8 +30,6 @@ on:
       sims:
         description: simulations per tour
         default: "20000"
-  schedule:
-    - cron: "*/30 * * * *"
 
 concurrency:
   group: live-projection

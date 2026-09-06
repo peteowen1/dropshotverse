@@ -75,6 +75,16 @@ became the `model-inputs-2026-09` Release; the R2 token reused is the laptop's
 (Pete's call over minting an R2-only one). Workflow header comments and
 [#4](https://github.com/peteowen1/dropshotverse/issues/4) carry the detail.
 
+**D-14 — 2026-09-06: the Actions producer is dispatched by the ITG Cloudflare
+Worker when R2 goes stale, not by GitHub's cron.** GitHub fired the `*/30`
+schedule once in two hours, and a Windows runner (billed 2x) every 30 minutes
+is ~500 minutes a day against a 2,000-minute free month. The Worker's existing
+`*/30` cron (all five free slots were taken, so it piggybacks) calls
+`workflow_dispatch` only when `tennis/live_predictions.parquet` is >40 min
+old and only until `TENNIS_LIVE_UNTIL`. Laptop stays primary through the
+final. Needs a fine-grained PAT from Pete. inthegame-blog
+`worker/src/index.js`, `maybeTriggerTennisProjection`.
+
 ## Standing corrections
 
 - **`slot` in the entrants files is not draw position** (2/128 agreement with
