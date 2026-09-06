@@ -39,7 +39,7 @@ import bridge_tennismylife as bridge
 import hierarchical_model as hm
 import simulate_tournament_updating as stu
 import usopen_live_draw as draw_mod
-from simulate_tournament import STAGE_ORDER
+from simulate_tournament import DD, STAGE_ORDER
 from simulate_tournament_xgb import build_round_pred_matrices
 from xgb_bt_rating import (build_h2h_dict, build_player_table, load_age_table,
                            train_bagged_model)
