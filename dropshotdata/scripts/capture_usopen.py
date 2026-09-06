@@ -94,15 +94,21 @@ def write_if_changed(directory: Path, stem: str, blob: bytes) -> bool:
     return True
 
 
-def capture_match(mid: str, tag: str = "") -> int:
+def capture_match(mid: str, tag: str = "") -> dict[str, bool]:
+    """Fetch every feed for one match. Returns which feeds were fetched in THIS
+    call (not which changed on disk): the backfill needs to know that the tape
+    it is about to call settled came from this pass, not from an earlier live
+    sweep that left a partial copy behind."""
+    fetched: dict[str, bool] = {}
     written = 0
     for name, tmpl in MATCH_FEEDS.items():
         blob = fetch(tmpl.format(y=YEAR, mid=mid))
+        fetched[name] = blob is not None
         if blob and write_if_changed(OUT / "matches" / str(mid), name, blob):
             written += 1
     if written:
         log(f"  match {mid}{tag}: {written} feed(s) written")
-    return written
+    return fetched
 
 
 def capture_reference() -> None:
@@ -222,10 +228,12 @@ def backfill(full: bool = False) -> None:
         f"{len(done & all_ids)} already settled on disk; {len(todo)} to capture")
     captured = 0
     for i, mid in enumerate(todo, 1):
-        capture_match(mid)
-        # Only the point tape decides whether the match is settled. If it
-        # failed to fetch, the match is retried on the next pass.
-        if any((OUT / "matches" / mid).glob("history.*.json")):
+        fetched = capture_match(mid)
+        # Only the point tape decides whether the match is settled, and only a
+        # fetch that succeeded in THIS pass counts. A live sweep usually leaves
+        # a partial history file behind before the match completes, so checking
+        # the disk would mark a failed re-fetch as settled forever.
+        if fetched.get("history"):
             done.add(mid)
             captured += 1
         if i % 25 == 0:
