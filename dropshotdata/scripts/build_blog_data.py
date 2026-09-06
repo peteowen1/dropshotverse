@@ -306,16 +306,26 @@ def main() -> None:
     bridged_raw = bridge.load_matches_with_bridge(hm)
     bridged_df, _ = hm.prepare(bridged_raw)
     as_of = bridged_df["date"].max()
-    log(f"  ratings as-of: {as_of.date()}")
+    # FABLE-redteam-2026-09-07 F3: `as_of` is the CUTOFF, and every lookup below
+    # filters `date < as_of`, so the most recent tournament (Sackmann and the
+    # bridge date every match with the tournament's start date) is excluded from
+    # the ratings that used to be labelled with that very date. The cutoff is
+    # deliberate and unchanged; only the published label moves, to the last date
+    # whose matches are actually in the table.
+    included_through = bridged_df.loc[bridged_df["date"] < as_of, "date"].max()
+    log(f"  ratings cutoff: {as_of.date()} (exclusive); last match date included: "
+        f"{included_through.date()}")
 
     log("loading age table...")
     age_table = load_age_table()
 
     log("\n=== building ratings.parquet ===")
     ratings = build_ratings_table(models, cat_levels, playstyle_full, age_table, bridged_df, as_of)
-    ratings["ratings_as_of"] = as_of.strftime("%Y-%m-%d")   # the data date; the page must show THIS, not R2's Last-Modified
+    # The last match date actually included, not the exclusive cutoff (F3). The
+    # page shows THIS, not R2's Last-Modified.
+    ratings["ratings_as_of"] = included_through.strftime("%Y-%m-%d")
     ratings["updated_at"] = updated_at
-    check_ratings_anchors(ratings, as_of)
+    check_ratings_anchors(ratings, included_through)
     ratings_path = BLOG_DIR / "ratings.parquet"
     ratings.to_parquet(ratings_path)
     log(f"wrote {ratings_path} ({len(ratings):,} rows, as of {as_of.date()})")

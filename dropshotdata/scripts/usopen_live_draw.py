@@ -32,8 +32,11 @@ Verified facts this module relies on (checked 2026-08-31, not assumed)
 * Player identity: feed carries US Open tour ids (`atpz355`), the model uses
   Sackmann uids (`atp:100644`). These are joined on normalised name against the
   *bridged* archive (archive + tennismylife bridge, so post-freeze players
-  resolve). Coverage 2026-08-31: men 128/128, women 127/128 (Gabriela Knutson
-  is genuinely new and gets a synthetic uid).
+  resolve). Coverage 2026-08-31 was reported as men 128/128, women 127/128,
+  but FABLE-redteam-2026-09-07 F2 found two misses, neither genuinely new:
+  the archive has "Bu Yunchaokete" (feed: "Yunchaokete Bu") and "Gabriela
+  Andrea Knutson" (feed: "Gabriela Knutson"). `build_name_to_uid` now also
+  indexes token-sorted and first+last keys, see `_alt_keys`.
 """
 from __future__ import annotations
 
@@ -59,6 +62,31 @@ def _norm(s: str | None) -> str:
     s = unicodedata.normalize("NFKD", str(s or ""))
     s = "".join(c for c in s if not unicodedata.combining(c))
     return re.sub(r"[^a-z]", "", s.lower())
+
+
+def _norm_tokens(s: str | None) -> list[str]:
+    """Per-word normalised tokens (same character rule as `_norm`)."""
+    s = unicodedata.normalize("NFKD", str(s or ""))
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return [t for t in re.split(r"[^a-z]+", s.lower()) if t]
+
+
+def _alt_keys(s: str | None) -> list[str]:
+    """Looser keys tried only when the exact `_norm` key misses.
+
+    FABLE-redteam-2026-09-07 F2: the archive lists "Bu Yunchaokete" (surname
+    first) and "Gabriela Andrea Knutson" (middle name) while the US Open feed
+    sends "Yunchaokete Bu" and "Gabriela Knutson"; the letters-only `_norm`
+    key cannot reconcile either, so both were minted as NEW_ and published at
+    1500. Token-sorted key catches word-order flips; first+last catches middle
+    names. Order matters: token-sorted first (stricter), then first+last."""
+    toks = _norm_tokens(s)
+    keys = []
+    if len(toks) >= 2:
+        keys.append("".join(sorted(toks)))
+        if len(toks) > 2:
+            keys.append(toks[0] + toks[-1])
+    return keys
 
 
 def match_id(round_no: int, n: int, event: str = "1") -> str:
@@ -138,7 +166,54 @@ def build_name_to_uid(df) -> dict[str, str]:
     uniq = pd.Series(long["name"].unique())
     long["key"] = long["name"].map(dict(zip(uniq, uniq.map(_norm))))
     best = long.loc[long.groupby("key", sort=False)["date"].idxmax()]
-    return dict(zip(best["key"], best["uid"]))
+    out = dict(zip(best["key"], best["uid"]))
+    # FABLE-redteam-2026-09-07 F2: secondary index (token-sorted, first+last)
+    # under `_ALT`, built from the same most-recent-wins rows. Exact keys keep
+    # priority because `lookup_uid` tries them first; among alt keys the most
+    # recent appearance wins, same rule as the exact index. (A two-word name's
+    # token-sorted key can equal its own exact key - keep it, that is how the
+    # feed's flipped "Yunchaokete Bu" reaches the archive's "Bu Yunchaokete".)
+    alt_rows = [(k, uid, date)
+                for name, uid, date in zip(best["name"], best["uid"], best["date"])
+                for k in _alt_keys(name)]
+    if alt_rows:
+        alt = pd.DataFrame(alt_rows, columns=["key", "uid", "date"])
+        # An alt key that reaches more than one PLAYER is dropped, not resolved
+        # most-recent-wins. Over the real archive 269 keys are ambiguous, e.g.
+        # "ahmedomar" is both Ahmed Ben Omar and Omar Ahmed, and "adrianalopez"
+        # is both Adriana Lopez and Adriana Coltorti Lopez. Picking one would
+        # attribute a real player's whole rating history to a different real
+        # player, silently and plausibly - strictly worse than the NEW_ mint
+        # this fallback exists to avoid, because a NEW_ mint is loud and flat
+        # 1500 while a wrong match looks right. Review of 05f9232, 2026-09-07.
+        n_keys = alt["key"].nunique()
+        uid_per_key = alt.groupby("key")["uid"].nunique()
+        ambiguous = set(uid_per_key.index[uid_per_key > 1])
+        if ambiguous:
+            print(f"[build_name_to_uid] dropped {len(ambiguous)} of {n_keys} alt keys that reach "
+                  f"more than one player (e.g. {sorted(ambiguous)[:3]})")
+            alt = alt[~alt["key"].isin(ambiguous)]
+        alt = alt.loc[alt.groupby("key", sort=False)["date"].idxmax()]
+        out[_ALT] = dict(zip(alt["key"], alt["uid"]))
+    else:
+        out[_ALT] = {}
+    return out
+
+
+_ALT = "__alt_keys__"   # FABLE-redteam-2026-09-07 F2: sub-dict slot in name2uid
+
+
+def lookup_uid(name2uid: dict, full: str) -> str | None:
+    """Exact normalised key first, then the looser keys (see `_alt_keys`)."""
+    uid = name2uid.get(_norm(full))
+    if uid is not None:
+        return uid
+    alt = name2uid.get(_ALT) or {}
+    for k in _alt_keys(full):
+        uid = alt.get(k)
+        if uid is not None:
+            return uid
+    return None
 
 
 def _player(team: dict) -> tuple[str, str] | None:
@@ -186,11 +261,17 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
         if p is None:
             return None
         full, _usid = p
-        uid = name2uid.get(_norm(full))
+        uid = lookup_uid(name2uid, full)   # FABLE-redteam-2026-09-07 F2
         if uid is None:
             uid = f"{tour}:NEW_{full.replace(' ', '_')}"
             if full not in unmatched:
                 unmatched.append(full)
+                # FABLE-redteam-2026-09-07 F2: say so every run, not only
+                # under verify(verbose). A seeded NEW_ is almost certainly a
+                # crosswalk miss, not a debutant.
+                seeded = " SEEDED" if team.get("seed") is not None else ""
+                print(f"[{code}] WARNING: no archive match for '{full}'{seeded}; "
+                      f"minted {uid} (will be rated 1500 across the board)")
         names[uid] = full
         if team.get("seed") is not None:
             seed_map[uid] = float(team["seed"])

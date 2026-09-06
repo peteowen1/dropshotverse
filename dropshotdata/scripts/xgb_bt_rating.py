@@ -275,6 +275,12 @@ def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
     latest_form = long_form.drop_duplicates(subset="uid", keep="last").set_index("uid")
 
     rows = []
+    # FABLE-redteam-2026-09-07 F2: a uid with no Elo history silently takes
+    # 1500 across every rating. Report them so a crosswalk miss is seen.
+    no_history = [u for u in field_uids if u not in latest_ro.index]
+    if no_history:
+        print(f"[build_player_table] {tour}: {len(no_history)} of {len(field_uids)} field uids have no "
+              f"Elo history before {date0} and default to 1500: {no_history[:20]}")
     for uid in field_uids:
         ro = float(latest_ro.loc[uid, "ro"]) if uid in latest_ro.index else 1500.0
         rs = float(latest_rs.loc[uid, "rs"]) if uid in latest_rs.index else 1500.0
