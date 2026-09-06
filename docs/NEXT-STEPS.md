@@ -74,10 +74,19 @@
    and disqualifying for the all-time GOAT list. D-11 in
    [DECISIONS.md](DECISIONS.md).
 
-4. **[#4](https://github.com/peteowen1/dropshotverse/issues/4) — move the blog
-   refresh off the local scheduled task to GitHub Actions.** Needs Cloudflare
-   repo secrets, which only Pete can create. Note `load_matches()` still globs
-   local CSVs and needs a branch to read the release parquet first.
+4. **[#4](https://github.com/peteowen1/dropshotverse/issues/4) — blog refresh
+   on GitHub Actions: BUILT 2026-09-06, needs two secrets to go live.**
+   `.github/workflows/live-projection.yml` runs the full live sim on a Windows
+   runner from two Releases (`sackmann-archive`, `model-inputs-2026-09`). Its
+   30-minute schedule is commented out until **`CLOUDFLARE_R2_TOKEN`** (R2
+   token scoped to `inthegame-data`) and **`CLOUDFLARE_ACCOUNT_ID`** exist as
+   repo secrets; until then a manual run builds and fails loudly at upload.
+   Once the secrets are in: uncomment the cron, watch one scheduled run, then
+   disable the local `DropshotverseUSOpenLiveSim` task. Long-term follow-up:
+   the scripts hard-code `C:\dev\dropshotverse\...`, so the runner uses a
+   junction; making paths relative is a separate change.
+   `check-freshness.yml` (hourly, public R2 URL, no secrets) is already live
+   and green; a stale-while-live file now fails a run and mails Pete.
 
 ## Open queue
 
@@ -148,13 +157,9 @@
 
 ## Known and NOT chased
 
-- **`check_blog_data_freshness.py` still runs from nothing (found by the
-  2026-09-06 review).** It reads the local parquet the sim just wrote, so
-  putting it in `refresh_usopen_live.cmd` would always pass. It needs its own
-  schedule AND somewhere to report to; a scheduled task that exits 1 into a
-  log nobody reads is not an alarm. The honest home is the ops health-check
-  workflow reading the public R2 URL, which is #4 territory and needs Pete's
-  Cloudflare secrets.
+- **~~`check_blog_data_freshness.py` runs from nothing~~ — FIXED 2026-09-06.**
+  `check-freshness.yml` fetches the public R2 copy hourly; `--url` was added to
+  the check for it. A failed run is the notification.
 - **~~`DropshotverseUSOpenCapture` re-runs a full backfill every 5 minutes~~ —
   diagnosis was wrong, real defect FIXED 2026-09-06.** The backfill ran only on
   the `:04` UTC tick each hour, but took ~60 min (598 matches x 6 feeds x 0.7 s
