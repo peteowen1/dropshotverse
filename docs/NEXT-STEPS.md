@@ -145,11 +145,23 @@ Still open from those reviews, in the order they are worth doing:
    saw a missing age and serving NaN would be the same train/serve mismatch as
    F4. The age table is still frozen-archive only (max 2026-05-25); carrying
    age from the bridge is the fuller fix and is not done.
-3. **W2 — there is no repeatable out-of-time measurement left.** Yearly
-   walk-forward as the standing scorecard. This gates W1, W3 and W4, which are
-   the model work (the largest being that the bookmaker price already in the
-   repo is ignored by the published probabilities). None of these should start
-   before Pete picks one.
+3. ~~**W2 — no repeatable out-of-time measurement left.**~~ **BUILT
+   2026-09-07.** `docs/plans/validation-charter.md` (locked before running) and
+   `tune_scratch/walk_forward_yearly.py`: expanding walk-forward, train
+   1995..Y-1, score Y, for Y in 2019-2025, on market-joined rows, with the
+   bookmaker average, Elo and a constant as baselines. A candidate ships only
+   on 5 of 7 years plus a mean gain of 0.002. **First result: the shipped
+   config is 0.0008 behind the bookmaker average on the mean and behind in 5
+   of 7 years, while beating Elo alone by 0.026 every year.** Caveat that
+   matters: 2022-2025 were used to select this config, so only 2019-2021 are
+   clean for it. Run a candidate with
+   `python walk_forward_yearly.py --label X --drop feature`.
+4. **W1, W3, W4 are now testable.** W1 (the bookmaker price sits in the repo
+   and the published probabilities ignore it) is the largest. W3 (the live
+   simulator freezes layoff and fatigue at the draw date for every round) has
+   its own scorecard already in `simulate_tournament_xgb.py`. W4 (matches in
+   progress are simulated as unplayed) is the biggest user-visible one. Each
+   needs Pete to pick it up; each is now judgeable against the charter.
 
 ## Known and NOT chased
 
