@@ -38,12 +38,12 @@ Verified facts this module relies on (checked 2026-08-31, not assumed)
 from __future__ import annotations
 
 import json
-
-import pandas as pd
 import re
 import unicodedata
 import urllib.request
 from pathlib import Path
+
+import pandas as pd
 
 FEED_URL = "https://www.usopen.org/en_US/scores/feeds/2026/draws/{code}.json"
 EVENT_CODE = {"atp": "MS", "wta": "WS"}

@@ -218,7 +218,7 @@ def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None,
     rows before date0), and the live sim called it with the same inputs every
     30 minutes at ~60-100 s a time. When set, each tournament's snapshot is
     pickled under cache_dir keyed by tournament key, date0 and a fingerprint
-    of the rows before date0; a hit skips the replay entirely. Opt-in, so
+    of the rows before date0 plus a hash of the field; a hit skips the replay entirely. Opt-in, so
     backtests that pass many cutoffs are unaffected."""
     log = lambda m: print(m, flush=True)
     if df is None:
@@ -231,10 +231,16 @@ def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None,
         import pickle
         cache_dir = Path(cache_dir)
         cache_dir.mkdir(parents=True, exist_ok=True)
+        import hashlib
         for key, meta in tournaments_meta.items():
             fp = snapshot_fingerprint(df, meta["date0"])
+            # The pickle holds only the field's players, so the field is part
+            # of the key: a draw correction or a name-crosswalk fix after the
+            # first write must miss, not be served the old field (review
+            # finding, 2026-09-06).
+            field_fp = hashlib.sha256("|".join(sorted(map(str, meta["field_uids"]))).encode()).hexdigest()[:12]
             safe = key.replace(":", "_").replace("/", "_")
-            path = cache_dir / f"{safe}_{pd.Timestamp(meta['date0']).date()}_{fp}.pkl"
+            path = cache_dir / f"{safe}_{pd.Timestamp(meta['date0']).date()}_{fp}_f{field_fp}.pkl"
             cache_paths[key] = path
             if path.exists():
                 with open(path, "rb") as fh:
