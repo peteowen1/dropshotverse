@@ -256,9 +256,12 @@ def check_ratings_anchors(ratings: pd.DataFrame, as_of: pd.Timestamp) -> None:
         problems.append("NaN in bt_rating or elo_overall")
     if ratings["elo_overall"].max() < 2200:
         problems.append(f"max elo_overall {ratings['elo_overall'].max():.0f} < 2200: the table is not the top of the tour")
+    # Staleness is a WARNING, not a gate: the tour-level bridge legitimately
+    # brings nothing for five to seven weeks between the Finals and January,
+    # and the structural anchors below catch a genuinely empty or broken run.
     age_days = (pd.Timestamp.now(tz="UTC").tz_localize(None) - as_of).days
     if age_days > 21:
-        problems.append(f"ratings_as_of {as_of.date()} is {age_days} days old: the bridge did not bring new matches")
+        log(f"  WARN: ratings_as_of {as_of.date()} is {age_days} days old; off-season, or the bridge is stuck")
     # Elo and BT must broadly agree: the top-10 by one should mostly be top-25 by the other
     for tour in ("atp", "wta"):
         t = ratings[ratings["tour"] == tour]
