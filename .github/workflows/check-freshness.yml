@@ -1,0 +1,33 @@
+# The alarm that check_blog_data_freshness.py was missing.
+#
+# The site serves live_predictions.parquet from public R2. If the producer
+# stops (laptop asleep, task expired on 2026-09-16, sim refusing to publish
+# because an anchor failed) the file simply stops changing and nothing notices.
+# This fetches the PUBLIC copy every hour and fails the run if it is older than
+# the limit while an event is still marked live. A failed run mails the repo
+# owner; that is the notification channel. Needs no secrets.
+#
+# A finished event is not stale: the check reads event_status and only warns.
+
+name: Check published data freshness
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: dropshotdata/scripts/check_blog_data_freshness.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pandas pyarrow
+      - name: Fetch the public R2 copy and check it
+        run: python dropshotdata/scripts/check_blog_data_freshness.py --url --max-age-hours 2
