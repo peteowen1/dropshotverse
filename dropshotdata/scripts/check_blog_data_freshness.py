@@ -39,6 +39,7 @@ monitor, and on its own it changes nothing.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -46,19 +47,57 @@ from pathlib import Path
 import pandas as pd
 
 DEFAULT = Path(r"C:\dev\dropshotverse\dropshotdata\blog\live_predictions.parquet")
+# The public R2 copy the site actually reads (inthegame-blog/data-loader.js
+# DATA_BASE_URL + "tennis/live_predictions.parquet"). Checking THIS copy is
+# the point: the local file is always fresh right after the sim writes it, so
+# a check run alongside the sim can never fail. Only the published copy can be
+# stale-while-live.
+PUBLIC_URL = ("https://pub-ee4bf5b599a047f9ac2b9facc1587008.r2.dev/"
+              "tennis/live_predictions.parquet")
 
 
 def log(m: str = "") -> None:
     print(m, flush=True)
 
 
+def fetch_to_temp(url: str) -> Path:
+    import tempfile
+    import urllib.request
+    req = urllib.request.Request(url, headers={"Cache-Control": "no-cache",
+                                               "User-Agent": "dropshotverse-freshness-check"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        blob = r.read()
+    fd, name = tempfile.mkstemp(suffix=".parquet")
+    os.close(fd)                      # mkstemp leaves it open; Windows then refuses the unlink
+    tmp = Path(name)
+    tmp.write_bytes(blob)
+    return tmp
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--path", default=str(DEFAULT))
+    ap.add_argument("--url", nargs="?", const=PUBLIC_URL, default=None,
+                    help="check the published copy instead of a local file; "
+                         "bare --url means the site's own R2 URL")
     ap.add_argument("--max-age-hours", type=float, default=2.0)
     args = ap.parse_args()
 
-    p = Path(args.path)
+    if args.url:
+        try:
+            p = fetch_to_temp(args.url)
+        except Exception as e:                               # noqa: BLE001
+            log(f"FAIL: cannot fetch {args.url}: {e}")
+            return 2
+        log(f"url: {args.url}")
+        try:
+            return check(p, args)
+        finally:
+            p.unlink(missing_ok=True)
+    return check(Path(args.path), args)
+
+
+def check(p: Path, args) -> int:
     if not p.exists():
         log(f"FAIL: {p} does not exist")
         return 2

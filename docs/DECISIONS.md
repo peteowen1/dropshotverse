@@ -89,6 +89,18 @@ Two consequences to hold onto:
 Detail: [issues/39](../.scratch/dropshot-tennis-engine/issues/39-tml-depth-decides-issue-3.md),
 scoping in [issues/38](../.scratch/dropshot-tennis-engine/issues/38-crosswalk-scoping.md).
 
+**D-12 — 2026-09-06: issue #1's hier tail bug is NOT a live-pipeline problem;
+`hier_logit_pwinner` stays in the shipped model.** Tested directly for the first
+time (`tune_scratch/screen_hier_contamination.py`). On the same 9,997 holdout
+rows the standalone hierarchical model gives the eventual winner under 1% in
+0.71% of matches; the shipped bagged XGBoost does so in 0.00%, and gives hier's
+50 worst matches a mean 18.3% (min 2.3%). The fit re-maps the feature and the
+tail collapses. Removing the feature costs +0.0092 log-loss (5/5 paired folds,
+se 0.0008), reproducing round 13's -0.0094 when it was added; removing all four
+hier columns costs +0.0134. Fixing the standalone bug is an upside experiment on
+a feature, not a correctness fix, and is not blocking anything. Issue left open
+for the standalone defect itself; the comment on #1 carries the tables.
+
 ## Standing corrections
 
 - **`RESUME-beat-elo.md` is stale from round 11 onward.** It still quotes a

@@ -90,11 +90,12 @@
    "Recently landed" below.
 
 8. **[#1](https://github.com/peteowen1/dropshotverse/issues/1) — hier
-   tail-calibration bug** makes `hierarchical_model.py` score worse than random
-   in its own standalone predictions. Ticket 31 corrected the earlier diagnosis:
-   a refit changes nothing and neither does XGBoost. Not established whether the
-   defect contaminates `hier_logit_pwinner` as an XGBoost input or is absorbed
-   by the downstream fit — never tested directly.
+   tail-calibration bug — DOWNGRADED 2026-09-06 (D-12).** Tested directly: the
+   shipped XGBoost does not inherit the tail (winners under 1%: 0.00% vs hier's
+   0.71% on the same rows) and needs the feature (+0.0092 without it, 5/5
+   folds). The standalone defect is real and unfixed but blocks nothing
+   shipped. Only worth picking up as "would a fixed hier make a better
+   feature", which is an upside experiment.
 
 9. **[#5](https://github.com/peteowen1/dropshotverse/issues/5)** — publish
    match-pairing/fixture data so the blog can build a real bracket.
