@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
+import sys
+sys.path.insert(0, r"C:\dev\dropshotverse\dropshotdata\scripts")   # archived 2026-09-06: elo_baseline / train_best_model stayed in scripts/
 import train_best_model as tbm
 
 SCRATCH = tbm.SCRATCH

@@ -33,6 +33,8 @@ import math
 import numpy as np
 import pandas as pd
 
+import sys
+sys.path.insert(0, r"C:\dev\dropshotverse\dropshotdata\scripts")   # archived 2026-09-06: elo_baseline / train_best_model stayed in scripts/
 from elo_baseline import (
     load_matches, prepare, run_elo, score, EVAL_YEARS, START,
     uts_kfunction,
