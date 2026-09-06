@@ -31,15 +31,13 @@
 1. **[#5](https://github.com/peteowen1/dropshotverse/issues/5)** — publish
    match-pairing/fixture data so the blog can build a real bracket. No blog
    consumer exists yet.
-2. **Between events: a ratings-led page that is actually current** (option A,
-   chosen 2026-09-06). Plan: [plans/between-events-ratings.md](plans/between-events-ratings.md).
-   Found while scoping: `ratings.parquet` was built once on 2026-08-29 and the
-   site labels it "Updated today" because the laptop re-uploads it every 30
-   min; the index page does not read `event_status`, so after the final the
-   bracket renders as live. Order: fix the date label on the blog, then a
-   daily `ratings-refresh.yml` (profile the Elo regen first), then the
-   finished-event hero. Option B (a Beijing forecast, field seeds ~09-23)
-   follows.
+2. **Between events: a ratings-led page** (option A). dropshotverse side DONE
+   2026-09-07: `ratings-refresh.yml` daily 06:00 UTC (3 min 50 s), hard
+   anchors, `ratings_as_of` column, warn-level alarm; first real run
+   published. Blog side: date label fixed on inthegame-blog dev; the
+   finished-event hero is **inthegame-blog#660** (ITG session). Then option B,
+   a Beijing forecast (field seeds ~2026-09-23).
+   Plan: [plans/between-events-ratings.md](plans/between-events-ratings.md).
 3. ~~**Live sim: five measured fixes**~~ — **DONE 2026-09-06**: 270 s to 68 s
    steady state (127 s on a cold snapshot cache), every function verified
    identical on the live inputs and the seeded end-to-end output compared.
