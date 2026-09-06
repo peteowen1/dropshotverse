@@ -66,9 +66,9 @@ list and the fresh-clone commands: [`dropshotdata/docs/README.md`](../dropshotda
 
 - **US Open 2026 projections** refresh to R2 every 30 minutes from the laptop
   task `DropshotverseUSOpenLiveSim`. `live-projection.yml` on GitHub Actions
-  is the backup: the ITG Worker's `*/30` cron dispatches it only when the R2
-  copy is more than 40 minutes old (D-13, D-14), once its PAT exists. See
-  NEXT-STEPS "Awaiting Pete".
+  is the armed backup: the ITG Worker's `*/30` cron dispatches it only when
+  the R2 copy is more than 40 minutes old (D-13, D-14); a run takes under
+  three minutes on Linux.
 - **Freshness alarm**: `check-freshness.yml` reads the public R2 copy and
   fails a run, which mails Pete, if the file is stale while an event is live.
   It rides the same sporadic scheduler, so a quiet hour is not proof of health.
