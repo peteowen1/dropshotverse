@@ -212,7 +212,11 @@ def build_ratings_table(models: list, cat_levels: dict, playstyle_full: pd.DataF
         # player the archive has no age row for must read as missing rather than
         # as the 24.0 default the model is fed. The model still receives the
         # default (see latest_age_at); only the published column changes.
-        defaulted = [u for u in field_uids if age_is_defaulted(age_table, u, as_of)]
+        # One pass over the age table rather than one per player (review note):
+        # age_is_defaulted asks the same question, but build_player_table has
+        # already scanned the table once per player and this would double it.
+        known = set(age_table.loc[age_table["date"] < as_of, "uid"])
+        defaulted = [u for u in field_uids if u not in known]
         if defaulted:
             log(f"  [{tour}] {len(defaulted)} player(s) have no age in the archive; "
                 f"publishing age as null, model still sees {AGE_DEFAULT}: "
