@@ -101,6 +101,19 @@ hier columns costs +0.0134. Fixing the standalone bug is an upside experiment on
 a feature, not a correctness fix, and is not blocking anything. Issue left open
 for the standalone defect itself; the comment on #1 carries the tables.
 
+**D-13 — 2026-09-06: the live projection publishes from GitHub Actions, on a
+Windows runner, from two Releases.** Closes issue #4's design. Windows rather
+than Linux because every pipeline script hard-codes `C:\dev\dropshotverse\...`;
+a junction at that path makes them resolve, and changing paths mid-event on
+the files the laptop task was running from was the wrong day for it. The
+derived inputs (Elo replays, layoff table, the shipped 5-seed bag) became a
+second Release, `model-inputs-2026-09`, alongside the raw archive; the 266 MB
+prepared-matches pickle was deliberately not published and is rebuilt on the
+runner in ~20 s. The R2 token reused is the one the laptop already uploaded
+with, Pete's call on 2026-09-06 over minting an R2-only token. The freshness
+alarm reads the public R2 URL hourly from a separate secret-free workflow, so
+it keeps working if the producer's credentials break.
+
 ## Standing corrections
 
 - **`RESUME-beat-elo.md` is stale from round 11 onward.** It still quotes a

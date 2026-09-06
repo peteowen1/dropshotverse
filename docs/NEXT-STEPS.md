@@ -74,19 +74,18 @@
    and disqualifying for the all-time GOAT list. D-11 in
    [DECISIONS.md](DECISIONS.md).
 
-4. **[#4](https://github.com/peteowen1/dropshotverse/issues/4) — blog refresh
-   on GitHub Actions: BUILT 2026-09-06, needs two secrets to go live.**
-   `.github/workflows/live-projection.yml` runs the full live sim on a Windows
-   runner from two Releases (`sackmann-archive`, `model-inputs-2026-09`). Its
-   30-minute schedule is commented out until **`CLOUDFLARE_R2_TOKEN`** (R2
-   token scoped to `inthegame-data`) and **`CLOUDFLARE_ACCOUNT_ID`** exist as
-   repo secrets; until then a manual run builds and fails loudly at upload.
-   Once the secrets are in: uncomment the cron, watch one scheduled run, then
-   disable the local `DropshotverseUSOpenLiveSim` task. Long-term follow-up:
-   the scripts hard-code `C:\dev\dropshotverse\...`, so the runner uses a
-   junction; making paths relative is a separate change.
-   `check-freshness.yml` (hourly, public R2 URL, no secrets) is already live
-   and green; a stale-while-live file now fails a run and mails Pete.
+4. **[#4](https://github.com/peteowen1/dropshotverse/issues/4) — live
+   projection now runs from GitHub Actions. LIVE 2026-09-06 15:05 local.**
+   `live-projection.yml` on a 30-minute cron: fetches `sackmann-archive` and
+   `model-inputs-2026-09` Releases, simulates, validates, uploads to R2, then
+   re-reads the PUBLIC copy to prove it landed. First full run with secrets:
+   5 min 15 s, every step green. Secrets `CLOUDFLARE_R2_TOKEN` (the same token
+   the laptop used, Pete's call) and `CLOUDFLARE_ACCOUNT_ID` set 15:00 local.
+   `check-freshness.yml` (hourly, no secrets) is the alarm. Remaining: disable
+   the local `DropshotverseUSOpenLiveSim` task after one SCHEDULED run is green
+   (the proof so far is a manual run). Follow-up, separate change: make the
+   scripts' paths relative so the workflow can drop the `C:\dev` junction and
+   run on Linux. D-13.
 
 ## Open queue
 
