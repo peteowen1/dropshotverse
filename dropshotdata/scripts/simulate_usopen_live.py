@@ -39,7 +39,7 @@ import bridge_tennismylife as bridge
 import hierarchical_model as hm
 import simulate_tournament_updating as stu
 import usopen_live_draw as draw_mod
-from simulate_tournament import STAGE_ORDER
+from simulate_tournament import DD, STAGE_ORDER
 from simulate_tournament_xgb import build_round_pred_matrices
 from xgb_bt_rating import (build_h2h_dict, build_player_table, load_age_table,
                            train_bagged_model)
@@ -224,7 +224,9 @@ def main() -> None:
         draws[tour] = d
         metas[f"{tour}:2026-usopen"] = {"date0": DATE0, "field_uids": sorted(set(d["bracket"]))}
 
-    all_snaps = stu.build_snapshots(metas, df=df)
+    # Snapshot cache (ticket 40): the replay is a pure function of the field,
+    # DATE0 and the rows before it, so a same-day rerun loads it from disk.
+    all_snaps = stu.build_snapshots(metas, df=df, cache_dir=DD / "tune_scratch" / "snapshot_cache")
 
     out = {}
     for tour in ("atp", "wta"):

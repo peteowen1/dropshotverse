@@ -43,6 +43,8 @@ import unicodedata
 import urllib.request
 from pathlib import Path
 
+import pandas as pd
+
 FEED_URL = "https://www.usopen.org/en_US/scores/feeds/2026/draws/{code}.json"
 EVENT_CODE = {"atp": "MS", "wta": "WS"}
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -118,16 +120,25 @@ def build_name_to_uid(df) -> dict[str, str]:
     On a name collision the most RECENT appearance wins, which is the right tie
     break here: the draw is current players, and stale homonyms from decades ago
     would otherwise capture the name."""
-    name2uid: dict[str, str] = {}
-    last: dict[str, object] = {}
+    # Vectorised 2026-09-06 (ticket 40): the row loop normalised ~2.4M names
+    # one character at a time and was 12% of a live run. Same semantics:
+    # winner column first then loser column, rows in order, most recent date
+    # wins, and on an equal date the FIRST occurrence wins (the old strict >).
+    # groupby().idxmax() returns the first row holding the group maximum in
+    # original order, which is exactly that rule. Verified identical by
+    # tune_scratch/verify_perf_live_path.py.
+    parts = []
     for col_u, col_n in (("winner_uid", "winner_name"), ("loser_uid", "loser_name")):
         sub = df[[col_u, col_n, "date"]].dropna()
-        for uid, name, date in sub.itertuples(index=False):
-            k = _norm(name)
-            if k not in last or date > last[k]:
-                last[k] = date
-                name2uid[k] = uid
-    return name2uid
+        parts.append(pd.DataFrame({"uid": sub[col_u].values, "name": sub[col_n].values,
+                                   "date": sub["date"].values}))
+    long = pd.concat(parts, ignore_index=True)
+    if not len(long):
+        return {}
+    uniq = pd.Series(long["name"].unique())
+    long["key"] = long["name"].map(dict(zip(uniq, uniq.map(_norm))))
+    best = long.loc[long.groupby("key", sort=False)["date"].idxmax()]
+    return dict(zip(best["key"], best["uid"]))
 
 
 def _player(team: dict) -> tuple[str, str] | None:

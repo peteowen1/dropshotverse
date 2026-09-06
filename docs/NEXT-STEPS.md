@@ -44,22 +44,31 @@
    outside the Slams' own feeds; a "projected field from top-N by rating" is
    the honest fallback and must be labelled as such.
    Plan: [plans/after-the-us-open.md](plans/after-the-us-open.md).
-3. **Make the scripts' paths relative** so `live-projection.yml` can drop the
+3. ~~**Live sim: five measured fixes**~~ — **DONE 2026-09-06**: 270 s to 68 s
+   steady state (127 s on a cold snapshot cache), every function verified
+   identical on the live inputs and the seeded end-to-end output compared.
+   Left on the table: the prepare-cache bypass (~20 s) and `hm.p_match` in
+   the pairwise loop. [issues/40](../.scratch/dropshot-tennis-engine/issues/40-live-sim-profile-and-redundancy.md).
+4. **Cull `scripts/`**: 27 superseded `train_xgb_*`/`tune_*` files (3,463
+   lines, no importers) to `scripts/archive/`, ~56 MB of unreferenced
+   `hier_v*` pickles/parquets deleted, one `_common.py` for the eight
+   duplicated helpers. Inventory in ticket 40. Pairs naturally with item 5.
+5. **Make the scripts' paths relative** so `live-projection.yml` can drop the
    `C:\dev\dropshotverse` junction and run on Linux. Every pipeline script
    hard-codes the absolute path. Do it between events, not during one.
-4. **The surface rating is not a self-correcting rating.** `elo_baseline.py:409`
+6. **The surface rating is not a self-correcting rating.** `elo_baseline.py:409`
    updates it with the blended `p_w`, which at `blend=0.0` is entirely overall
    Elo, so it accumulates residuals bucketed by surface with no feedback loop
    (std 498 vs 180). `elo_surface_diff` **is** an XGBoost feature. Whether it
    should use `p_s` is untested.
-5. **[#1](https://github.com/peteowen1/dropshotverse/issues/1) — hier tail
+7. **[#1](https://github.com/peteowen1/dropshotverse/issues/1) — hier tail
    bug, downgraded (D-12).** The shipped model does not inherit it and needs
    the feature (+0.0092 without). Only worth picking up as "would a fixed hier
    make a better feature": an upside experiment.
-6. **[#2](https://github.com/peteowen1/dropshotverse/issues/2)** — the WTA
+8. **[#2](https://github.com/peteowen1/dropshotverse/issues/2)** — the WTA
    public live-scores API. Its in-play fields have never been observed
    populating.
-7. **`DropshotverseUSOpenCapture` exits 1 intermittently.** Cause unknown;
+9. **`DropshotverseUSOpenCapture` exits 1 intermittently.** Cause unknown;
    597/597 matches captured, so not chased.
 
 ## Live deadlines (absolute dates)

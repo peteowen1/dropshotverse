@@ -283,9 +283,16 @@ def build_playstyle_features() -> pd.DataFrame:
     long_l = arc[["orig_idx", "loser_uid", "serve_pct_l", "return_pct_l"]].rename(
         columns={"loser_uid": "uid", "serve_pct_l": "serve_pct", "return_pct_l": "return_pct"})
     long_all = pd.concat([long_w, long_l], ignore_index=True).sort_values(["uid", "orig_idx"], kind="stable")
+    # groupby().ewm() is the cythonised path; the per-group Python lambda it
+    # replaces was 35 s of every live run on frozen data (ticket 40). Same
+    # shift-then-EWM per player. Verified identical by
+    # tune_scratch/verify_perf_live_path.py.
     for col in ("serve_pct", "return_pct"):
-        long_all[f"{col}_form"] = long_all.groupby("uid")[col].transform(
-            lambda s: s.shift(1).ewm(span=15, min_periods=3).mean())
+        shifted = long_all.groupby("uid")[col].shift(1)
+        long_all["_shifted"] = shifted
+        ew = long_all.groupby("uid")["_shifted"].ewm(span=15, min_periods=3).mean()
+        long_all[f"{col}_form"] = ew.reset_index(level=0, drop=True).reindex(long_all.index).values
+    long_all = long_all.drop(columns=["_shifted"])
 
     fw = long_all.rename(columns={"uid": "winner_uid", "serve_pct_form": "serve_form_w",
                                    "return_pct_form": "return_form_w"})[
