@@ -1,5 +1,15 @@
 # Rating model report: XGBoost (shipped predictor)
 
+> **Update 2026-09-06.** The 0.00073 gap below is on the 2024-25 holdout,
+> which had been revealed at least a dozen times and is retired (D-10). The
+> clean measurement is the 2026 forward test (`issues/36`): on 2,654 untouched
+> Jan-May 2026 matches the model scored 0.59638 against the market's 0.57168,
+> and was right 38.0% of the time when it dissented (CI [32.3, 43.8]). That
+> is an upper bound on the shipped config's gap (the test ran the v1 feature
+> set); the shipped model's own 2026 number was deliberately not measured,
+> since a 38% dissent accuracy leaves no edge worth sizing. Everything else in
+> this report still describes what is live.
+
 Per the `ratings-strength-models` skill's reporting template. Consolidated
 2026-08-31 from tickets 27, 28, 29 - no new analysis, existing results
 only. **This is the live predictor** feeding inthegame-data R2 (ratings +
