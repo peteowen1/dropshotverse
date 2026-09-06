@@ -44,15 +44,11 @@
    outside the Slams' own feeds; a "projected field from top-N by rating" is
    the honest fallback and must be labelled as such.
    Plan: [plans/after-the-us-open.md](plans/after-the-us-open.md).
-3. **Live sim: five measured fixes take a 4.5-minute run to under a minute.**
-   cProfile (ticket 40) puts 85% of the time in five functions, three of them
-   pure Python over frozen data: `bridge_tennismylife.build_name_to_id` (38%,
-   `iterrows` over 931K rows), the hier replay `build_snapshots` (17%,
-   cacheable per date0), `usopen_live_draw.build_name_to_uid` (12%),
-   `build_pairwise_features_base` (11%, pandas indexing in a 128x127 loop),
-   `build_playstyle_features` (7%). Each must verify bit-identical on
-   `live_predictions.parquet`. Do between events or on a branch.
-   [issues/40](../.scratch/dropshot-tennis-engine/issues/40-live-sim-profile-and-redundancy.md).
+3. ~~**Live sim: five measured fixes**~~ — **DONE 2026-09-06**: 270 s to 68 s
+   steady state (127 s on a cold snapshot cache), every function verified
+   identical on the live inputs and the seeded end-to-end output compared.
+   Left on the table: the prepare-cache bypass (~20 s) and `hm.p_match` in
+   the pairwise loop. [issues/40](../.scratch/dropshot-tennis-engine/issues/40-live-sim-profile-and-redundancy.md).
 4. **Cull `scripts/`**: 27 superseded `train_xgb_*`/`tune_*` files (3,463
    lines, no importers) to `scripts/archive/`, ~56 MB of unreferenced
    `hier_v*` pickles/parquets deleted, one `_common.py` for the eight

@@ -60,6 +60,24 @@ Also seen, not on the live path: `capture_usopen.poll()` re-fetches
 completed matches every cycle because `seen_final` is written but never
 checked. `once()` (the mode the task runs) is unaffected.
 
+## Result (2026-09-06, branch `perf/live-sim`)
+
+All five shipped, each verified identical to the old code on the live inputs
+(`tune_scratch/verify_perf1_name_to_id.py`, `verify_perf_live_path.py`):
+
+| fix | before | after |
+|---|---:|---:|
+| 1 `build_name_to_id` (both tours) | 88 s | 7 s (the CSV reads) |
+| 2 `build_snapshots` | 56 s | 2.5 s on a cache hit; keyed by field key, date0 and a hash of every row before date0 |
+| 3 `build_name_to_uid` | 11-23 s | 2-3 s |
+| 4 `build_pairwise_features_base` (both tours) | 17 s | 10 s (the rest is `hm.p_match`) |
+| 5 `build_playstyle_features` | 13 s | 7 s |
+| **full run, 20,000 sims** | **270 s** | **127 s cold cache, 68 s steady state** |
+
+Not done: the prepare-cache bypass (rank 6, ~20 s) and `p_match` in the
+pairwise loop. Both are next if the runner time matters; neither is worth it
+for the laptop.
+
 ## Redundancy inventory of `dropshotdata/scripts/` (60 files)
 
 Nothing dead was found inside the live files (`simulate_usopen_live.py`,
