@@ -68,8 +68,10 @@ dropping the feature costs +0.0092 log-loss on 5/5 paired folds. Tables on
 [#1](https://github.com/peteowen1/dropshotverse/issues/1),
 script `tune_scratch/screen_hier_contamination.py`.
 
-**D-13 — 2026-09-06: the live projection publishes from GitHub Actions, on a
-Windows runner, from two Releases.** Windows because every script hard-codes
+**D-13 — 2026-09-06: the live projection publishes from GitHub Actions from
+two Releases.** (Windows runner plus a junction at first; moved to Linux the
+same evening once the live path resolved its own paths, PR #17: 2 min 45 s a
+run at 1x billing against 5 min at 2x.) Windows because every script hard-codes
 `C:\dev\dropshotverse\...` and a junction resolves it; the derived inputs
 became the `model-inputs-2026-09` Release; the R2 token reused is the laptop's
 (Pete's call over minting an R2-only one). Workflow header comments and
