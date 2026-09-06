@@ -83,5 +83,26 @@ the one number this plan is missing; everything else is known.
 
 - The world number 1 on each tour is top 3 by both Elo and BT.
 - A player who has not played in 52 weeks is absent.
-- `ratings_as_of` is within a week of today on every refresh, else the
-  bridge broke and the alarm must say so.
+- `ratings_as_of` advances whenever a new tournament enters the bridge;
+  more than 21 days without movement is logged as a warning (off-season is
+  legitimate), and the hourly alarm warns when the table itself is more than
+  three days old.
+
+## Status 2026-09-07
+
+- **Step 5 done** on inthegame-blog dev by the ITG session: the page labels
+  from the parquet ("Ratings as of {ratings_as_of}", else "Ratings built
+  {updated_at}"). **Step 6 filed as inthegame-blog#660.**
+- **Steps 1 to 4 shipped** (dropshotverse PR #20): `ratings-refresh.yml` daily
+  at 06:00 UTC on Linux. Dry run: Elo regeneration 38 s, ratings build 114 s,
+  3 min 50 s end to end; anchors PASS; Sinner/Alcaraz and Sabalenka/Gauff
+  top two on their tours. First real run published 347 rows the same night.
+- **Semantics worth knowing:** `ratings_as_of` is the start date of the
+  latest tournament in the bridged data, and the Elo shown is the rating
+  strictly BEFORE that date. An in-progress event is therefore excluded by
+  construction (consistent with the simulator's ratings freeze) and lands the
+  day the next tournament appears in the bridge. During a Slam the table
+  does not move; that is the design, not a stuck job.
+- **Staleness is a warning, not a gate:** the tour-level bridge brings
+  nothing for five to seven weeks in the off-season.
+

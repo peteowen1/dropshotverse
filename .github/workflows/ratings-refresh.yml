@@ -7,11 +7,11 @@
 # only (predictions.parquet is the LOCKED pre-tournament forecast and is not
 # touched), checks its anchors, and uploads that one file.
 #
-# SCHEDULE IS OFF until the first dry run has timed the Elo regeneration on
-# this runner (rule: profile before scheduling). Dispatch with dry_run=true,
-# read the step timings, then uncomment the cron. GitHub's cron is best-effort;
-# at daily granularity a few hours of drift is fine, and the hourly
-# check-freshness job warns when the table is more than three days old.
+# Measured on the first dry run (2026-09-06, run 34037818980): Elo regeneration
+# 38 s, ratings build 114 s, whole job 3 min 50 s on ubuntu-latest. Daily at
+# 06:00 UTC. GitHub's cron is best-effort; at daily granularity a few hours of
+# drift is fine, and the hourly check-freshness job warns when the table is
+# more than three days old.
 
 name: Ratings refresh
 
@@ -22,8 +22,8 @@ on:
         description: build and check but do not upload
         type: boolean
         default: false
-  # schedule:
-  #   - cron: "0 6 * * *"
+  schedule:
+    - cron: "0 6 * * *"
 
 concurrency:
   group: ratings-refresh
