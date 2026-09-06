@@ -25,6 +25,7 @@ import hashlib
 import unicodedata
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 DD = Path(r"C:\dev\dropshotverse\dropshotdata")
@@ -63,18 +64,33 @@ def build_name_to_id(tour: str) -> dict[str, int]:
     """Archive's own winner_name/loser_name -> winner_id/loser_id, tour-level
     files only (matches TML's 2026.csv scope) - same source of truth
     parse_us_open_draws.py's crosswalk used."""
-    name_to_id: dict[str, int] = {}
+    # Vectorised 2026-09-06 (ticket 40): the previous iterrows() over ~930K
+    # rows was 38% of a live run. Semantics kept exactly: files in the same
+    # order, rows in order, winner before loser within a row, and the LAST
+    # occurrence of a normalised name wins. Verified identical by
+    # tune_scratch/verify_perf1_name_to_id.py.
+    frames = []
     for suffix in ("", "_qual_chall", "_qual_itf"):
         for year in range(1995, 2027):
             p = DD / f"raw/github/{tour}/{tour}_matches{suffix}_{year}.csv"
             if not p.exists():
                 continue
-            df = pd.read_csv(p, low_memory=False, usecols=["winner_id", "winner_name", "loser_id", "loser_name"])
-            for _, row in df.iterrows():
-                if pd.notna(row["winner_id"]):
-                    name_to_id[norm(row["winner_name"])] = int(row["winner_id"])
-                if pd.notna(row["loser_id"]):
-                    name_to_id[norm(row["loser_name"])] = int(row["loser_id"])
+            frames.append(pd.read_csv(p, low_memory=False,
+                                      usecols=["winner_id", "winner_name", "loser_id", "loser_name"]))
+    name_to_id: dict[str, int] = {}
+    if frames:
+        df = pd.concat(frames, ignore_index=True)
+        # interleave winner/loser per row so the order matches the row loop
+        long = pd.DataFrame({
+            "name": np.column_stack([df["winner_name"].values, df["loser_name"].values]).ravel(),
+            "id": np.column_stack([df["winner_id"].values, df["loser_id"].values]).ravel(),
+        })
+        long = long[pd.notna(long["id"])]
+        uniq = pd.Series(long["name"].unique())
+        key_of = dict(zip(uniq, uniq.map(norm)))
+        long["key"] = long["name"].map(key_of)
+        last = long.drop_duplicates(subset="key", keep="last")
+        name_to_id = dict(zip(last["key"], last["id"].astype("int64").map(int)))
     for wiki_key, archive_key in MANUAL_NAME_OVERRIDES.items():
         if archive_key in name_to_id:
             name_to_id[wiki_key] = name_to_id[archive_key]
