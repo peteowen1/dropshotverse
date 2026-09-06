@@ -4,7 +4,7 @@
 > Decision log: [DECISIONS.md](DECISIONS.md) · Vault map: [HOME.md](HOME.md)
 > Created 2026-09-05 — this verse had no docs hub until then, and appeared in
 > neither `C:\dev\ECOSYSTEM.md` nor `C:\dev\vault\NEXT-STEPS.md` (both fixed).
-> Last updated: **2026-09-06**. Two big questions closed: the market chase is
+> Last updated: **2026-09-06 (evening)**. Live projection moved to GitHub Actions (D-13), #1 answered (D-12), five PRs merged. Earlier the same day: two big questions closed: the market chase is
 > settled (no edge, measured three ways) and issue #3 is decided (D-11, keep
 > Sackmann as base). WTA upcoming-tournament forecasting works end to end; the
 > in-match win-probability model has its first calibrated result.
@@ -59,13 +59,10 @@
    (`C:\dev\auspol\scripts\`), not citiusverse's; it was attributed by
    proximity in the process list, which was wrong.
 
-2. **[PR #8](https://github.com/peteowen1/dropshotverse/pull/8) is open, `dev` -> `main`, reviewed, awaiting Pete's merge** (opened 2026-09-06 after a two-reviewer Sonnet pass; merging closes #6 and #7). Original blocker text follows.
-   **30 commits on `dev`, no PR ever opened on this repo** (was 10 when first written). Same review-gate
-   conflict as row 1 of the cross-verse dashboard: `~/.claude/CLAUDE.md` requires
-   a reviewer-agent pass before any PR, and sessions have been running with
-   agents disabled. `main` has never received anything since it was created
-   2026-08-31. Includes the antisymmetry fix (#7), the 6-6 tiebreak fix, and
-   pairwise publishing (#6).
+2. ~~**No PR ever opened on this repo**~~ — **RESOLVED 2026-09-06.** PRs #8
+   through #12 merged, each after a Sonnet reviewer pass; `main` is now the
+   real branch. #8 carried the antisymmetry fix (#7), the 6-6 tiebreak fix and
+   pairwise publishing (#6), and closed both issues.
 
 3. ~~**#3 canonical base archive**~~ — **DECIDED and closed 2026-09-06.** Keep
    the frozen Sackmann archive as base, TML as live bridge. TML has ATP from
