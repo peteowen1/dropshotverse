@@ -231,13 +231,34 @@ def h2h_wins_before(h2h: dict, a: str, b: str, date0) -> tuple[int, int]:
     return a_wins, b_wins
 
 
+AGE_DEFAULT = 24.0   # archive-wide rough median tour debut age
+
+
 def latest_age_at(age_table: pd.DataFrame, uid: str, date0) -> float:
+    """Age at date0, or AGE_DEFAULT when the archive has no row for this player.
+
+    The default is fed to the model on purpose: training never saw a missing
+    age, so serving NaN would be the same train/serve mismatch as F4. Callers
+    that PUBLISH age must not present the default as a measurement - use
+    `age_is_defaulted` to tell them apart. FABLE-redteam-2026-09-07 F5.
+    """
     sub = age_table[(age_table["uid"] == uid) & (age_table["date"] < date0)]
     if not len(sub):
-        return 24.0   # archive-wide rough median tour debut age; only hit for a player with zero prior rows
+        return AGE_DEFAULT
     last = sub.iloc[-1]
     years_elapsed = (date0 - last["date"]).days / 365.25
     return float(last["age"]) + years_elapsed
+
+
+def age_is_defaulted(age_table: pd.DataFrame, uid: str, date0) -> bool:
+    """True when latest_age_at fell back to AGE_DEFAULT for this player.
+
+    Not `age == AGE_DEFAULT`: on 2026-08-30 four of the twelve published rows
+    sitting at exactly 24.0 were real ages that rounded there (Cazaux, Samuel,
+    Parry, Fernandez, all 23.7-23.96 carried forward), and only eight were the
+    default. The value cannot distinguish them; the absence of a row can.
+    """
+    return not len(age_table[(age_table["uid"] == uid) & (age_table["date"] < date0)])
 
 
 def _latest_rating_lookup(path: str, tour: str, date0, field_uids: list[str],

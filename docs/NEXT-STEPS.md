@@ -135,9 +135,16 @@ Still open from those reviews, in the order they are worth doing:
    probability moving more than **0.002**. Serve now matches training; treat
    it as a correctness fix and do not expect it in any metric.
    Measurement: `tune_scratch/screen_h2h_train_serve_skew.py`.
-2. **F5 — twelve published players carry the hard-coded default age 24.0**,
-   because the age table is built from the frozen CSVs and not the bridge.
-   Publish NA when defaulted, or carry age from the bridge.
+2. ~~**F5 — published players carrying the default age 24.0.**~~ **FIXED
+   2026-09-07, and the count was wrong.** Only **8** of the 12 rows sitting at
+   exactly 24.0 were the default; the other 4 (Cazaux, Samuel, Parry,
+   Fernandez) were real ages of 23.7 to 23.96 carried forward and rounded to
+   one decimal. The published value cannot tell them apart, so the check is now
+   the absence of an age row, not the value. `age` publishes as null when the
+   archive has no row; the model still receives 24.0, because training never
+   saw a missing age and serving NaN would be the same train/serve mismatch as
+   F4. The age table is still frozen-archive only (max 2026-05-25); carrying
+   age from the bridge is the fuller fix and is not done.
 3. **W2 — there is no repeatable out-of-time measurement left.** Yearly
    walk-forward as the standing scorecard. This gates W1, W3 and W4, which are
    the model work (the largest being that the bookmaker price already in the

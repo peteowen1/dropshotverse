@@ -45,8 +45,9 @@ import hierarchical_model as hm
 import train_best_model as tbm
 from simulate_tournament import DD, STAGE_ORDER
 import simulate_tournament_updating as stu
-from xgb_bt_rating import build_h2h_dict, build_pairwise_features_base, build_player_table, load_age_table, \
-    prep_X_d, train_bagged_model
+from xgb_bt_rating import (AGE_DEFAULT, age_is_defaulted, build_h2h_dict,
+                           build_pairwise_features_base, build_player_table,
+                           load_age_table, prep_X_d, train_bagged_model)
 
 SCRATCH = DD / "tune_scratch"
 BLOG_DIR = DD / "blog"
@@ -207,12 +208,22 @@ def build_ratings_table(models: list, cat_levels: dict, playstyle_full: pd.DataF
         np.fill_diagonal(d, 0.0)
         bt_rating = {uid: float(np.nanmean(d[k, :])) for k, uid in enumerate(field_uids)}
 
+        # FABLE-redteam-2026-09-07 F5: `age` is published as a measurement, so a
+        # player the archive has no age row for must read as missing rather than
+        # as the 24.0 default the model is fed. The model still receives the
+        # default (see latest_age_at); only the published column changes.
+        defaulted = [u for u in field_uids if age_is_defaulted(age_table, u, as_of)]
+        if defaulted:
+            log(f"  [{tour}] {len(defaulted)} player(s) have no age in the archive; "
+                f"publishing age as null, model still sees {AGE_DEFAULT}: "
+                f"{[name_lookup.get(u, u) for u in defaulted][:8]}")
+        defaulted_set = set(defaulted)
         for uid in field_uids:
             rows.append({
                 "player_id": uid, "player_name": name_lookup.get(uid, uid), "tour": tour,
                 "elo_overall": round(float(ptab.loc[uid, "ro"]), 1),
                 "bt_rating": round(bt_rating[uid], 2),
-                "age": round(float(ptab.loc[uid, "age"]), 1),
+                "age": None if uid in defaulted_set else round(float(ptab.loc[uid, "age"]), 1),
             })
     return pd.DataFrame(rows)
 
