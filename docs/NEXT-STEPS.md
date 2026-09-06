@@ -87,6 +87,11 @@
 
 ## Recently landed (2026-09-06)
 
+- **Evening batch (PRs #15-#18):** live sim 276 s to 68 s with outputs
+  identical (ticket 40); `scripts/` culled 77 to 45 files and 55 MB of dead
+  artefacts removed; the live path resolves its own paths via `_common.py`
+  and the Actions runner moved to Linux (2 min 45 s a run); the capture
+  task's exit 1 traced to an uncaught connection reset and fixed.
 - **Live projection can run from GitHub Actions** (D-13): `live-projection.yml`
   from the `sackmann-archive` and `model-inputs-2026-09` Releases, proven end
   to end. Its cron was removed the same day (D-14): GitHub fired it once in
