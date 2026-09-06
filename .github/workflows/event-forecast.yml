@@ -87,16 +87,19 @@ jobs:
           extra=""
           if [ "${{ inputs.allow_partial }}" = "true" ]; then extra="--allow-partial"; fi
           python simulate_wta_event.py --group "${{ inputs.group_id }}" --year "${{ inputs.year }}" \
-            --sims "${{ inputs.sims }}" $extra
+            --sims "${{ inputs.sims }}" --no-refetch $extra
 
       - name: Validate
         shell: bash
+        env:
+          EVENT_ID: ${{ inputs.year }}-${{ inputs.group_id }}
         run: |
           python - <<'EOF'
+          import os
           import pandas as pd
           d = pd.read_parquet("dropshotdata/blog/upcoming_predictions.parquet")
           print(d.shape, "events:", sorted(d["tournament_id"].unique()))
-          ev = d[d["tournament_id"] == f"${{ inputs.year }}-${{ inputs.group_id }}"]
+          ev = d[d["tournament_id"] == os.environ["EVENT_ID"]]
           print(ev.iloc[0][["tournament_name", "start_date", "field_status", "source", "ratings_as_of"]].to_string())
           print(ev.nlargest(8, "p_title")[["player_name", "seed", "p_title", "p_f"]].to_string(index=False))
           EOF
