@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import _common
+from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -71,7 +72,10 @@ def fetch(path: str, tries: int = 3) -> bytes | None:
                 continue
             log(f"  HTTP {e.code} {url}")
             return None
-        except (URLError, TimeoutError) as e:
+        except (URLError, TimeoutError, OSError, HTTPException) as e:
+            # OSError covers ConnectionResetError mid-read (a WinError 10054
+            # killed a whole sweep on 2026-09-02, the task's intermittent exit
+            # 1); HTTPException covers IncompleteRead. Neither is a URLError.
             if attempt < tries - 1:
                 time.sleep(backoff)
                 backoff *= 3
