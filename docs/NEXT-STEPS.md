@@ -31,12 +31,15 @@
 1. **[#5](https://github.com/peteowen1/dropshotverse/issues/5)** — publish
    match-pairing/fixture data so the blog can build a real bracket. No blog
    consumer exists yet.
-2. **Forecasts for events after the US Open: WTA solved, ATP not.**
-   `fetch_wta_upcoming.py` gets real calendar and entry lists weeks ahead
-   (100% entrant resolution across four events). ATP has no entry-list source
-   outside the Slams' own feeds; a "projected field from top-N by rating" is
-   the honest fallback and must be labelled as such.
-   Plan: [plans/after-the-us-open.md](plans/after-the-us-open.md).
+2. **Between events: a ratings-led page that is actually current** (option A,
+   chosen 2026-09-06). Plan: [plans/between-events-ratings.md](plans/between-events-ratings.md).
+   Found while scoping: `ratings.parquet` was built once on 2026-08-29 and the
+   site labels it "Updated today" because the laptop re-uploads it every 30
+   min; the index page does not read `event_status`, so after the final the
+   bracket renders as live. Order: fix the date label on the blog, then a
+   daily `ratings-refresh.yml` (profile the Elo regen first), then the
+   finished-event hero. Option B (a Beijing forecast, field seeds ~09-23)
+   follows.
 3. ~~**Live sim: five measured fixes**~~ — **DONE 2026-09-06**: 270 s to 68 s
    steady state (127 s on a cold snapshot cache), every function verified
    identical on the live inputs and the seeded end-to-end output compared.
