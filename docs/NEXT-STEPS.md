@@ -10,25 +10,18 @@
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
 >   [issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md).
 > - The live US Open projection publishes from the laptop task; GitHub
->   Actions is the backup, dispatched by the ITG Worker only when R2 goes
->   stale (D-13, D-14). The Worker needs a PAT first (Awaiting Pete 1).
+>   Actions is the armed backup, dispatched by the ITG Worker only when R2
+>   goes stale (D-13, D-14). Nothing is waiting on Pete for it.
 > - `main` is real: PRs #8-#12 merged 2026-09-06, each reviewed.
 
 ## Awaiting Pete
 
-1. **Mint the GitHub token that lets the ITG Worker trigger the Actions
-   producer (D-14).** GitHub's own cron fired once in two hours, and a
-   Windows-runner `*/30` cron would burn ~500 billed minutes a day against
-   the 2,000-minute free allowance, so the schedule is removed. The ITG
-   Worker's existing `*/30` cron now calls `workflow_dispatch` ONLY when R2's
-   `tennis/live_predictions.parquet` is >40 min old and only until
-   `TENNIS_LIVE_UNTIL` (2026-09-16T02:00Z, in `worker/wrangler.toml`). It
-   needs a **fine-grained PAT**: github.com/settings/personal-access-tokens,
-   repository access = `peteowen1/dropshotverse` only, permission
-   **Actions: read and write**, expiry short. Then in
-   `C:\dev\inthegame-blog\worker`: `wrangler secret put GITHUB_DISPATCH_TOKEN`.
-   Until then the Worker logs "token not set" and the laptop is the only
-   producer. Keep `DropshotverseUSOpenLiveSim` through the final regardless.
+1. ~~**Mint the GitHub token for the ITG Worker**~~ — **DONE 2026-09-06 13:41
+   UTC** (the gh CLI token, Pete's call). The backup producer is armed: the
+   Worker dispatches `live-projection.yml` when R2 is >40 min stale, until
+   `TENNIS_LIVE_UNTIL` (2026-09-16T02:00Z). Verified by an API dispatch: green
+   in 2 min 43 s. #4 closed. Laptop stays primary through the final by choice;
+   per event, bump `TENNIS_LIVE_UNTIL` and `INPUTS_TAG` if the vintage changed.
 2. **Do not publish a "we match the market" claim** (D-4, a recommendation):
    the 0.00073 gap is from a burnt holdout, and the 2026 forward test puts the
    honest gap at 0.0247 with 38% accuracy when dissenting.
