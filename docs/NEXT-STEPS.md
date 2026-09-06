@@ -70,8 +70,9 @@
 8. **[#2](https://github.com/peteowen1/dropshotverse/issues/2)** — the WTA
    public live-scores API. Its in-play fields have never been observed
    populating.
-9. **`DropshotverseUSOpenCapture` exits 1 intermittently.** Cause unknown;
-   597/597 matches captured, so not chased.
+9. ~~**`DropshotverseUSOpenCapture` exits 1 intermittently.**~~ — **FIXED
+   2026-09-06**: a `ConnectionResetError` mid-read escaped `fetch()`'s retry
+   (it is an `OSError`, not a `URLError`) and killed the sweep. Now retried.
 
 ## Live deadlines (absolute dates)
 
