@@ -154,12 +154,16 @@
   log nobody reads is not an alarm. The honest home is the ops health-check
   workflow reading the public R2 URL, which is #4 territory and needs Pete's
   Cloudflare secrets.
-- **`DropshotverseUSOpenCapture` returns exit 1 intermittently.** Cause looks
-  clear from the log: it runs a **full 595-match backfill on every invocation**
-  (~50 minutes) while scheduled **every 5 minutes**, so runs overlap. Harmless
-  so far — 597/597 matches have history feeds and 93,663 points are captured —
-  but it is wasted load and the likely source of the exit code. A `--since`
-  or lock-file fix is the obvious answer.
+- **~~`DropshotverseUSOpenCapture` re-runs a full backfill every 5 minutes~~ —
+  diagnosis was wrong, real defect FIXED 2026-09-06.** The backfill ran only on
+  the `:04` UTC tick each hour, but took ~60 min (598 matches x 6 feeds x 0.7 s
+  courtesy delay), and the task's `MultipleInstances=IgnoreNew` meant runs never
+  overlapped: instead every 5-minute live sweep during that hour was dropped.
+  Live point capture was blind roughly every other hour (log: backfills at 12,
+  14, 16, 17, 19, 20, 22, 00, 02, 04 UTC). `backfill()` is now incremental via
+  `reference/backfill_done.json` (seeded with 593 settled ids); a pass takes
+  ~50 s. `capture_usopen.py backfill --full` forces the old behaviour. The
+  intermittent exit 1 is still unexplained and still not chased.
 - **The surface rating is not a self-correcting rating.**
   `elo_baseline.py:409` updates it with the blended `p_w`, which at `blend=0.0`
   comes entirely from OVERALL Elo — so it accumulates overall-Elo residuals
