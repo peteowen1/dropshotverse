@@ -20,12 +20,13 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+import _common
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 BASE = "https://www.usopen.org"
 YEAR = 2026
-import _common
 OUT = _common.RAW / "usopen" / str(YEAR)
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")

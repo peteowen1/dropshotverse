@@ -53,7 +53,6 @@ from xgb_bt_rating import build_h2h_dict, build_pairwise_features_base, build_pl
     prep_X_d, train_bagged_model
 
 import _common
-DD = str(_common.DD)
 # The entrant lists are INPUTS, so they live in the repo. They used to be read
 # from a Claude Code session scratchpad under %TEMP%, keyed by a session UUID -
 # which meant this script, the source of truth for the locked pre-tournament

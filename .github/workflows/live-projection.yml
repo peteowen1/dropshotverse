@@ -11,9 +11,9 @@
 # the runner bills at 1x instead of Windows' 2x.
 #
 # NO `schedule:` TRIGGER, on purpose. GitHub's cron fired once in two hours
-# on 2026-09-06, and this job runs on a Windows runner (billed 2x) against a
-# 2,000-minute monthly free allowance: a `*/30` cron that GitHub did honour
-# would burn about 500 billed minutes a day. The trigger is the ITG Cloudflare
+# on 2026-09-06, and even on a Linux runner a `*/30` cron that GitHub did
+# honour would burn about 250 billed minutes a day against a 2,000-minute
+# monthly free allowance. The trigger is the ITG Cloudflare
 # Worker's */30 cron (inthegame-blog worker/src/index.js,
 # maybeTriggerTennisProjection), which calls workflow_dispatch here ONLY when
 # R2's tennis/live_predictions.parquet is more than 40 minutes old, i.e. when
