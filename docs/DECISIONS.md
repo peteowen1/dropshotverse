@@ -214,4 +214,24 @@ Consequences to hold onto:
   with 32 byes, so in the round after the byes a seed meets someone who has
   played a match and the true difference is -1. Untested, and it reaches the
   WTA event forecaster rather than the US Open path.
+- **D-36 (2026-09-07)** — Data-source survey, after Sackmann's repos died. What
+  is free and current, probed rather than assumed (~25 endpoints, 5 providers):
+  **ESPN** is live and has the US Open (239 matches a draw, scores and set
+  lines) but NO serve statistics and NO point-by-point - its `plays` resource
+  returns `count: 0`. **The WTA API** is live and real (18,787 tournaments,
+  36,138 players, `/tournaments/{id}/{year}/matches` works) but is scores only.
+  **atptour.com** is 403 behind Cloudflare. **Sofascore** is 403.
+  **tennismylife** is the only tour-wide source with serve stats and lags 8-14
+  days - it had no US Open at all on 2026-09-07, mid-tournament.
+- **D-37 (2026-09-07)** — The slam feeds are the richest free tennis data
+  available and we were using one fortnight of one of them. The US Open's
+  `slamtracker/history` answers for **2022 through 2026**, Wimbledon for
+  2025-2026, on the same path shape. Roland Garros has nothing on that shape;
+  the Australian Open returns a 200 HTML page for every path, which is a soft
+  404 and which I briefly mistook for a hit. The payload is richer than the
+  match archive: serve speed, serve width and depth, return depth, kick height,
+  rally count, distance run and shot type, per point. Backfilling the US Open
+  2022-25 takes ~89k points to roughly 450k, which is what makes WTA
+  calibration measurable at all - on one event 88% of the between-player spread
+  was sampling noise (D-35).
 

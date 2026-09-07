@@ -327,13 +327,25 @@ def once() -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=["backfill", "poll", "both", "once"])
+    ap.add_argument("--year", type=int, default=YEAR,
+                    help="tournament year. The slam feeds keep past editions on the "
+                         "same paths - the US Open answers for 2022 onward - so this "
+                         "backfills previous years with the identical capture. Every "
+                         "feed is stored raw, whole, exactly as for the live year: "
+                         "deciding at harvest time which fields matter is a decision "
+                         "you cannot revisit without fetching it all again.")
     ap.add_argument("--hours", type=float, default=8.0)
     ap.add_argument("--full", action="store_true",
                     help="backfill: re-capture every completed match, ignoring backfill_done.json")
     args = ap.parse_args()
 
+    if args.year != YEAR:
+        YEAR = args.year
+        OUT = _common.RAW / "usopen" / str(YEAR)
+        DONE_FILE = OUT / "reference" / "backfill_done.json"
+
     OUT.mkdir(parents=True, exist_ok=True)
-    log(f"output: {OUT}")
+    log(f"output: {OUT}  (year {YEAR})")
     try:
         if args.mode == "once":
             once()
