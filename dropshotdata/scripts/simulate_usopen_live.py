@@ -39,6 +39,7 @@ import bridge_tennismylife as bridge
 import hierarchical_model as hm
 import simulate_tournament_updating as stu
 import usopen_live_draw as draw_mod
+from inmatch_seeding import seeded_probability
 from simulate_tournament import DD, STAGE_ORDER
 from simulate_tournament_xgb import build_round_pred_matrices
 from xgb_bt_rating import (build_h2h_dict, build_player_table, load_age_table,
@@ -65,13 +66,21 @@ def log(m: str) -> None:
 
 def simulate_from_state(bracket: list[str], results: dict[str, str], event: str,
                         idx: dict[str, int], round_matrices: dict[str, np.ndarray],
-                        rng: np.random.Generator) -> dict[str, str]:
+                        rng: np.random.Generator,
+                        live_p: dict[str, tuple[str, float]] | None = None) -> dict[str, str]:
     """One bracket playthrough that RESPECTS completed matches.
 
     Ordering invariant this relies on: survivors stay in bracket order, so in
     round `r` the k-th match (1-based) is always fed by list positions
     2k-2 and 2k-1. That is the same invariant `simulate_frozen_xgb` uses; here
     it additionally lets us address the feed's match id for the same pairing.
+
+    `live_p` maps a match_id that is UNDER WAY to (that match's team1 uid, the
+    probability that player wins from the current score). A match with an entry
+    here is still sampled - it has not been decided - but from a probability
+    that knows the score instead of the pre-match one. Empty or None reproduces
+    the previous behaviour exactly, which is what makes this reviewable: with
+    the flag off, not one random draw changes.
     """
     stage_reached = {uid: STAGE_ORDER[0] for uid in bracket}
     current = list(bracket)
@@ -88,7 +97,24 @@ def simulate_from_state(bracket: list[str], results: dict[str, str], event: str,
             if known == a or known == b:
                 winner = known           # real result - not a coin toss
             else:
-                p_a = M[idx[a], idx[b]]
+                seeded = (live_p or {}).get(mid)
+                if seeded is None:
+                    p_a = M[idx[a], idx[b]]
+                elif seeded[0] == a:
+                    p_a = seeded[1]
+                elif seeded[0] == b:
+                    p_a = 1.0 - seeded[1]
+                else:
+                    # Both players of a match under way are already determined,
+                    # so this pairing is identical in every simulation and this
+                    # branch is unreachable unless the bracket ordering and the
+                    # feed's team1/team2 have come apart. That would orient a
+                    # live probability backwards, so it stops the run rather
+                    # than falling back to the pre-match number.
+                    raise RuntimeError(
+                        f"{mid}: the feed has a live match starting from {seeded[0]}, "
+                        f"but the bracket puts {a} vs {b} here; refusing to guess "
+                        f"which way round the probability goes")
                 winner = a if rng.random() < p_a else b
             nxt.append(winner)
         round_no += 1
@@ -99,8 +125,36 @@ def simulate_from_state(bracket: list[str], results: dict[str, str], event: str,
     return stage_reached
 
 
+def build_live_probabilities(draw: dict, tour: str, best_of: int,
+                             round_matrices: dict[str, np.ndarray],
+                             idx: dict[str, int]) -> dict[str, tuple[str, float]]:
+    """Seed every match under way from its pre-match probability and its score.
+
+    Computed ONCE per refresh rather than inside the simulation: there are at
+    most a handful of live matches and each solve costs 40 recursion
+    evaluations, which would otherwise be paid 20,000 times over for an answer
+    that cannot change between simulations.
+    """
+    live_p: dict[str, tuple[str, float]] = {}
+    for mid, st in draw.get("live", {}).items():
+        u1, u2 = st["uid1"], st["uid2"]
+        if u1 not in idx or u2 not in idx:
+            log(f"  [{tour}] {mid}: under way but a player is outside the field, "
+                f"left at its pre-match probability")
+            continue
+        stage = STAGE_ORDER[draw_mod.parse_match_id(mid)[0] - 1]
+        p_pre = float(round_matrices[stage][idx[u1], idx[u2]])
+        p_now = seeded_probability(p_pre, st, tour, best_of)
+        live_p[mid] = (u1, p_now)
+        log(f"  [{tour}] {mid} under way at {st['sets1']}-{st['sets2']} sets, "
+            f"{st['games1']}-{st['games2']} games: {draw['names'].get(u1, u1)} "
+            f"{p_pre:.1%} pre-match -> {p_now:.1%} from the score")
+    return live_p
+
+
 def run_tour(tour: str, draw: dict, snap: dict, models: list, cat_levels: dict,
-             playstyle_full: pd.DataFrame, age_table: pd.DataFrame, n_sims: int) -> dict:
+             playstyle_full: pd.DataFrame, age_table: pd.DataFrame, n_sims: int,
+             use_live_score: bool = False) -> dict:
     best_of = 5 if tour == "atp" else 3
     bracket = draw["bracket"]
     field_uids = sorted(set(bracket))
@@ -116,11 +170,15 @@ def run_tour(tour: str, draw: dict, snap: dict, models: list, cat_levels: dict,
                                                h2h, DATE0, cat_levels, models, STAGE_ORDER[:-1])
 
     idx = {u: k for k, u in enumerate(field_uids)}
+    live_p = (build_live_probabilities(draw, tour, best_of, round_matrices, idx)
+              if use_live_score else {})
+    if use_live_score and not live_p:
+        log(f"  [{tour}] no match under way; live scoring changes nothing this run")
     rng = np.random.default_rng(TOUR_SEED[tour])
     counts = {uid: {s: 0 for s in STAGE_ORDER} for uid in field_uids}
     for _ in range(n_sims):
         reached = simulate_from_state(bracket, draw["results"], draw["event"], idx,
-                                      round_matrices, rng)
+                                      round_matrices, rng, live_p)
         for uid, stage in reached.items():
             counts[uid][stage] += 1
 
@@ -143,7 +201,8 @@ def run_tour(tour: str, draw: dict, snap: dict, models: list, cat_levels: dict,
     # the model's own match odds. Publishing the matrix closes that gap.
     return {"field_uids": field_uids, "names": names, "seed_map": seed_map,
             "round_matrices": round_matrices, "idx": idx,
-            "probs": probs, "n_done": n_done, "eliminated": eliminated}
+            "probs": probs, "n_done": n_done, "eliminated": eliminated,
+            "n_live": len(live_p)}
 
 
 def report(label: str, res: dict, top_n: int = 12) -> None:
@@ -199,6 +258,14 @@ def main() -> None:
                          "Diagnostic only: comparing locked -> this isolates the effect of "
                          "knowing the draw, and this -> live isolates the effect of results. "
                          "The locked-vs-live difference alone conflates the two.")
+    ap.add_argument("--live-score", action="store_true",
+                    help="Condition a match already under way on its current score "
+                         "instead of using its pre-match probability. OFF by default, "
+                         "and deliberately: the scheduled task runs this checkout's "
+                         "working tree, so anything on by default here is published "
+                         "within 30 minutes. Measured as arm C in "
+                         "docs/plans/validation-charter.md; the open question is late "
+                         "rounds, which the 2026-09-13 final settles.")
     ap.add_argument("--out", default="us_open_2026_live_predictions.json")
     args = ap.parse_args()
 
@@ -220,7 +287,9 @@ def main() -> None:
             # real bracket, clean slate - diagnostic arm. `losers` must be
             # cleared alongside `results` or the report would call players out
             # in an arm that is pretending nothing has been played.
-            d["results"], d["losers"] = {}, set()
+            # `live` goes with them: an arm pretending nothing has been played
+            # cannot also condition on the score of a match in progress.
+            d["results"], d["losers"], d["live"] = {}, set(), {}
         draws[tour] = d
         metas[f"{tour}:2026-usopen"] = {"date0": DATE0, "field_uids": sorted(set(d["bracket"]))}
 
@@ -232,7 +301,7 @@ def main() -> None:
     for tour in ("atp", "wta"):
         snap = all_snaps.get(f"{tour}:2026-usopen", {})
         out[tour] = run_tour(tour, draws[tour], snap, models, cat_levels,
-                             playstyle_full, age_table, args.sims)
+                             playstyle_full, age_table, args.sims, args.live_score)
     # The anchors used to be printed and ignored, so a failing one reached R2
     # with exit 0 and the .cmd wrapper's errorlevel guard never fired. A FAIL
     # now refuses the write, same as a draw that fails verification above:
@@ -252,6 +321,8 @@ def main() -> None:
     payload["_meta"] = {"generated_at": datetime.now(timezone.utc).isoformat(),
                         "n_sims": args.sims,
                         "source": "draw-only" if args.ignore_results else "live",
+                        "live_score": bool(args.live_score),
+                        "n_live_conditioned": {t: r["n_live"] for t, r in out.items()},
                         "ratings_as_of": str(DATE0.date())}
     path = OUT_DIR / args.out
     path.write_text(json.dumps(payload), encoding="utf-8")

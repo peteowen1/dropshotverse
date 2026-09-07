@@ -196,7 +196,20 @@ Still open from those reviews, in the order they are worth doing:
    is not: on round 4 the plain seeded arm C beats the recalibrated arm D on
    both calibration (0.128 vs 0.175) and log-loss (0.224 vs 0.272), on 7
    matches. **Ship the seeding, not the recalibration**, and settle C vs D
-   after the final with the same rebuild-and-re-score. `tune_scratch/screen_inmatch_seeded.py`,
+   after the final with the same rebuild-and-re-score.
+
+   **Built on `feat/inmatch-seeding`** (2026-09-07), behind `--live-score`,
+   OFF by default because the scheduled task runs this working tree. The solve
+   lives once in `dropshotdata/scripts/inmatch_seeding.py`; the screen imports
+   the same code and was re-run through it to confirm the measurement holds.
+   Switch-on checklist, all three needed:
+   1. the 2026-09-13 final, then rebuild the point table and re-score C vs D;
+   2. decide whether `live_predictions.parquet` should say which model made it
+      (the `source` column is hard coded to `"live"` today, so a seeded and an
+      unseeded projection are indistinguishable to the site);
+   3. one live run with the flag on while a match is actually in progress -
+      nothing was under way on 2026-09-07, so that path has been tested on
+      synthetic states only. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw

@@ -349,3 +349,37 @@ arm A's ECE falls to 0.0286 and now passes the 0.03 bar the candidates were
 being held to, which is a reminder that these calibration numbers move
 materially on 12 extra matches.
 
+## Arm C moved into the live simulator (2026-09-07, later still)
+
+Built on `feat/inmatch-seeding`, behind `--live-score`, which is OFF by
+default. That default is not caution for its own sake: the scheduled task runs
+this checkout's working tree, so anything on by default here is published
+within 30 minutes and never passes a review gate.
+
+The solve was about to exist twice, once in the screen and once in the
+simulator. That is the exact shape of the F4 head-to-head defect - training
+counted one thing, serving counted another, and nothing failed - so it now
+lives once, in `dropshotdata/scripts/inmatch_seeding.py`, and both callers
+import it. The screen was re-run through the shared module to prove the
+refactor did not change what was measured:
+
+| arm C | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| as recorded above | 0.0456 | 0.52184 | 0.784 |
+| through the shared module | 0.0460 | 0.52146 | 0.785 |
+
+The small drift is intended and is an improvement. The recursion is memoised
+on serve rates, and the key rounded them to 1e-3, which is the solve's real
+resolution: anchor C2 sat at 0.00495 against a 0.005 bar, passing on a
+rounding error rather than on being right. At 1e-4 it is 0.00059. Anchors C1
+(100% agreement on 231 matches) and C3 (100%) are unchanged.
+
+**Before the flag is turned on**, one thing is still open beyond the late-round
+question. The published `live_predictions.parquet` has a `source` column hard
+coded to `"live"`, so a seeded projection and an unseeded one are
+indistinguishable in the artifact the site actually reads. The JSON carries
+`_meta.live_score` and `_meta.n_live_conditioned`, but the site does not read
+the JSON. Either widen that column or accept that the published copy cannot
+say which model produced it - and that is a decision to make deliberately,
+not to discover during an incident.
+

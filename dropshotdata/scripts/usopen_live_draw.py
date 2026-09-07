@@ -223,6 +223,49 @@ def _player(team: dict) -> tuple[str, str] | None:
     return f"{team['firstNameA']} {team['lastNameA']}", team.get("idA") or ""
 
 
+def live_state(m: dict) -> dict | None:
+    """The current (sets, games, server) of a match under way, or None.
+
+    The feed carries this on every match and the repo has never read it: only
+    `winner` was ever extracted, so an in-progress match looked exactly like an
+    unplayed one to the simulator. Fields used, all verified against a
+    completed R4 match on 2026-09-07:
+
+      teamN.totalSetsWon  sets won so far
+      teamN.serve         True for whoever serves the next point
+      scores.sets         one entry per set STARTED, each [team1, team2] with
+                          a `score` per side; the last entry is the set in
+                          progress when there are more entries than sets won
+
+    `p1_served_first` is derived, not given. Service alternates every game and
+    carries across sets, so the player serving now also served the first game
+    of the match exactly when an even number of games has been completed. A
+    tiebreak counts as one game, which this parity handles correctly.
+
+    Returns None for a match that has not started, both because there is
+    nothing to condition on and because a fresh state is by construction
+    identical to the pre-match probability - so the caller can treat "no live
+    state" and "no change" as the same thing.
+    """
+    if m.get("winner") in ("1", "2"):
+        return None
+    t1, t2 = m.get("team1") or {}, m.get("team2") or {}
+    if _player(t1) is None or _player(t2) is None:
+        return None
+    sets1, sets2 = int(t1.get("totalSetsWon") or 0), int(t2.get("totalSetsWon") or 0)
+    raw_sets = ((m.get("scores") or {}).get("sets")) or []
+    games = [[int((side or {}).get("score") or 0) for side in (st or [])[:2]]
+             for st in raw_sets if st]
+    # a set is in progress only when more sets have been STARTED than decided
+    games1, games2 = (games[-1] + [0, 0])[:2] if len(games) > sets1 + sets2 else (0, 0)
+    if sets1 + sets2 + games1 + games2 == 0:
+        return None
+    played = sum(sum(g) for g in games)
+    p1_serves = bool(t1.get("serve"))
+    return {"sets1": sets1, "sets2": sets2, "games1": games1, "games2": games2,
+            "p1_serves": p1_serves, "p1_served_first": p1_serves == (played % 2 == 0)}
+
+
 def load_live_draw(tour: str, name2uid: dict[str, str], *,
                    cache_path: str | Path | None = None,
                    use_cache: bool = False) -> dict:
@@ -235,6 +278,10 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
         1102 team1, ...). Index i faces index i^1 in round 1.
     results : dict[str, str]
         match_id -> winning uid, for matches the feed reports as decided.
+    live : dict[str, dict]
+        match_id -> the current score of a match UNDER WAY, as returned by
+        `live_state`, plus the two players' uids. Empty when nothing is in
+        progress. Decided matches are in `results`, never here.
     losers : set[str]
         Every uid that has lost a decided match, i.e. is out of the
         tournament. Read straight off the feed rather than inferred from a
@@ -297,9 +344,15 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
     # simulated probability being zero.
     results: dict[str, str] = {}
     losers: set[str] = set()
+    live: dict[str, dict] = {}
     for m in matches:
         w = m.get("winner")
         if w not in ("1", "2"):
+            st = live_state(m)
+            if st is not None:
+                u1, u2 = uid_for(m["team1"]), uid_for(m["team2"])
+                if u1 is not None and u2 is not None:
+                    live[m["match_id"]] = {**st, "uid1": u1, "uid2": u2}
             continue
         uid = uid_for(m["team1" if w == "1" else "team2"])
         lost = uid_for(m["team2" if w == "1" else "team1"])
@@ -309,7 +362,7 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
             losers.add(lost)
 
     return {"tour": tour, "code": code, "draw_size": draw_size,
-            "bracket": bracket, "results": results, "losers": losers,
+            "bracket": bracket, "results": results, "losers": losers, "live": live,
             "names": names, "seed_map": seed_map, "unmatched": unmatched,
             "event": ev, "raw": data}
 

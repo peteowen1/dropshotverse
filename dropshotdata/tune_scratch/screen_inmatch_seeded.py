@@ -57,7 +57,7 @@ import usopen_live_draw as draw_mod                                  # noqa: E40
 import xgb_bt_rating as xbr                                          # noqa: E402
 from simulate_tournament import STAGE_ORDER                          # noqa: E402
 from simulate_tournament_xgb import build_round_pred_matrices        # noqa: E402
-from ticket09_live_modes import p_match_from_state                   # noqa: E402
+from inmatch_seeding import SERVE_BASE, solve_serves, wp             # noqa: E402
 
 PTS = _common.DD / "usopen_2026_points.parquet"
 OUT = _common.SCRATCH / "screen_inmatch_seeded.parquet"
@@ -85,52 +85,20 @@ def ece(p, y, bins: int = 10) -> float:
                      for m in (idx == b for b in range(bins)) if m.sum()))
 
 
-_wp_cache: dict[tuple, float] = {}
-
-
-def wp(p1, p2, s1, s2, g1, g2, p1_serves, bo) -> float:
-    key = (round(p1, 3), round(p2, 3), s1, s2, g1, g2, p1_serves, bo)
-    v = _wp_cache.get(key)
-    if v is None:
-        v = p_match_from_state(*key)
-        _wp_cache[key] = v
-    return v
-
-
-def solve_serves(p_target: float, base: float, bo: int, p1_serves_first: bool) -> tuple[float, float]:
-    """(p1, p2) with p1 + p2 = 2*base whose opening-state probability ~= p_target.
-
-    Monotone increasing in the difference d, and d must be allowed
-    to go NEGATIVE: at d=0 the recursion states exactly 0.5, so searching only
-    d>=0 clamps every match where the model makes P1 the underdog to a coin
-    flip. The first version of this did that and anchor C2 caught it at a
-    maximum error of 0.496 - half the matches, silently, while the aggregate
-    log-loss still looked good.
-
-    Solved against the recursion AT THE OPENING STATE with the actual first
-    server, not against hm.p_match. The two differ by the serve-order effect:
-    the pre-match model does not know who will serve first, the recursion does,
-    and anchor C2 measured that gap at 0.027 when this solved against p_match.
-    Solving against the state the arm is actually evaluated from makes arm C
-    exactly "the model's pre-match number, then updated by the score"."""
-    p_target = min(max(p_target, 1e-4), 1 - 1e-4)
-    bound = min(base, 1 - base) * 0.999
-    lo, hi = -bound, bound
-    for _ in range(40):
-        d = (lo + hi) / 2
-        if wp(base + d, base - d, 0, 0, 0, 0, p1_serves_first, bo) < p_target:
-            lo = d
-        else:
-            hi = d
-    d = (lo + hi) / 2
-    return base + d, base - d
-
-
 def main() -> None:
     d = pd.read_parquet(PTS)
     d["best_of"] = np.where(d["event"] == "1", 5, 3)
     tour_avg = d.groupby("event").apply(
         lambda g: float((g["PointServer"] == g["PointWinner"]).mean()), include_groups=False)
+    # The shipped path cannot recompute this - the runner has no point tape -
+    # so it carries the same rates as a constant. Assert they still agree, or
+    # the thing measured here stops being the thing that runs.
+    for ev, tour in EVENT_TOUR.items():
+        drift = abs(float(tour_avg[ev]) - SERVE_BASE[tour])
+        if drift > 5e-4:
+            raise SystemExit(f"{tour}: tape serve rate {tour_avg[ev]:.6f} has drifted "
+                             f"{drift:.6f} from the shipped SERVE_BASE {SERVE_BASE[tour]:.6f}; "
+                             f"update inmatch_seeding.SERVE_BASE before trusting this run")
     log(f"points {len(d):,} across {d['match_id'].nunique():,} matches; "
         f"tour-average serve win " + ", ".join(f"{k}={v:.4f}" for k, v in tour_avg.items()))
 
