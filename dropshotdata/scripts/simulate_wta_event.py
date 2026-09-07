@@ -287,8 +287,20 @@ def main() -> None:
     snap = snaps.get(key, {})
     h2h = build_h2h_dict(set(field_uids))
     ptab = build_player_table(field_uids, tour, date0, surface, snap, playstyle_full, age_table)
+    # Seeds 1..n_byes sit opposite a bye, so their first MATCH is round two.
+    # The anchor at the bottom of this file asserts exactly that (a seeded
+    # player with a bye must hold p_r64 == 1), so this reuses its rule rather
+    # than inventing a second one. Without it, fatigue_diff and the layoff are
+    # computed as though everyone started together, and in the round after the
+    # byes a seed with nothing in their legs is treated as having played a
+    # match (D-28).
+    first_round = {u: (1 if seed_map.get(u, n_byes + 1) <= n_byes else 0)
+                   for u in field_uids}
+    n_with_bye = sum(first_round.values())
+    log(f"  {n_with_bye} of {len(field_uids)} entrants enter in round two on a bye")
     matrices = build_round_pred_matrices(field_uids, ptab, tour, surface, 3, level, h2h, date0,
-                                         cat_levels, models, STAGE_ORDER[:-1])
+                                         cat_levels, models, STAGE_ORDER[:-1],
+                                         first_round=first_round)
     idx = {u: k for k, u in enumerate(field_uids)}
     # TBD plays like the weakest entrant: the row with the lowest mean win prob in the first round matrix
     first = matrices[STAGE_ORDER[0]]

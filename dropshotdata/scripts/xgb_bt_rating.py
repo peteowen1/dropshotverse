@@ -321,7 +321,18 @@ def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
         set_elo = float(latest_set_elo.loc[uid, "rating"]) if uid in latest_set_elo.index else 1500.0
         game_elo = float(latest_game_elo.loc[uid, "rating"]) if uid in latest_game_elo.index else 1500.0
         last_date = latest_ro.loc[uid, "date"] if uid in latest_ro.index else None
-        weeks_since_last = (date0 - last_date).days / 7.0 if last_date is not None else 52.0
+        # A player with no rating history has no known layoff. 52.0 said "out
+        # for a year", which is a claim, and an extreme one: in the training
+        # matrix `weeks_since_last_diff` has p25 = p50 = p75 = 0 and a standard
+        # deviation of 4.65, and |diff| >= 52 occurs in 132 of 112,062 rows.
+        # Worse, training DROPS rows where the layoff is unknown, so the model
+        # has never seen a debutant and 52 is extrapolation, not a default.
+        #
+        # None here, resolved after the loop to the field median, so an unknown
+        # layoff moves the feature toward 0 - which is what the model saw in
+        # most of its training rows - instead of to the far tail.
+        weeks_since_last = ((date0 - last_date).days / 7.0
+                            if last_date is not None else None)
         state = hier_snapshot.get(uid, hm.PlayerState())
         age = latest_age_at(age_table, uid, date0)
         serve_form = float(latest_form.loc[uid, "serve_form"]) if uid in latest_form.index else np.nan
@@ -329,7 +340,18 @@ def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
         rows.append({"uid": uid, "ro": ro, "rs": rs, "set_elo": set_elo, "game_elo": game_elo,
                     "weeks_since_last": weeks_since_last, "n_matches": state.n_matches, "age": age,
                     "serve_form": serve_form, "return_form": return_form, "state": state})
-    return pd.DataFrame(rows).set_index("uid")
+    out = pd.DataFrame(rows).set_index("uid")
+
+    unknown = out["weeks_since_last"].isna()
+    if unknown.any():
+        known = out.loc[~unknown, "weeks_since_last"]
+        fill = float(known.median()) if len(known) else 1.0
+        out.loc[unknown, "weeks_since_last"] = fill
+        print(f"[build_player_table] {tour}: {int(unknown.sum())} of {len(out)} field uids "
+              f"have no rating history and so no known layoff; using the field "
+              f"median {fill:.2f} weeks rather than asserting a year out")
+    out["weeks_since_last"] = out["weeks_since_last"].astype(float)
+    return out
 
 
 def build_pairwise_features_base(field_uids: list[str], ptab: pd.DataFrame, tour: str, surface: str, best_of: int,

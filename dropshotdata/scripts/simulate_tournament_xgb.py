@@ -44,9 +44,15 @@ def antisymmetrise(M: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-(L - L.T) / 2.0))
 
 
+# A player who has already played at this event went on court about two days
+# ago, whatever they arrived with. 2/7 of a week, in the units the feature uses.
+IN_EVENT_WEEKS = 2.0 / 7.0
+
+
 def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: str, surface: str, best_of: int,
                               tourney_level: str, h2h: dict, date0, cat_levels: dict,
-                              models: list, rounds: list[str]) -> dict[str, np.ndarray]:
+                              models: list, rounds: list[str],
+                              first_round: dict[str, int] | None = None) -> dict[str, np.ndarray]:
     """One full round-robin prediction pass per round value. Features other
     than `round` are identical across rounds (frozen pre-tournament state),
     so the shared base feature matrix is built once and only the `round`
@@ -65,6 +71,28 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     this is a transform on predictions already made, not a model change or a
     retrain. xgb_bt_rating.py and build_blog_data.py already apply the same
     (L - L.T)/2 before taking BT row means; it was never applied at source.
+
+    TWO features are NOT frozen across rounds, despite the note above, because
+    freezing them was wrong (D-26, D-28):
+
+    `weeks_since_last_diff` was the pre-tournament layoff gap in every round,
+    so a player who arrived four weeks idle was still four weeks idle when the
+    final was simulated - by which point they would have played six matches.
+    In the training matrix this feature is 0 at the 25th, 50th and 75th
+    percentile, precisely because most matches are between two players who
+    both played a few days ago. Zeroing it from a player's second match on
+    moved published probabilities by mean 0.023 (ATP) and 0.018 (WTA).
+
+    `fatigue_diff` was hard-coded to 0.0. In a 128 draw with no byes that is
+    exactly right and always was - both players have played the same number of
+    matches - which is why it never bit. It is wrong the moment there are byes:
+    a 96 draw into 128 slots leaves 32 seeds entering a round later, so in that
+    round one player has a match in their legs and the other does not.
+
+    `first_round` maps a uid to the 0-based index into `rounds` of that
+    player's FIRST match. Omit it and everyone starts in round one, which is
+    the no-byes case and reproduces the previous behaviour for
+    `fatigue_diff` exactly.
     """
     n = len(field_uids)
     idx = {u: k for k, u in enumerate(field_uids)}
@@ -73,10 +101,25 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     pairs_i = np.array([idx[u] for u in pairs_i_uid])
     pairs_j = np.array([idx[u] for u in pairs_j_uid])
 
+    # per-player layoff as it stands BEFORE the event, and when each player
+    # actually starts. Both are needed per round, so they are resolved once.
+    fr = {u: int((first_round or {}).get(u, 0)) for u in field_uids}
+    wsl = {u: float(ptab.loc[u, "weeks_since_last"]) for u in field_uids}
+    fr_i = np.array([fr[u] for u in pairs_i_uid])
+    fr_j = np.array([fr[u] for u in pairs_j_uid])
+    wsl_i = np.array([wsl[u] for u in pairs_i_uid])
+    wsl_j = np.array([wsl[u] for u in pairs_j_uid])
+
     matrices: dict[str, np.ndarray] = {}
-    for rnd in rounds:
+    for k, rnd in enumerate(rounds):
         Xdf = base.copy()
         Xdf["round"] = rnd
+        # matches each player has already played at this event by this round
+        played_i = np.maximum(k - fr_i, 0)
+        played_j = np.maximum(k - fr_j, 0)
+        Xdf["fatigue_diff"] = (played_i - played_j).astype(float)
+        Xdf["weeks_since_last_diff"] = (np.where(played_i > 0, IN_EVENT_WEEKS, wsl_i)
+                                        - np.where(played_j > 0, IN_EVENT_WEEKS, wsl_j))
         X = prep_X_d(Xdf, cat_levels)
         dmat = xgb.DMatrix(X, enable_categorical=True)
         p = np.clip(np.mean([m.predict(dmat) for m in models], axis=0), 1e-9, 1 - 1e-9)
