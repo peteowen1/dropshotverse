@@ -211,9 +211,14 @@ Still open from those reviews, in the order they are worth doing:
       nothing was under way on 2026-09-07, so that path has been tested on
       synthetic states only.
 
-   Review of the branch also found and fixed a real defect in the recursion
-   underneath all of this (6-6 sets, error up to 0.42, see D-16). Every arm on
-   the charter was re-measured; the conclusion did not change. `tune_scratch/screen_inmatch_seeded.py`,
+   Review of the branch found and fixed TWO real defects underneath all of
+   this: 6-6 sets decided twice (error up to 0.42, D-16) and the point tape's
+   set-ending row read as a set in progress (1.58% of points, D-17). Every arm
+   was re-measured twice. **C over D is now settled (D-18)** - arm D clears the
+   headline bar on the corrected tape but fails its own anchor D3, the two
+   tours' temperatures being 1.209 and 1.458 against a 0.15 spread bar. The
+   2026-09-13 final is now a confirmation of the late-round result on more than
+   7 matches, not the decider it was. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw
