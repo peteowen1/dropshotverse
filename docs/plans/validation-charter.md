@@ -298,3 +298,54 @@ after the final. The earlier "do not ship" here was written against arm A
 rather than against what the site does, which understated the gain by an order
 of magnitude and named a join bug that does not exist.
 
+## Round 4 arrives, and it splits the answer (2026-09-07, later)
+
+Pete asked why the late-round check had to wait. Most of it does - the
+quarter-finals, semi-finals and final have not been played - but the point
+table was a stale snapshot, and eight fourth-round matches had finished since
+it was built. Rebuilding it (88,993 points, 562 matches) and re-scoring adds a
+first, small look at late rounds: 231 matches and 42,657 points overall, of
+which 7 matches and 1,197 points are round 4.
+
+**All rounds**
+
+| | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A | 0.0286 | 0.57013 | 0.712 |
+| arm C, seeded | 0.0456 | 0.52184 | 0.784 |
+| arm D, seeded + recalibrated | 0.0337 | 0.48715 | 0.784 |
+
+**Round 4 only, 7 matches, so read it as a signal and not a result**
+
+| | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1711 | 0.38008 | 0.825 |
+| arm A | 0.1841 | 0.37622 | 0.892 |
+| **arm C, seeded** | **0.1277** | **0.22445** | 0.909 |
+| arm D, seeded + recalibrated | 0.1747 | 0.27189 | 0.909 |
+
+**Two things follow, and they point in different directions.**
+
+1. **Conditioning on the live score is settled.** In every round, both seeded
+   arms beat what the site publishes today by a wide margin: overall 0.487 or
+   0.522 log-loss against 0.591, accuracy 0.784 against 0.747, and calibration
+   0.034 or 0.046 against 0.106. There is no reading of this table in which
+   ignoring the score is the right thing to keep doing.
+2. **Whether to recalibrate is NOT settled, and round 4 argues against it.**
+   The temperature that helps in rounds 1-3 hurts in round 4, where arm C
+   beats arm D on both calibration (0.128 against 0.175) and log-loss (0.224
+   against 0.272). That is coherent: late-round matches here were lopsided
+   (accuracy 0.909), and shrinking confidence is exactly the wrong move when
+   the confident answer keeps being right. It rests on 7 matches, so it is a
+   warning rather than a finding, and it is the first evidence that the
+   early-round temperature does not transfer.
+
+**Recommendation, updated again.** Ship the seeding. Do not ship the
+recalibration on this evidence. The clean decision between C and D needs the
+quarter-finals onward, which arrive on 2026-09-13, and the same rebuild-and
+re-score will answer it in ten minutes. Note also that with round 4 included
+arm A's ECE falls to 0.0286 and now passes the 0.03 bar the candidates were
+being held to, which is a reminder that these calibration numbers move
+materially on 12 extra matches.
+

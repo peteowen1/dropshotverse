@@ -189,10 +189,14 @@ Still open from those reviews, in the order they are worth doing:
    match is publish the pre-match number and ignore the score
    (`simulate_usopen_live.py:88-91`), which scores ECE **0.1058**, log-loss
    0.60332. So against the real incumbent arm D is three times better
-   calibrated and 0.110 better on log-loss. **Recommended to ship**, subject to
-   one thing: the evaluation covers rounds 1-3 because the tournament is still
-   being played and the point table is a snapshot, not because of any join bug.
-   Rebuild the point table and re-score after the final. `tune_scratch/screen_inmatch_seeded.py`,
+   calibrated and 0.110 better on log-loss. **Round 4 then arrived** (the point
+   table was a stale snapshot; rebuilding it added 8 finished R16 matches) and
+   split the answer. Conditioning on the live score is settled - both seeded
+   arms beat today's published number in every round. Whether to RECALIBRATE
+   is not: on round 4 the plain seeded arm C beats the recalibrated arm D on
+   both calibration (0.128 vs 0.175) and log-loss (0.224 vs 0.272), on 7
+   matches. **Ship the seeding, not the recalibration**, and settle C vs D
+   after the final with the same rebuild-and-re-score. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw
