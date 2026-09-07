@@ -242,4 +242,35 @@ Consequences to hold onto:
   number must be relative to its own tour. Related: serve and return correlate
   at +0.342 (ATP) but +0.571 (WTA), so on the women's side the two numbers
   substantially restate overall quality rather than separating two skills.
+- **D-33 (2026-09-07)** — Built paired serve/return Elo: two ratings per
+  player, the server's rated against the returner's, zero-sum per exchange.
+  `point_elo.py` had ruled this out, correctly, for a SINGLE rating - serve%
+  and return% are not complementary player-to-player - but they are
+  complementary server-to-returner, which is what a paired rating uses.
+  Two evidence modes: share of service points won, and share of service games
+  held. Holds are not in the prepared archive but are exact from the raw CSVs,
+  `SvGms - (bpFaced - bpSaved)`, because a lost service game contributes
+  exactly one unsaved break point. Only 18.9% of the archive records serve
+  stats at all.
+- **D-34 (2026-09-07)** — Elo beats hier on calibration at equal ordering, which
+  is what matters for publishing. On the 2026 tape with K chosen only on
+  2022-23: ATP serve points ratio 0.95 and games held 0.78, against hier's
+  1.96. K is the dispersion dial hier lacks. Correlation rises monotonically
+  with K while calibration degrades (+0.645 at k=0.15 against +0.771 at k=1.0
+  on ATP points), so **the publishable K and the best-feature K are different
+  numbers** and a feature build should choose its own.
+- **D-35 (2026-09-07)** — **NOT published yet, and here is what is still wrong.**
+  Starting every player at 1500 gave an expected 0.500 against a real 0.61, so
+  every rating drifted upward on serve for as long as a player kept playing:
+  serve rating correlated **+0.758** with match count, and serve and return
+  came out spuriously ANTI-correlated (-0.373 ATP). Starting each tour at its
+  own average fixed the sign (+0.157) and cut the drift to +0.650. The
+  remainder is partly real - observed serve% genuinely correlates +0.253 with
+  career length - but ATP's rating still over-weights experience by **+0.235**,
+  because a veteran has converged to their true level while an equally good
+  newcomer is still shrunk toward the average. WTA is fine at +0.039. Publish
+  only after that is handled, by reliability-weighting or a minimum match
+  count. The K values in `K_BY_TOUR_MODE` were also chosen BEFORE the drift fix
+  and are stale - ATP games held now reads 0.78, over-shrunk - so re-sweep
+  before using them.
 
