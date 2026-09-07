@@ -198,7 +198,7 @@ Still open from those reviews, in the order they are worth doing:
    matches. **Ship the seeding, not the recalibration**, and settle C vs D
    after the final with the same rebuild-and-re-score.
 
-   **Built on `feat/inmatch-seeding`** (2026-09-07), behind `--live-score`,
+   **Shipped to `main` 2026-09-07 via PR #31**, behind `--live-score`,
    OFF by default because the scheduled task runs this working tree. The solve
    lives once in `dropshotdata/scripts/inmatch_seeding.py`; the screen imports
    the same code and was re-run through it to confirm the measurement holds.

@@ -154,3 +154,15 @@ Consequences to hold onto:
   bit-identical. Aggregate barely moved (arm C log-loss 0.48467 -> 0.48310);
   the median per-point change went from 0.0000 to 0.0109, which is the actual
   point. Evidence: `docs/plans/validation-charter.md`.
+- **D-21 (2026-09-07)** — In-match seeding merged to `main` (PR #31, 8 commits,
+  +1434/-76). `--live-score` is OFF in both producers, so the code is live and
+  inert; the three-item switch-on checklist is in NEXT-STEPS. Five review
+  rounds each returned a finding; all six defects were pre-existing and none
+  had ever published a wrong number, because the live path did not reach
+  `ticket09_live_modes` until this branch wired it in.
+- **D-22 (2026-09-07)** — Open: this repo has NO CI. `gh pr checks` reports
+  none, so the "verify CI conclusion" step of the review gate is vacuous here
+  and #31 merged on local verification alone. A workflow running
+  `dropshotdata/tune_scratch/test_inmatch_seeding.py` on pull requests would
+  give the gate something real to check.
+
