@@ -234,4 +234,17 @@ Consequences to hold onto:
   2022-25 takes ~89k points to roughly 450k, which is what makes WTA
   calibration measurable at all - on one event 88% of the between-player spread
   was sampling noise (D-35).
+- **D-38 (2026-09-07)** — tennismylife is archived daily to its own Release
+  (`.github/workflows/archive-tennismylife.yml`). It was the only tour-wide
+  source of serve statistics we have, fetched live on every run, with no copy
+  kept anywhere - the identical exposure that made Sackmann's 404 a crisis in
+  August. Latest plus dated copies, so a bad upstream day can be stepped back
+  from. An empty or schema-changed response FAILS the job; mere staleness only
+  warns, because 8-14 days behind is this source's normal.
+- **D-39 (2026-09-07)** — The capturer takes `--slam` and handles Wimbledon,
+  which serves the point tape but 403s `eventDays.json`, `seeds`, live scores,
+  `insight` and `match_stats`. It cannot be enumerated the way the US Open is,
+  so it falls back to the draw feeds: MS and LS give 254 decided singles
+  matches. `enumerate_via` in SLAMS records which host does what, because it is
+  a fact about each site rather than a preference.
 
