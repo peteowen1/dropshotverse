@@ -82,9 +82,132 @@ def set_is_decided(a: int, b: int) -> bool:
     return (hi == 7 and lo <= 6) or (hi == 6 and hi - lo >= 2)
 
 
+# A game's point score is written 0/15/30/40/AD; a TIEBREAK's is written as
+# plain numbers, and both arrive as strings from the tape and from the feed.
+# One table, shared, so the screen that measures and the simulator that serves
+# cannot disagree about what "40" means.
+_POINT_VALUE = {"0": 0, "15": 1, "30": 2, "40": 3, "AD": 4, "A": 4, "ADV": 4}
+
+
+def point_count(value, in_tiebreak: bool = False) -> int:
+    """Points won, as a count, from whatever the source calls it."""
+    s = str(value).strip().upper()
+    if in_tiebreak:
+        return int(s) if s.isdigit() else 0
+    if s in _POINT_VALUE:
+        return _POINT_VALUE[s]
+    return int(s) if s.isdigit() else 0
+
+
+def p_game_from_state(p: float, a: int, b: int) -> float:
+    """P(the SERVER wins this game) from an arbitrary point score.
+
+    `a` and `b` are points won by the server and the returner, as counts:
+    0/15/30/40/AD is 0/1/2/3/4. The tape and the feed both give the tennis
+    strings; the caller converts.
+
+    p_game(p) is the same quantity from 0-0 and stays the entry point for a
+    game not yet started. This exists because the recursion above it only ever
+    knew games and sets, so 84.6% of the points on the 2026 tape were scored
+    from a state that had thrown away a real, non-zero game score: 40-0 up on
+    serve and 0-40 down returned the identical number.
+
+    From 3-3 on this is the classic deuce chain, which has a closed form:
+    the server wins from deuce with p^2 / (p^2 + (1-p)^2), because any split
+    pair returns to deuce. Only the offset from deuce matters after that, so
+    every score at or beyond 3-3 collapses to one of three states.
+    """
+    if p <= 0.0:
+        return 0.0
+    if p >= 1.0:
+        return 1.0
+    if a >= 4 and a - b >= 2:
+        return 1.0
+    if b >= 4 and b - a >= 2:
+        return 0.0
+    if a >= 3 and b >= 3:
+        pd = p * p / (p * p + (1 - p) * (1 - p))     # from deuce
+        d = a - b
+        if d == 0:
+            return pd
+        return p + (1 - p) * pd if d == 1 else p * pd
+    return p * p_game_from_state(p, a + 1, b) + (1 - p) * p_game_from_state(p, a, b + 1)
+
+
+def _tb_tail(pa: float, pb: float) -> float:
+    """P(A eventually wins) from any TIE in a tiebreak, A's serve prob `pa`.
+
+    From a tie the next two points are always one serve each. That is not an
+    approximation: A serves point t iff (t-1) mod 4 is 0 or 3, and at a tie an
+    even number of points has been played, so the next two always split. Order
+    does not matter to the product, so A takes both with pa*(1-pb), B takes
+    both with (1-pa)*pb, and anything else returns to a tie.
+    """
+    up, dn = pa * (1 - pb), (1 - pa) * pb
+    tot = up + dn
+    return 0.5 if tot <= 0 else up / tot
+
+
+def p_tiebreak_from_state(pa: float, pb: float, a: int, b: int,
+                          a_serves_next: bool, target: int = 7) -> float:
+    """P(A wins the tiebreak) from an arbitrary point score.
+
+    p_tiebreak(pa, pb) is the same quantity from 0-0 with A serving first, and
+    is left alone as the entry point for a tiebreak not yet started.
+
+    Who served point ONE is recovered from the rotation rather than asked for:
+    A serves point t iff (t-1) mod 4 is 0 or 3, so with `t0 = a + b` points
+    played, whether A serves next pins down whether A served first.
+    """
+    if a >= target and a - b >= 2:
+        return 1.0
+    if b >= target and b - a >= 2:
+        return 0.0
+    t0 = a + b
+    on_pattern = (t0 % 4) in (0, 3)          # would A serve point t0+1 if A served point 1
+    a_first = (a_serves_next == on_pattern)
+    tail = _tb_tail(pa, pb)
+    if a == b and a >= target - 1:
+        return tail
+
+    states = {(a, b): 1.0}
+    win_a = 0.0
+    for t in range(t0 + 1, t0 + 40):
+        if not states:
+            break
+        on = (t - 1) % 4 in (0, 3)
+        a_serves = on if a_first else (not on)
+        pt = pa if a_serves else (1 - pb)
+        nxt: dict[tuple[int, int], float] = {}
+        for (x, y), pr in states.items():
+            for (nx, ny), w in (((x + 1, y), pt), ((x, y + 1), 1 - pt)):
+                prob = pr * w
+                if prob == 0.0:
+                    continue
+                if nx >= target and nx - ny >= 2:
+                    win_a += prob
+                elif ny >= target and ny - nx >= 2:
+                    pass
+                elif nx == ny and nx >= target - 1:
+                    win_a += prob * tail          # exact geometric tail, no cap
+                else:
+                    nxt[(nx, ny)] = nxt.get((nx, ny), 0.0) + prob
+        states = nxt
+    return win_a + sum(states.values()) * tail
+
+
 def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
-                     p1_serves_next: bool) -> float:
-    """P(player1 wins the SET) from an arbitrary in-progress game score."""
+                     p1_serves_next: bool, points1: int = 0, points2: int = 0) -> float:
+    """P(player1 wins the SET) from an arbitrary in-progress game score.
+
+    `points1`/`points2` are the point score WITHIN the game now being played
+    (or within the tiebreak, at 6-6). They default to 0-0, which is the game
+    not yet started and reproduces this function's previous behaviour exactly -
+    asserted in tune_scratch/test_inmatch_seeding.py, because every caller that
+    does not pass them must keep getting the number it got before.
+
+    Only the CURRENT game uses them. Every later game in the recursion starts
+    at 0-0, which is what p_game and p_tiebreak already assume."""
     states = {(games1, games2): 1.0}
     final = 0.0
     for _ in range(20):
@@ -121,11 +244,19 @@ def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
                 # wrong expression returns exactly 0.5, which is also the right
                 # answer. Asymmetric pairings are where it bites, which is
                 # every pairing that matters.
-                final += pr * p_tiebreak(p1, p2)
+                final += pr * (p_tiebreak_from_state(p1, p2, points1, points2,
+                                                     p1_serves_next)
+                               if (a, b) == (games1, games2)
+                               else p_tiebreak(p1, p2))
                 continue
             idx = (a + b) - (games1 + games2)
             a_serves = (idx % 2 == 0) == p1_serves_next
-            pa = p_game(p1) if a_serves else 1 - p_game(p2)
+            if idx == 0 and (points1 or points2):
+                # the game actually in progress, from the score it is at
+                pa = (p_game_from_state(p1, points1, points2) if a_serves
+                      else 1 - p_game_from_state(p2, points2, points1))
+            else:
+                pa = p_game(p1) if a_serves else 1 - p_game(p2)
             for winner, w in ((0, pa), (1, 1 - pa)):
                 na, nb = (a + 1, b) if winner == 0 else (a, b + 1)
                 prob = pr * w
@@ -147,7 +278,7 @@ def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
 
 def p_match_from_state(p1: float, p2: float, sets1: int, sets2: int,
                        games1: int, games2: int, p1_serves_next: bool,
-                       best_of: int) -> float:
+                       best_of: int, points1: int = 0, points2: int = 0) -> float:
     """P(player1 wins the match) from an arbitrary (sets, games) state.
 
     Bug caught by the (0,0,0,0)-boundary self-test: an earlier version gave
@@ -174,7 +305,8 @@ def p_match_from_state(p1: float, p2: float, sets1: int, sets2: int,
     # The remaining asymmetry is genuine and is the reason both orders are
     # averaged above: p_match never knows who serves first, while a real
     # in-progress match does.
-    q_current = p_set_from_state(p1, p2, games1, games2, p1_serves_next)
+    q_current = p_set_from_state(p1, p2, games1, games2, p1_serves_next,
+                                 points1, points2)
     q_fresh = 0.5 * (p_set_from_state(p1, p2, 0, 0, True)
                      + p_set_from_state(p1, p2, 0, 0, False))
     states = {(sets1, sets2): 1.0}

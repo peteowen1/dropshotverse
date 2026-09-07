@@ -146,9 +146,11 @@ Consequences to hold onto:
   game-ending point, and anchor C3 was vacuous (a post-point final state is the
   finished match, so it returned 1.0 and reported 100% for any model). C3 now
   reads 99.1%. Headline numbers barely moved; all conclusions stand.
-- **D-20 (2026-09-07)** — Open, not blocking: the in-match recursion works at
-  GAME granularity, so the median per-point change in win probability is
-  exactly 0.0000 - the number cannot move on 30-0 or on a break point saved,
-  only when a game or set completes. Wrong grain for a live product. Next thing
-  to fix after the seeding ships.
-
+- **D-20 (2026-09-07, CLOSED same day)** — The in-match recursion worked at
+  GAME granularity while the data was point level: 84.6% of points carried a
+  within-game score the model never saw, and 40-0 up on serve read the same as
+  0-40 down. Added `p_game_from_state` and `p_tiebreak_from_state`, threaded
+  through as arguments defaulting to 0-0 so every existing caller is
+  bit-identical. Aggregate barely moved (arm C log-loss 0.48467 -> 0.48310);
+  the median per-point change went from 0.0000 to 0.0109, which is the actual
+  point. Evidence: `docs/plans/validation-charter.md`.

@@ -45,7 +45,7 @@ _wp_cache: dict[tuple, float] = {}
 
 
 def wp(p1: float, p2: float, s1: int, s2: int, g1: int, g2: int,
-       p1_serves: bool, best_of: int) -> float:
+       p1_serves: bool, best_of: int, pt1: int = 0, pt2: int = 0) -> float:
     """p_match_from_state, memoised on serve rates rounded to 1e-4.
 
     The rounding is the solve's real resolution, not a detail: at 1e-3 the
@@ -54,7 +54,7 @@ def wp(p1: float, p2: float, s1: int, s2: int, g1: int, g2: int,
     orders of magnitude clear at no measurable cost, because the states being
     memoised are shared across matches rather than within one solve.
     """
-    key = (round(p1, 4), round(p2, 4), s1, s2, g1, g2, p1_serves, best_of)
+    key = (round(p1, 4), round(p2, 4), s1, s2, g1, g2, p1_serves, best_of, pt1, pt2)
     v = _wp_cache.get(key)
     if v is None:
         v = p_match_from_state(*key)
@@ -127,4 +127,5 @@ def seeded_probability(p_pre: float, state: dict, tour: str, best_of: int) -> fl
     base = SERVE_BASE[tour]
     p1, p2 = solve_serves(p_pre, base, best_of, state["p1_served_first"])
     return wp(p1, p2, state["sets1"], state["sets2"],
-              state["games1"], state["games2"], state["p1_serves"], best_of)
+              state["games1"], state["games2"], state["p1_serves"], best_of,
+              state.get("points1", 0), state.get("points2", 0))

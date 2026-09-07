@@ -558,3 +558,74 @@ thing worth fixing after this ships. It is not a defect in what is being
 shipped here, which is strictly better than the pre-match number it replaces,
 but it does bound how good this can get.
 
+## Point level, because game level was throwing away 84.6% of what we had (2026-09-07, Pete)
+
+Pete asked whether the data was point level or game level. The answer was
+both, in the wrong combination.
+
+**The data is point level**: 88,993 rows, one per point, carrying the
+within-game score (`P1Score`/`P2Score`, written 0/15/30/40/AD) and a tiebreak
+flag on 2,404 of them. **The model was game level**: its entire state was sets,
+games and who serves next, with `p_game(p)` computing a game only from 0-0. So
+the richer half of every row was discarded.
+
+| | points | share |
+|---|---:|---:|
+| start a game, so game level is exact | 13,709 | 15.4% |
+| carried a non-zero game score the model never saw | 75,284 | **84.6%** |
+
+At 40-0 up on serve and 0-40 down, the model returned the identical number.
+
+**What was added.** `p_game_from_state(p, a, b)` for a game from any point
+score - the deuce chain, which collapses to a closed form at 3-3 and beyond -
+and `p_tiebreak_from_state` for a tiebreak from any point score, recovering who
+served point one from the rotation rather than being told. Both are threaded
+through `p_set_from_state` and `p_match_from_state` as arguments that DEFAULT TO
+0-0, so every existing caller gets exactly the number it got before. That is
+asserted, not assumed: the difference is 0.00e+00.
+
+The tiebreak tail is exact rather than capped. From any tie the next two points
+are always one serve each - A serves point t iff (t-1) mod 4 is 0 or 3, and a
+tie has been reached after an even number of points - so A takes both with
+pa(1-pb), B with (1-pa)pb, and the geometric sum is closed form.
+
+| all rounds, pre-point frame, point level | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0297 | 0.52936 | 0.724 |
+| arm C, seeded | 0.0484 | 0.48310 | 0.782 |
+| arm D, seeded + recalibrated | 0.0278 | 0.47283 | 0.782 |
+
+| late rounds | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C** | **0.1266** | **0.22068** | 0.906 |
+| arm D | 0.1672 | 0.26615 | 0.906 |
+
+**The aggregate barely moved and that is the honest headline.** Arm C goes from
+0.0503 to 0.0484 on calibration and 0.48467 to 0.48310 on log-loss. Anyone
+sizing this on the metric alone would call it not worth doing.
+
+**The product behaviour changed completely, and the metric cannot see it.**
+
+| arm C per-point change | mean abs | median | p99 | max |
+|---|---:|---:|---:|---:|
+| game level | 0.0065 | **0.0000** | 0.1176 | 0.6911 |
+| point level | 0.0163 | **0.0109** | 0.0851 | 0.4199 |
+
+A median of zero meant the published number was frozen for the whole of a game
+and then jumped. It now moves on every point. A break point at 5-5 in a
+deciding set is worth 0.363 against 0.782 at 40-0 - a spread of 0.419 that used
+to be a single number. That is the difference between a live win probability
+and a scoreboard that updates every six points, and no aggregate log-loss over
+42,657 points was ever going to report it.
+
+Every conclusion is unchanged: arm D still fails anchor D3 (temperatures 1.202
+and 1.458, spread 0.256), late rounds still prefer arm C, and arm C still beats
+what the site publishes by a wide margin.
+
+One note on anchor C3, which reads 100% again here against 99.1% at game level.
+That is not the old degeneracy returning: the final point's pre-state is still a
+live position (games 5-4, not a finished match), and it reaches 100% because
+knowing the point score genuinely tells you more. The check retains its
+teeth - it is asked of a state the match could still turn from.
+

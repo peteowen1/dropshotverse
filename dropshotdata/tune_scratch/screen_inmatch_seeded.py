@@ -58,7 +58,7 @@ import xgb_bt_rating as xbr                                          # noqa: E40
 from simulate_tournament import STAGE_ORDER                          # noqa: E402
 from simulate_tournament_xgb import build_round_pred_matrices        # noqa: E402
 from inmatch_seeding import SERVE_BASE, solve_serves, wp             # noqa: E402
-from ticket09_live_modes import set_is_decided                       # noqa: E402
+from ticket09_live_modes import point_count, set_is_decided          # noqa: E402
 
 PTS = _common.DD / "usopen_2026_points.parquet"
 OUT = _common.SCRATCH / "screen_inmatch_seeded.parquet"
@@ -198,11 +198,21 @@ def main() -> None:
         # The post-point probability is kept alongside it. The difference
         # between the two is what winning that point was worth.
         st = g[["P1SetsWon", "P2SetsWon", "P1GamesWon", "P2GamesWon"]].fillna(0).astype(int)
+        # The WITHIN-GAME score, which the recursion ignored until now. The
+        # tape resets it to 0-0 on the point that ends a game, so shifting it
+        # by one alongside the other state columns lands the right thing: the
+        # first point of a game sees 0-0, and a point mid-game sees the score
+        # it was actually played at.
+        tb = [bool(x) for x in g["is_tb"]]
+        pts = [(point_count(a, t), point_count(b, t))
+               for a, b, t in zip(g["P1Score"], g["P2Score"], tb)]
         # NOT named `pre`: that is the dict of pre-match probabilities this
         # function is built around, and shadowing it silently skipped every
         # match after the first.
         post_state = list(st.itertuples(index=False, name=None))
         pre_state = [(0, 0, 0, 0)] + post_state[:-1]
+        post_pts = pts
+        pre_pts = [(0, 0)] + pts[:-1]
         servers = [x == "1" for x in g["PointServer"]]
 
         for k, r in enumerate(g.itertuples()):
@@ -220,12 +230,14 @@ def main() -> None:
             # who serves the next point, for the post-point frame: the same
             # player unless this point ended a game, in which case it passes
             srv_next = (not srv) if str(getattr(r, "GameWinner", "0")) != "0" else srv
+            ap1, ap2 = pre_pts[k]
+            bp1, bp2 = post_pts[k]
             rows.append((mid, r.point_no, y1,
-                         wp(base, base, a1, a2, ag1, ag2, srv, bo),          # A, pre
-                         wp(c1, c2, a1, a2, ag1, ag2, srv, bo),              # C, pre
+                         wp(base, base, a1, a2, ag1, ag2, srv, bo, ap1, ap2),
+                         wp(c1, c2, a1, a2, ag1, ag2, srv, bo, ap1, ap2),
                          p_pre,
-                         wp(base, base, b1, b2, bg1, bg2, srv_next, bo),     # A, post
-                         wp(c1, c2, b1, b2, bg1, bg2, srv_next, bo)))        # C, post
+                         wp(base, base, b1, b2, bg1, bg2, srv_next, bo, bp1, bp2),
+                         wp(c1, c2, b1, b2, bg1, bg2, srv_next, bo, bp1, bp2)))
 
     log(f"scored {len({r[0] for r in rows}):,} matches, {len(rows):,} points "
         f"({skipped} matches skipped: no pre-match number or no clean result)")

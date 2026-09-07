@@ -8,8 +8,11 @@ sys.path.insert(0, str(ROOT / "dropshotdata" / "scripts"))
 import usopen_live_draw as d          # noqa: E402
 from inmatch_seeding import (SERVE_BASE, TOLERANCE, seeded_probability,  # noqa: E402
                              solve_serves, wp)
-from ticket09_live_modes import (p_set_from_state, p_tiebreak,  # noqa: E402
-                                 set_is_decided, p_match_from_state)
+from ticket09_live_modes import (p_game_from_state, p_match_from_state,  # noqa: E402
+                                 p_set_from_state, p_tiebreak,
+                                 p_tiebreak_from_state, point_count,
+                                 set_is_decided)
+from hierarchical_model import p_game  # noqa: E402
 
 
 def hdr(t):
@@ -251,5 +254,53 @@ if tape.exists():
     print("  so the screen zeroes those games; counting them would score the set twice")
 else:
     print(f"  skipped: {tape} not present")
+
+hdr("17. the point-level primitives reduce to the game-level ones at 0-0")
+w = max(abs(p_game_from_state(x, 0, 0) - p_game(x))
+        for x in (0.35, 0.5, 0.55, 0.61, 0.75, 0.9))
+print(f"  p_game_from_state(p,0,0) vs p_game(p): worst {w:.2e}")
+assert w < 1e-12
+w = max(abs(p_tiebreak_from_state(pa, pb, 0, 0, True) - p_tiebreak(pa, pb))
+        for pa in (0.5, 0.61, 0.8) for pb in (0.45, 0.57, 0.7))
+print(f"  p_tiebreak_from_state(...,0,0,True) vs p_tiebreak: worst {w:.2e}")
+assert w < 1e-9
+# Every existing caller passes no point score, so all of them must be untouched.
+w = 0.0
+for g1, g2 in ((0, 0), (3, 2), (5, 5), (6, 6), (6, 5)):
+    w = max(w, abs(p_set_from_state(0.65, 0.55, g1, g2, True)
+                   - p_set_from_state(0.65, 0.55, g1, g2, True, 0, 0)))
+    w = max(w, abs(p_match_from_state(0.65, 0.55, 1, 1, g1, g2, True, 5)
+                   - p_match_from_state(0.65, 0.55, 1, 1, g1, g2, True, 5, 0, 0)))
+print(f"  set and match with points defaulted: worst {w:.2e}")
+assert w == 0.0, "adding the point score changed a caller that does not pass one"
+
+hdr("18. the point score moves the number, in the right direction")
+order = [p_game_from_state(0.65, a, b) for a, b in ((3, 0), (2, 0), (0, 0), (0, 2), (0, 3))]
+print("  P(hold) at 40-0, 30-0, 0-0, 0-30, 0-40: "
+      + ", ".join(f"{v:.4f}" for v in order))
+assert order == sorted(order, reverse=True), "hold probability is not monotone in the score"
+assert abs(p_game_from_state(0.5, 3, 3) - 0.5) < 1e-12, "deuce at p=0.5 must be 0.5"
+assert abs(p_game_from_state(0.5, 0, 0) - 0.5) < 1e-12
+# advantage in must beat deuce must beat advantage out
+adv_in, deuce, adv_out = (p_game_from_state(0.65, 4, 3), p_game_from_state(0.65, 3, 3),
+                          p_game_from_state(0.65, 3, 4))
+print(f"  AD in {adv_in:.4f} > deuce {deuce:.4f} > AD out {adv_out:.4f}")
+assert adv_in > deuce > adv_out
+
+hdr("19. what a break point is worth, which the model could not see before")
+lo = p_match_from_state(0.65, 0.55, 2, 2, 5, 5, True, 5, 0, 3)
+hi = p_match_from_state(0.65, 0.55, 2, 2, 5, 5, True, 5, 3, 0)
+mid_ = p_match_from_state(0.65, 0.55, 2, 2, 5, 5, True, 5, 0, 0)
+print(f"  5-5 in a deciding set, serving: 0-40 {lo:.4f}, 0-0 {mid_:.4f}, 40-0 {hi:.4f}")
+print(f"  spread {hi - lo:.4f}, all of which used to be one number")
+assert hi > mid_ > lo
+
+hdr("20. score strings convert the same way everywhere")
+for v, want in (("0", 0), ("15", 1), ("30", 2), ("40", 3), ("AD", 4), ("A", 4)):
+    assert point_count(v) == want, (v, point_count(v))
+for v, want in (("0", 0), ("5", 5), ("11", 11)):
+    assert point_count(v, in_tiebreak=True) == want, (v, point_count(v, True))
+assert point_count(None) == 0 and point_count("") == 0
+print("  0/15/30/40/AD in a game, plain numbers in a tiebreak, 0 for anything absent")
 
 print("\nALL SEEDING TESTS PASSED")
