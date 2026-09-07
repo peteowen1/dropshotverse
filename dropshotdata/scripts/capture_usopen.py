@@ -26,20 +26,43 @@ from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-BASE = "https://www.usopen.org"
+# The four majors run the same IBM-built platform, but not all of it is open.
+# Probed on 2026-09-07, and the differences are real rather than cosmetic:
+#
+#   US Open    every feed answers, 2022 onward. eventDays enumerates.
+#   Wimbledon  the POINT TAPE answers for 2025-2026, and so do draws, players,
+#              complete and distance - but eventDays, seeds, live scores,
+#              insight and match_stats are all 403. So it cannot be enumerated
+#              the way the US Open is, and falls back to the draw feeds.
+#   Roland Garros   nothing on this path shape.
+#   Australian Open ausopen.com returns a 200 HTML page for EVERY path, which
+#              is a soft 404 - it briefly looked like a hit until a check that
+#              insists on JSON was applied.
+#
+# `enumerate_via` is therefore not a preference, it is a fact about each host.
+SLAMS = {
+    "usopen": {"host": "https://www.usopen.org", "loc": "en_US",
+               "enumerate_via": "eventDays", "draw_codes": ("MS", "WS")},
+    "wimbledon": {"host": "https://www.wimbledon.com", "loc": "en_GB",
+                  "enumerate_via": "draws", "draw_codes": ("MS", "LS", "WS")},
+}
+
+SLAM = "usopen"
+BASE = SLAMS[SLAM]["host"]
+LOC = SLAMS[SLAM]["loc"]
 YEAR = 2026
-OUT = _common.RAW / "usopen" / str(YEAR)
+OUT = _common.RAW / SLAM / str(YEAR)
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36")
 
 # per-match feeds worth keeping. `history` is the point tape and the whole point
 # of this exercise; the rest are cheap and contextual.
 MATCH_FEEDS = {
-    "history":  "/en_US/scores/feeds/{y}/slamtracker/history/{mid}C.json",
-    "complete": "/en_US/scores/feeds/{y}/matches/complete/{mid}.json",
-    "stats":    "/en_US/scores/feeds/{y}/completed_matches/match_stats_{mid}.json",
-    "distance": "/en_US/scores/feeds/{y}/slamtracker/distance/{mid}.dist.json",
-    "insight":  "/en_US/scores/feeds/{y}/match_insight/{mid}.json",
+    "history":  "/{loc}/scores/feeds/{y}/slamtracker/history/{mid}C.json",
+    "complete": "/{loc}/scores/feeds/{y}/matches/complete/{mid}.json",
+    "stats":    "/{loc}/scores/feeds/{y}/completed_matches/match_stats_{mid}.json",
+    "distance": "/{loc}/scores/feeds/{y}/slamtracker/distance/{mid}.dist.json",
+    "insight":  "/{loc}/scores/feeds/{y}/match_insight/{mid}.json",
 }
 
 DELAY = 0.7          # seconds between requests — we are a guest here
@@ -108,7 +131,7 @@ def capture_match(mid: str, tag: str = "") -> dict[str, bool]:
     fetched: dict[str, bool] = {}
     written = 0
     for name, tmpl in MATCH_FEEDS.items():
-        blob = fetch(tmpl.format(y=YEAR, mid=mid))
+        blob = fetch(tmpl.format(loc=LOC, y=YEAR, mid=mid))
         fetched[name] = blob is not None
         if blob and write_if_changed(OUT / "matches" / str(mid), name, blob):
             written += 1
@@ -120,13 +143,13 @@ def capture_match(mid: str, tag: str = "") -> dict[str, bool]:
 def capture_reference() -> None:
     """Tournament-level feeds: the draw, the player list, the feed catalogue itself."""
     refs = {
-        "config_web":   "/en_US/json/gen/config_web.json",
-        "draws":        f"/en_US/scores/feeds/{YEAR}/draws/draws.json",
-        "players":      f"/en_US/scores/feeds/{YEAR}/players/players.json",
-        "competitors":  f"/en_US/scores/feeds/{YEAR}/players/competitors.json",
-        "seeds":        f"/en_US/scores/feeds/{YEAR}/players/seeds_results_all.json",
-        "event_days":   f"/en_US/scores/feeds/{YEAR}/completed_matches/eventDays.json",
-        "schedule_days": f"/en_US/scores/feeds/{YEAR}/schedule/scheduleDays.json",
+        "config_web":   f"/{LOC}/json/gen/config_web.json",
+        "draws":        f"/{LOC}/scores/feeds/{YEAR}/draws/draws.json",
+        "players":      f"/{LOC}/scores/feeds/{YEAR}/players/players.json",
+        "competitors":  f"/{LOC}/scores/feeds/{YEAR}/players/competitors.json",
+        "seeds":        f"/{LOC}/scores/feeds/{YEAR}/players/seeds_results_all.json",
+        "event_days":   f"/{LOC}/scores/feeds/{YEAR}/completed_matches/eventDays.json",
+        "schedule_days": f"/{LOC}/scores/feeds/{YEAR}/schedule/scheduleDays.json",
     }
     for name, path in refs.items():
         blob = fetch(path)
@@ -177,6 +200,51 @@ def save_done(done: set[str]) -> None:
     tmp.replace(DONE_FILE)
 
 
+def ids_from_draw_feeds() -> set[str]:
+    """Every match id in this slam's draw feeds.
+
+    Wimbledon serves the point tape but 403s `completed_matches/eventDays.json`,
+    which is how the US Open backfill finds its matches. The draw feeds are open
+    there and carry every match with its `winner`, so they enumerate just as
+    well - one request per draw instead of one per tournament day.
+
+    Only DECIDED matches are returned. An undecided one has no settled tape to
+    capture, and would be re-fetched on the next run anyway.
+    """
+    ids: set[str] = set()
+    for code in SLAMS[SLAM]["draw_codes"]:
+        blob = fetch(f"/{LOC}/scores/feeds/{YEAR}/draws/{code}.json")
+        if not blob:
+            continue
+        write_if_changed(OUT / "reference" / "draws", code, blob)
+        try:
+            matches = json.loads(blob).get("matches", [])
+        except json.JSONDecodeError:
+            log(f"  {code}.json did not parse")
+            continue
+        decided = [m for m in matches
+                   if str(m.get("winner", "")) in ("1", "2") and m.get("match_id")]
+        ids |= {str(m["match_id"]) for m in decided}
+        log(f"  draw {code}: {len(matches)} matches, {len(decided)} decided")
+    log(f"  {len(ids)} decided matches to capture")
+    return ids
+
+
+def capture_ids(ids: list[str], full: bool = False) -> None:
+    """Capture every feed for each id, skipping ones already settled."""
+    done = set() if full else load_done()
+    todo = [i for i in ids if i not in done]
+    log(f"  {len(todo)} not yet captured ({len(ids) - len(todo)} already settled)")
+    for n, mid in enumerate(todo, 1):
+        fetched = capture_match(mid, tag=f" [{n}/{len(todo)}]")
+        if fetched.get("history"):
+            done.add(mid)
+        if n % 25 == 0:
+            save_done(done)
+    save_done(done)
+    log(f"  backfill complete: {len(done)} matches settled")
+
+
 def backfill(full: bool = False) -> None:
     """Capture the settled tape of every completed match not yet captured.
 
@@ -191,7 +259,15 @@ def backfill(full: bool = False) -> None:
     log("=== BACKFILL: completed matches not yet captured ===")
     capture_reference()
 
-    days_blob = fetch(f"/en_US/scores/feeds/{YEAR}/completed_matches/eventDays.json")
+    if SLAMS[SLAM]["enumerate_via"] == "draws":
+        ids = ids_from_draw_feeds()
+        if not ids:
+            log("!! no match ids from the draw feeds — nothing to capture")
+            return
+        capture_ids(sorted(ids), full=full)
+        return
+
+    days_blob = fetch(f"/{LOC}/scores/feeds/{YEAR}/completed_matches/eventDays.json")
     if not days_blob:
         log("!! no eventDays.json — cannot enumerate completed matches")
         return
@@ -256,7 +332,7 @@ def poll(hours: float) -> None:
     seen_final: set[str] = set()
 
     while time.time() < deadline:
-        blob = fetch(f"/en_US/scores/feeds/{YEAR}/matches/live/scores.json")
+        blob = fetch(f"/{LOC}/scores/feeds/{YEAR}/matches/live/scores.json")
         if blob:
             write_if_changed(OUT / "reference" / "live", "scores", blob)
             try:
@@ -290,7 +366,7 @@ def once() -> None:
     a crash costs one interval rather than the whole capture, and reboots are a
     non-event. Content-addressed writes make repeated runs idempotent.
     """
-    blob = fetch(f"/en_US/scores/feeds/{YEAR}/matches/live/scores.json")
+    blob = fetch(f"/{LOC}/scores/feeds/{YEAR}/matches/live/scores.json")
     if not blob:
         log("no live feed response")
         return
@@ -327,13 +403,32 @@ def once() -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=["backfill", "poll", "both", "once"])
+    ap.add_argument("--slam", choices=sorted(SLAMS), default=SLAM,
+                    help="which major. Only the two that actually serve a point "
+                         "tape are listed; see the SLAMS comment for what each "
+                         "host does and does not answer.")
+    ap.add_argument("--year", type=int, default=YEAR,
+                    help="tournament year. The slam feeds keep past editions on the "
+                         "same paths - the US Open answers for 2022 onward - so this "
+                         "backfills previous years with the identical capture. Every "
+                         "feed is stored raw, whole, exactly as for the live year: "
+                         "deciding at harvest time which fields matter is a decision "
+                         "you cannot revisit without fetching it all again.")
     ap.add_argument("--hours", type=float, default=8.0)
     ap.add_argument("--full", action="store_true",
                     help="backfill: re-capture every completed match, ignoring backfill_done.json")
     args = ap.parse_args()
 
+    if args.slam != SLAM or args.year != YEAR:
+        SLAM = args.slam
+        BASE = SLAMS[SLAM]["host"]
+        LOC = SLAMS[SLAM]["loc"]
+        YEAR = args.year
+        OUT = _common.RAW / SLAM / str(YEAR)
+        DONE_FILE = OUT / "reference" / "backfill_done.json"
+
     OUT.mkdir(parents=True, exist_ok=True)
-    log(f"output: {OUT}")
+    log(f"output: {OUT}  (year {YEAR})")
     try:
         if args.mode == "once":
             once()

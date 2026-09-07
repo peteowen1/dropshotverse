@@ -190,4 +190,61 @@ Consequences to hold onto:
   with `cal_*.json`, so a fixed fetch could still be undone by a stale file.
   The glob is now `cal_*_p*.json`, `calendar()` deletes a same-window
   single-page cache when it pages, and the two on disk were removed.
+- **D-26 (2026-09-07)** — W3 sized and it is real. `build_player_table`
+  computes `weeks_since_last` once from DATE0 and the simulator reuses it for
+  every round, so the model is fed the pre-tournament layoff gap at the final.
+  From round two on both players have just played, so the true
+  `weeks_since_last_diff` is ~0. Zeroing it moves published probabilities by
+  mean 0.023 (ATP) and 0.018 (WTA) over the whole field, p99 ~0.17, max 0.25.
+  **Worth fixing, but not mid-event**: restricted to the 12 players still alive
+  the effect falls to 0.012 (ATP) and 0.006 (WTA), because the extreme layoffs
+  have been eliminated. The value is largest at the START of a draw, so the fix
+  belongs before Beijing (2026-09-30), not during a US Open that is nearly
+  over. Evidence: `tune_scratch/screen_w3_frozen_layoff.py`.
+- **D-27 (2026-09-07)** — W3 and W5 interact, which neither ticket said.
+  `weeks_since_last` defaults to **52.0** for a player with no Elo history, so
+  a debutant is indistinguishable from someone a year injured and carries a
+  ~50-week difference against every opponent. Three ATP and one WTA entrant hit
+  this. Any W3 fix should decide the debutant case explicitly rather than
+  inheriting 52.0.
+- **D-28 (2026-09-07)** — `fatigue_diff` is hard-coded to 0.0 in
+  `xgb_bt_rating.py:400` for every simulated match. For a 128 draw with no byes
+  that is exactly right, since both players have played the same number of
+  matches. It is NOT right for a draw with byes: Beijing is 96 into 128 slots
+  with 32 byes, so in the round after the byes a seed meets someone who has
+  played a match and the true difference is -1. Untested, and it reaches the
+  WTA event forecaster rather than the US Open path.
+- **D-36 (2026-09-07)** — Data-source survey, after Sackmann's repos died. What
+  is free and current, probed rather than assumed (~25 endpoints, 5 providers):
+  **ESPN** is live and has the US Open (239 matches a draw, scores and set
+  lines) but NO serve statistics and NO point-by-point - its `plays` resource
+  returns `count: 0`. **The WTA API** is live and real (18,787 tournaments,
+  36,138 players, `/tournaments/{id}/{year}/matches` works) but is scores only.
+  **atptour.com** is 403 behind Cloudflare. **Sofascore** is 403.
+  **tennismylife** is the only tour-wide source with serve stats and lags 8-14
+  days - it had no US Open at all on 2026-09-07, mid-tournament.
+- **D-37 (2026-09-07)** — The slam feeds are the richest free tennis data
+  available and we were using one fortnight of one of them. The US Open's
+  `slamtracker/history` answers for **2022 through 2026**, Wimbledon for
+  2025-2026, on the same path shape. Roland Garros has nothing on that shape;
+  the Australian Open returns a 200 HTML page for every path, which is a soft
+  404 and which I briefly mistook for a hit. The payload is richer than the
+  match archive: serve speed, serve width and depth, return depth, kick height,
+  rally count, distance run and shot type, per point. Backfilling the US Open
+  2022-25 takes ~89k points to roughly 450k, which is what makes WTA
+  calibration measurable at all - on one event 88% of the between-player spread
+  was sampling noise (D-35).
+- **D-38 (2026-09-07)** — tennismylife is archived daily to its own Release
+  (`.github/workflows/archive-tennismylife.yml`). It was the only tour-wide
+  source of serve statistics we have, fetched live on every run, with no copy
+  kept anywhere - the identical exposure that made Sackmann's 404 a crisis in
+  August. Latest plus dated copies, so a bad upstream day can be stepped back
+  from. An empty or schema-changed response FAILS the job; mere staleness only
+  warns, because 8-14 days behind is this source's normal.
+- **D-39 (2026-09-07)** — The capturer takes `--slam` and handles Wimbledon,
+  which serves the point tape but 403s `eventDays.json`, `seeds`, live scores,
+  `insight` and `match_stats`. It cannot be enumerated the way the US Open is,
+  so it falls back to the draw feeds: MS and LS give 254 decided singles
+  matches. `enumerate_via` in SLAMS records which host does what, because it is
+  a fact about each site rather than a preference.
 
