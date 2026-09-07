@@ -5,6 +5,34 @@
 > Rolled-off narrative: [backlog/](backlog/)
 > Last updated: **2026-09-07 evening.**
 >
+> **FIRST ACTION IN THIS REPO - check the backfill finished.**
+> A four-year US Open point-tape backfill was left running detached on
+> 2026-09-07 (~6.5 hours, ~1.3 GB). It is orphaned from the session that
+> started it, so it survives a terminal close, but **nothing alarms if it
+> died** and nobody is watching it. Expect **~944 match folders per year**:
+>
+> ```powershell
+> foreach ($y in 2022,2023,2024,2025) {
+>   $p = "C:\dev\dropshotverse\dropshotdata\raw\usopen\$y\matches"
+>   "{0}: {1}" -f $y, $(if (Test-Path $p) { (Get-ChildItem $p -Directory).Count } else { "MISSING" })
+> }
+> ```
+>
+> Short or missing? It is **resumable** - `backfill_done.json` is saved every 25
+> matches and the re-run skips what is already captured:
+>
+> ```
+> python dropshotdata/scripts/capture_usopen.py backfill --year <year>
+> ```
+>
+> Run that from a WORKTREE, not the working tree: `capture_usopen.py` is what
+> the 5-minute scheduled task executes, so until 2026-09-16 an edit there is in
+> production within five minutes.
+>
+> Once all four years are complete, the next real task is queued item 2 below -
+> verify per-year field coverage BEFORE anything uses the 2022-24 tapes. Feeds
+> change shape across years and that caught the 2026-09-07 session twice.
+>
 > **Read first if you are cold:**
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
