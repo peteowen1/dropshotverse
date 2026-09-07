@@ -190,4 +190,28 @@ Consequences to hold onto:
   with `cal_*.json`, so a fixed fetch could still be undone by a stale file.
   The glob is now `cal_*_p*.json`, `calendar()` deletes a same-window
   single-page cache when it pages, and the two on disk were removed.
+- **D-26 (2026-09-07)** — W3 sized and it is real. `build_player_table`
+  computes `weeks_since_last` once from DATE0 and the simulator reuses it for
+  every round, so the model is fed the pre-tournament layoff gap at the final.
+  From round two on both players have just played, so the true
+  `weeks_since_last_diff` is ~0. Zeroing it moves published probabilities by
+  mean 0.023 (ATP) and 0.018 (WTA) over the whole field, p99 ~0.17, max 0.25.
+  **Worth fixing, but not mid-event**: restricted to the 12 players still alive
+  the effect falls to 0.012 (ATP) and 0.006 (WTA), because the extreme layoffs
+  have been eliminated. The value is largest at the START of a draw, so the fix
+  belongs before Beijing (2026-09-30), not during a US Open that is nearly
+  over. Evidence: `tune_scratch/screen_w3_frozen_layoff.py`.
+- **D-27 (2026-09-07)** — W3 and W5 interact, which neither ticket said.
+  `weeks_since_last` defaults to **52.0** for a player with no Elo history, so
+  a debutant is indistinguishable from someone a year injured and carries a
+  ~50-week difference against every opponent. Three ATP and one WTA entrant hit
+  this. Any W3 fix should decide the debutant case explicitly rather than
+  inheriting 52.0.
+- **D-28 (2026-09-07)** — `fatigue_diff` is hard-coded to 0.0 in
+  `xgb_bt_rating.py:400` for every simulated match. For a 128 draw with no byes
+  that is exactly right, since both players have played the same number of
+  matches. It is NOT right for a draw with byes: Beijing is 96 into 128 slots
+  with 32 byes, so in the round after the byes a seed meets someone who has
+  played a match and the true difference is -1. Untested, and it reaches the
+  WTA event forecaster rather than the US Open path.
 

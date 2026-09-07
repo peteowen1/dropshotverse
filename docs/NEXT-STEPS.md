@@ -235,10 +235,18 @@ Still open from those reviews, in the order they are worth doing:
    7 matches, not the decider it was. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
-6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw
-   date for every round) and has its own stage-reaching scorecard in
-   `simulate_tournament_xgb.py`. W5 (new players enter at 1500 with no prior)
-   is the last unexamined item.
+6. **W3 MEASURED 2026-09-07 (D-26): real, worth fixing, not mid-event.**
+   Zeroing the stale layoff difference from round two on moves published
+   probabilities by mean 0.023 (ATP) / 0.018 (WTA) across the field, p99 ~0.17.
+   Restricted to the 12 players still alive it is 0.012 / 0.006 - the extreme
+   layoffs are already out. The effect is largest at the START of a draw, so
+   **do it before Beijing (2026-09-30)**, not during a US Open that is nearly
+   over. Two things surfaced alongside it: `weeks_since_last` defaults to
+   **52.0** for a player with no Elo history, so a debutant looks a year
+   injured (D-27, and this is W5's real shape); and `fatigue_diff` is hard
+   coded to 0.0, correct for a 128 draw with no byes and wrong for Beijing's
+   96-into-128 with 32 byes (D-28). Sizing script:
+   `tune_scratch/screen_w3_frozen_layoff.py`.
 
 ## Known and NOT chased
 
