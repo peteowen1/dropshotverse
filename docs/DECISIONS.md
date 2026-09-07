@@ -160,9 +160,13 @@ Consequences to hold onto:
   rounds each returned a finding; all six defects were pre-existing and none
   had ever published a wrong number, because the live path did not reach
   `ticket09_live_modes` until this branch wired it in.
-- **D-22 (2026-09-07)** — Open: this repo has NO CI. `gh pr checks` reports
+- **D-22 (2026-09-07, CLOSED same day)** — This repo had NO CI. `gh pr checks` reports
   none, so the "verify CI conclusion" step of the review gate is vacuous here
   and #31 merged on local verification alone. A workflow running
-  `dropshotdata/tune_scratch/test_inmatch_seeding.py` on pull requests would
-  give the gate something real to check.
-
+  `dropshotdata/tune_scratch/test_inmatch_seeding.py` on pull requests now
+  gives the gate something real to check: `.github/workflows/tests.yml`. The
+  suite was made offline and deterministic first (a checked-in feed fixture
+  instead of a live fetch), so a red run means the maths changed rather than
+  that a tournament ended. A second job fails the build if either producer
+  passes `--live-score`, since the working tree is production and turning it on
+  by accident would publish within 30 minutes.
