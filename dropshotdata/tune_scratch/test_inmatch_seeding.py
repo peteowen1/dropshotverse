@@ -10,8 +10,8 @@ from inmatch_seeding import (SERVE_BASE, TOLERANCE, seeded_probability,  # noqa:
                              solve_serves, wp)
 from ticket09_live_modes import (p_game_from_state, p_match_from_state,  # noqa: E402
                                  p_set_from_state, p_tiebreak,
-                                 p_tiebreak_from_state, point_count,
-                                 set_is_decided)
+                                 p_tiebreak_from_state, parse_game_score,
+                                 point_count, set_is_decided)
 from hierarchical_model import p_game  # noqa: E402
 
 
@@ -302,5 +302,44 @@ for v, want in (("0", 0), ("5", 5), ("11", 11)):
     assert point_count(v, in_tiebreak=True) == want, (v, point_count(v, True))
 assert point_count(None) == 0 and point_count("") == 0
 print("  0/15/30/40/AD in a game, plain numbers in a tiebreak, 0 for anything absent")
+
+hdr("21. every gameScore shape the live feed actually sends")
+# Enumerated from 15,385 captured polls under raw/usopen/2026/matches.
+for raw, in_tb, want in ((None, False, (0, 0)), ([], False, (0, 0)),
+                         ([None, None], False, (0, 0)), (["0", "0"], False, (0, 0)),
+                         (["15", "30"], False, (1, 2)), (["40", "40"], False, (3, 3)),
+                         (["A", None], False, (4, 3)), ([None, "A"], False, (3, 4)),
+                         (["2", "2"], True, (2, 2)), (["11", "9"], True, (11, 9))):
+    got = parse_game_score(raw, in_tb)
+    assert got == want, f"{raw!r} in_tb={in_tb} gave {got}, wanted {want}"
+print("  absent, [], [None,None] and ['0','0'] all read as not started")
+print("  ['40','40'] is deuce; ['A',None] is advantage with the None meaning 40")
+# The None beside an advantage is NOT no-score. Reading it as 0 gives 4-0,
+# which resolves to a won game at probability 1.0 on the poll where somebody
+# reaches advantage - a live-path bug, on exactly the break-point case this
+# whole change exists to represent.
+assert p_game_from_state(0.65, 4, 0) == 1.0, "4-0 should be a won game"
+adv = p_game_from_state(0.65, 4, 3)
+print(f"  advantage as 4-0 would be {p_game_from_state(0.65, 4, 0):.4f}; "
+      f"as 4-3 it is {adv:.4f}")
+assert adv < 1.0
+
+hdr("22. a game boundary is taken from the tape's numbering, not from a reset")
+if tape.exists():
+    t2 = pd.read_parquet(tape, columns=["match_id", "point_no", "SetNo", "GameNo",
+                                        "P1Score", "P2Score"])
+    t2 = t2[t2["match_id"] == t2["match_id"].iloc[0]].sort_values("point_no").reset_index(drop=True)
+    keys = list(zip(t2["SetNo"].astype(str), t2["GameNo"].astype(str)))
+    starts = [True] + [keys[i] != keys[i - 1] for i in range(1, len(keys))]
+    n_start = sum(starts)
+    # every row that begins a game must be scored from 0-0 regardless of what
+    # the previous row's score column happened to say
+    bad = [i for i in range(1, len(keys)) if starts[i]
+           and (str(t2["P1Score"][i - 1]), str(t2["P2Score"][i - 1])) != ("0", "0")]
+    print(f"  {n_start} game boundaries in this match; "
+          f"{len(bad)} where the previous row had NOT reset to 0-0")
+    print("  the shift now reads (SetNo, GameNo) so those cannot leak a stale score")
+else:
+    print("  skipped: point tape not present")
 
 print("\nALL SEEDING TESTS PASSED")

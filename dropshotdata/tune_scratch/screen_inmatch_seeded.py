@@ -206,13 +206,22 @@ def main() -> None:
         tb = [bool(x) for x in g["is_tb"]]
         pts = [(point_count(a, t), point_count(b, t))
                for a, b, t in zip(g["P1Score"], g["P2Score"], tb)]
+        # Which rows begin a new game, from the tape's OWN numbering. The score
+        # is normally reset to 0-0 on the row that ends a game, so shifting it
+        # lands 0-0 on the next row by itself - but not always: 3 of the 13,203
+        # game boundaries have rows missing or a live score correction, and
+        # there a stale score would leak into the first point of a new game.
+        # Reading (SetNo, GameNo) makes it exact rather than usually right.
+        keys = list(zip(g["SetNo"].astype(str), g["GameNo"].astype(str)))
+        starts_game = [True] + [keys[i] != keys[i - 1] for i in range(1, len(keys))]
         # NOT named `pre`: that is the dict of pre-match probabilities this
         # function is built around, and shadowing it silently skipped every
         # match after the first.
         post_state = list(st.itertuples(index=False, name=None))
         pre_state = [(0, 0, 0, 0)] + post_state[:-1]
         post_pts = pts
-        pre_pts = [(0, 0)] + pts[:-1]
+        pre_pts = [(0, 0) if starts_game[i] else pts[i - 1] if i else (0, 0)
+                   for i in range(len(pts))]
         servers = [x == "1" for x in g["PointServer"]]
 
         for k, r in enumerate(g.itertuples()):

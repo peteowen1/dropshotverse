@@ -629,3 +629,24 @@ live position (games 5-4, not a finished match), and it reaches 100% because
 knowing the point score genuinely tells you more. The check retains its
 teeth - it is asked of a state the match could still turn from.
 
+### Review caught an advantage point reading as a won game (2026-09-07)
+
+The live feed writes an advantage game as `['A', null]`, and that null is not
+"no score" - it means the other player is on 40. Reading it as zero gives 4-0,
+which `p_game_from_state` resolves to a **won game at probability 1.0**, on the
+poll where somebody reaches advantage. Correct is 0.9213 at p=0.65.
+
+Confirmed against 289 of 15,385 captured polls. Every gameScore shape the feed
+sends is now decided in one place, `parse_game_score`, and asserted in test 21.
+
+**The measured numbers were never affected.** The point tape writes advantage
+as `AD` in `P1Score` with `40` on the other side, which converted correctly all
+along. This was purely the live path - the one that publishes - and it would
+have fired on exactly the break-point case the point-level work exists to
+represent.
+
+Also tightened: the screen took a new game from the score column having been
+reset to 0-0, which holds at 13,200 of 13,203 boundaries. The three exceptions
+are rows missing from the tape or a live score correction. It now reads
+`(SetNo, GameNo)`, so a stale score cannot leak into a new game at all.
+

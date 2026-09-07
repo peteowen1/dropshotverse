@@ -223,7 +223,7 @@ def _player(team: dict) -> tuple[str, str] | None:
     return f"{team['firstNameA']} {team['lastNameA']}", team.get("idA") or ""
 
 
-from ticket09_live_modes import point_count, set_is_decided  # noqa: E402
+from ticket09_live_modes import parse_game_score, set_is_decided  # noqa: E402
 
 
 def live_state(m: dict) -> dict | None:
@@ -307,14 +307,12 @@ def live_state(m: dict) -> dict | None:
     played = sum(sum(g) for g in games)
     in_tiebreak = games1 == 6 and games2 == 6
 
-    # The score within the game being played. `gameScore` is [null, null] when
-    # no game is under way, which reads as 0-0 and is correct. Absent entirely
-    # is also 0-0: that costs the point-level refinement for this poll and
-    # leaves a game-level number, which is what the old code always produced,
-    # so it degrades rather than lies.
-    gs = ((m.get("scores") or {}).get("gameScore")) or [None, None]
-    points1 = point_count(gs[0], in_tiebreak) if len(gs) > 0 and gs[0] is not None else 0
-    points2 = point_count(gs[1], in_tiebreak) if len(gs) > 1 and gs[1] is not None else 0
+    # The score within the game being played. Absent, empty and [null, null]
+    # all mean no game under way, which is 0-0. An advantage arrives as
+    # ['A', null], where the null means 40 - see parse_game_score, which is
+    # where every one of these shapes is decided, once.
+    points1, points2 = parse_game_score(
+        (m.get("scores") or {}).get("gameScore"), in_tiebreak)
     return {"sets1": sets1, "sets2": sets2, "games1": games1, "games2": games2,
             "p1_serves": s1, "in_tiebreak": in_tiebreak,
             "points1": points1, "points2": points2,

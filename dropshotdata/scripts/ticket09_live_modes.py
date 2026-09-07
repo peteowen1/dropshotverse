@@ -99,6 +99,44 @@ def point_count(value, in_tiebreak: bool = False) -> int:
     return int(s) if s.isdigit() else 0
 
 
+_ADVANTAGE = {"A", "AD", "ADV"}
+
+
+def parse_game_score(raw, in_tiebreak: bool = False) -> tuple[int, int]:
+    """The live feed's `scores.gameScore` as two point counts.
+
+    The feed writes an advantage game as ['A', None] or [None, 'A'], and that
+    None is NOT "no score" - it means the other player is on 40. Reading it as
+    zero gives 4-0, which `p_game_from_state` resolves to a WON GAME at
+    probability 1.0, on the poll where somebody reaches advantage. Confirmed
+    across 289 captured polls; deuce, by contrast, arrives as ['40', '40'] and
+    was always read correctly.
+
+    Absent, empty and [None, None] all mean no game under way, which is 0-0.
+    Any other shape carrying exactly one side is not something this format is
+    known to produce, so it degrades to 0-0 - a game-level number, which is
+    what this code produced for its whole life - and says so rather than
+    inventing the missing half.
+    """
+    if not raw:
+        return 0, 0
+    a = raw[0] if len(raw) > 0 else None
+    b = raw[1] if len(raw) > 1 else None
+    if a is None and b is None:
+        return 0, 0
+    a_adv = a is not None and str(a).strip().upper() in _ADVANTAGE
+    b_adv = b is not None and str(b).strip().upper() in _ADVANTAGE
+    if a_adv and b is None:
+        return 4, 3
+    if b_adv and a is None:
+        return 3, 4
+    if a is None or b is None:
+        print(f"WARNING: gameScore {raw!r} carries only one side and it is not an "
+              f"advantage; reading the game as not started rather than guessing")
+        return 0, 0
+    return point_count(a, in_tiebreak), point_count(b, in_tiebreak)
+
+
 def p_game_from_state(p: float, a: int, b: int) -> float:
     """P(the SERVER wins this game) from an arbitrary point score.
 
