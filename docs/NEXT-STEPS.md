@@ -189,10 +189,36 @@ Still open from those reviews, in the order they are worth doing:
    match is publish the pre-match number and ignore the score
    (`simulate_usopen_live.py:88-91`), which scores ECE **0.1058**, log-loss
    0.60332. So against the real incumbent arm D is three times better
-   calibrated and 0.110 better on log-loss. **Recommended to ship**, subject to
-   one thing: the evaluation covers rounds 1-3 because the tournament is still
-   being played and the point table is a snapshot, not because of any join bug.
-   Rebuild the point table and re-score after the final. `tune_scratch/screen_inmatch_seeded.py`,
+   calibrated and 0.110 better on log-loss. **Round 4 then arrived** (the point
+   table was a stale snapshot; rebuilding it added 8 finished R16 matches) and
+   split the answer. Conditioning on the live score is settled - both seeded
+   arms beat today's published number in every round. Whether to RECALIBRATE
+   is not: on round 4 the plain seeded arm C beats the recalibrated arm D on
+   both calibration (0.128 vs 0.175) and log-loss (0.224 vs 0.272), on 7
+   matches. **Ship the seeding, not the recalibration**, and settle C vs D
+   after the final with the same rebuild-and-re-score.
+
+   **Built on `feat/inmatch-seeding`** (2026-09-07), behind `--live-score`,
+   OFF by default because the scheduled task runs this working tree. The solve
+   lives once in `dropshotdata/scripts/inmatch_seeding.py`; the screen imports
+   the same code and was re-run through it to confirm the measurement holds.
+   Switch-on checklist, all three needed:
+   1. the 2026-09-13 final, then rebuild the point table and re-score C vs D;
+   2. decide whether `live_predictions.parquet` should say which model made it
+      (the `source` column is hard coded to `"live"` today, so a seeded and an
+      unseeded projection are indistinguishable to the site);
+   3. one live run with the flag on while a match is actually in progress -
+      nothing was under way on 2026-09-07, so that path has been tested on
+      synthetic states only.
+
+   Review of the branch found and fixed TWO real defects underneath all of
+   this: 6-6 sets decided twice (error up to 0.42, D-16) and the point tape's
+   set-ending row read as a set in progress (1.58% of points, D-17). Every arm
+   was re-measured twice. **C over D is now settled (D-18)** - arm D clears the
+   headline bar on the corrected tape but fails its own anchor D3, the two
+   tours' temperatures being 1.209 and 1.458 against a 0.15 spread bar. The
+   2026-09-13 final is now a confirmation of the late-round result on more than
+   7 matches, not the decider it was. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw

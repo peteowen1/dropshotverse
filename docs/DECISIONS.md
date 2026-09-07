@@ -120,3 +120,37 @@ Consequences to hold onto:
   `2026_wta.csv` the whole time. The real limitation is no WTA *before* 1990.
 - Two more (the RESUME log is stale from round 11; the archive does not end at
   Roland Garros) live in [HOME.md](HOME.md), where a cold session reads them.
+- **D-16 (2026-09-07)** — `p_set_from_state` decided a 6-6 set by playing a
+  thirteenth game and then applying the tiebreak on top, an error up to 0.42.
+  Fixed. It was invisible to the equal-players anchor (both halves give 0.5)
+  and had been documented in the code as a convention difference rather than a
+  bug; the recursion now agrees with `hm.p_match` at the opening boundary to
+  machine precision. Nothing published was affected - the live path does not
+  reach this module on `dev`. Evidence and re-measured arms:
+  `docs/plans/validation-charter.md`.
+- **D-17 (2026-09-07)** — The point tape's set-ending row carries the new set
+  count AND the finished set's game score at once (match 1101 point 70: sets
+  1-0, games 6-4). 1,410 points, 1.58% of the tape, sat on such a row and were
+  being scored as a set in progress. Fixed in the screen; every in-match number
+  measured before this is void. Arm C: log-loss 0.53106 -> 0.48286.
+- **D-18 (2026-09-07)** — Ship arm C (seed the in-match recursion from the
+  model's pre-match number), not arm D (temperature on top). Arm D clears the
+  headline bar on the corrected tape but fails its own anchor D3: the men's and
+  women's temperatures are 1.209 and 1.458, a spread of 0.248 against a 0.15
+  bar, so a single temperature is not what the data contains. Late rounds
+  independently still prefer C. Evidence:
+  `docs/plans/validation-charter.md`.
+- **D-19 (2026-09-07)** — The point tape's state columns are post-point while
+  `PointServer` is pre-point; the screen was pairing them. Now scored from the
+  state as each point began. Two consequences: the serve was wrong on every
+  game-ending point, and anchor C3 was vacuous (a post-point final state is the
+  finished match, so it returned 1.0 and reported 100% for any model). C3 now
+  reads 99.1%. Headline numbers barely moved; all conclusions stand.
+- **D-20 (2026-09-07, CLOSED same day)** — The in-match recursion worked at
+  GAME granularity while the data was point level: 84.6% of points carried a
+  within-game score the model never saw, and 40-0 up on serve read the same as
+  0-40 down. Added `p_game_from_state` and `p_tiebreak_from_state`, threaded
+  through as arguments defaulting to 0-0 so every existing caller is
+  bit-identical. Aggregate barely moved (arm C log-loss 0.48467 -> 0.48310);
+  the median per-point change went from 0.0000 to 0.0109, which is the actual
+  point. Evidence: `docs/plans/validation-charter.md`.

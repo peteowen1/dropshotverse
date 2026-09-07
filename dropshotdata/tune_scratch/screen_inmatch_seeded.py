@@ -57,7 +57,8 @@ import usopen_live_draw as draw_mod                                  # noqa: E40
 import xgb_bt_rating as xbr                                          # noqa: E402
 from simulate_tournament import STAGE_ORDER                          # noqa: E402
 from simulate_tournament_xgb import build_round_pred_matrices        # noqa: E402
-from ticket09_live_modes import p_match_from_state                   # noqa: E402
+from inmatch_seeding import SERVE_BASE, solve_serves, wp             # noqa: E402
+from ticket09_live_modes import point_count, set_is_decided          # noqa: E402
 
 PTS = _common.DD / "usopen_2026_points.parquet"
 OUT = _common.SCRATCH / "screen_inmatch_seeded.parquet"
@@ -85,52 +86,20 @@ def ece(p, y, bins: int = 10) -> float:
                      for m in (idx == b for b in range(bins)) if m.sum()))
 
 
-_wp_cache: dict[tuple, float] = {}
-
-
-def wp(p1, p2, s1, s2, g1, g2, p1_serves, bo) -> float:
-    key = (round(p1, 3), round(p2, 3), s1, s2, g1, g2, p1_serves, bo)
-    v = _wp_cache.get(key)
-    if v is None:
-        v = p_match_from_state(*key)
-        _wp_cache[key] = v
-    return v
-
-
-def solve_serves(p_target: float, base: float, bo: int, p1_serves_first: bool) -> tuple[float, float]:
-    """(p1, p2) with p1 + p2 = 2*base whose opening-state probability ~= p_target.
-
-    Monotone increasing in the difference d, and d must be allowed
-    to go NEGATIVE: at d=0 the recursion states exactly 0.5, so searching only
-    d>=0 clamps every match where the model makes P1 the underdog to a coin
-    flip. The first version of this did that and anchor C2 caught it at a
-    maximum error of 0.496 - half the matches, silently, while the aggregate
-    log-loss still looked good.
-
-    Solved against the recursion AT THE OPENING STATE with the actual first
-    server, not against hm.p_match. The two differ by the serve-order effect:
-    the pre-match model does not know who will serve first, the recursion does,
-    and anchor C2 measured that gap at 0.027 when this solved against p_match.
-    Solving against the state the arm is actually evaluated from makes arm C
-    exactly "the model's pre-match number, then updated by the score"."""
-    p_target = min(max(p_target, 1e-4), 1 - 1e-4)
-    bound = min(base, 1 - base) * 0.999
-    lo, hi = -bound, bound
-    for _ in range(40):
-        d = (lo + hi) / 2
-        if wp(base + d, base - d, 0, 0, 0, 0, p1_serves_first, bo) < p_target:
-            lo = d
-        else:
-            hi = d
-    d = (lo + hi) / 2
-    return base + d, base - d
-
-
 def main() -> None:
     d = pd.read_parquet(PTS)
     d["best_of"] = np.where(d["event"] == "1", 5, 3)
     tour_avg = d.groupby("event").apply(
         lambda g: float((g["PointServer"] == g["PointWinner"]).mean()), include_groups=False)
+    # The shipped path cannot recompute this - the runner has no point tape -
+    # so it carries the same rates as a constant. Assert they still agree, or
+    # the thing measured here stops being the thing that runs.
+    for ev, tour in EVENT_TOUR.items():
+        drift = abs(float(tour_avg[ev]) - SERVE_BASE[tour])
+        if drift > 5e-4:
+            raise SystemExit(f"{tour}: tape serve rate {tour_avg[ev]:.6f} has drifted "
+                             f"{drift:.6f} from the shipped SERVE_BASE {SERVE_BASE[tour]:.6f}; "
+                             f"update inmatch_seeding.SERVE_BASE before trusting this run")
     log(f"points {len(d):,} across {d['match_id'].nunique():,} matches; "
         f"tour-average serve win " + ", ".join(f"{k}={v:.4f}" for k, v in tour_avg.items()))
 
@@ -202,18 +171,92 @@ def main() -> None:
         p_pre = pre[mid][0]
         first_server_is_p1 = bool(g["PointServer"].iloc[0] == "1")
         c1, c2 = solve_serves(p_pre, base, bo, first_server_is_p1)
-        for r in g.itertuples():
-            s1, s2 = int(r.P1SetsWon or 0), int(r.P2SetsWon or 0)
-            gm1, gm2 = int(r.P1GamesWon or 0), int(r.P2GamesWon or 0)
-            srv = (r.PointServer == "1")
+        # ---- reference frame ------------------------------------------
+        # Every STATE column on the tape is recorded AFTER the point: at point
+        # 1 the score already reads 15-0, and on the last point of match 1101
+        # P1SetsWon is 3, i.e. the match is over. `PointServer`, by contrast,
+        # is the server OF that point, which is a before-the-point fact.
+        #
+        # Scoring the post-point state against the pre-point server mixes the
+        # two, and it is wrong precisely on the points where it matters: when a
+        # point ends a game the serve passes, so the recursion was told the
+        # wrong player serves next on every game-ending point.
+        #
+        # It also made anchor C3 - "the eventual winner is above 0.5 on the
+        # final point" - impossible to fail, because the final point's
+        # post-state IS the finished match and the recursion returns exactly
+        # 1.0. It reported 100% for arm A and arm C alike; it would report 100%
+        # for any model at all.
+        #
+        # So the state is shifted by one within the match: what a point is
+        # scored from is the state as that point BEGINS, which is the previous
+        # point's post-state, and 0-0 0-0 for the first point. That pairs
+        # correctly with PointServer, makes the first point's probability the
+        # pre-match number by construction (anchor C2), and makes the last
+        # point a real forecast again.
+        #
+        # The post-point probability is kept alongside it. The difference
+        # between the two is what winning that point was worth.
+        st = g[["P1SetsWon", "P2SetsWon", "P1GamesWon", "P2GamesWon"]].fillna(0).astype(int)
+        # The WITHIN-GAME score, which the recursion ignored until now. The
+        # tape resets it to 0-0 on the point that ends a game, so shifting it
+        # by one alongside the other state columns lands the right thing: the
+        # first point of a game sees 0-0, and a point mid-game sees the score
+        # it was actually played at.
+        tb = [bool(x) for x in g["is_tb"]]
+        pts = [(point_count(a, t), point_count(b, t))
+               for a, b, t in zip(g["P1Score"], g["P2Score"], tb)]
+        # Which rows begin a new game, from the tape's OWN numbering. The score
+        # is normally reset to 0-0 on the row that ends a game, so shifting it
+        # lands 0-0 on the next row by itself - but not always: 3 of the 13,203
+        # game boundaries have rows missing or a live score correction, and
+        # there a stale score would leak into the first point of a new game.
+        # Reading (SetNo, GameNo) makes it exact rather than usually right.
+        keys = list(zip(g["SetNo"].astype(str), g["GameNo"].astype(str)))
+        starts_game = [True] + [keys[i] != keys[i - 1] for i in range(1, len(keys))]
+        # NOT named `pre`: that is the dict of pre-match probabilities this
+        # function is built around, and shadowing it silently skipped every
+        # match after the first.
+        post_state = list(st.itertuples(index=False, name=None))
+        pre_state = [(0, 0, 0, 0)] + post_state[:-1]
+        post_pts = pts
+        pre_pts = [(0, 0) if starts_game[i] else pts[i - 1] if i else (0, 0)
+                   for i in range(len(pts))]
+        servers = [x == "1" for x in g["PointServer"]]
+
+        for k, r in enumerate(g.itertuples()):
+            a1, a2, ag1, ag2 = pre_state[k]
+            b1, b2, bg1, bg2 = post_state[k]
+            # The set-ending row carries the new set count AND the finished
+            # set's games at once (match 1101 point 70: sets 1-0, games 6-4),
+            # so those games are a leftover the set count already reflects.
+            # True of the shifted state exactly as it was of the raw one.
+            if set_is_decided(ag1, ag2):
+                ag1 = ag2 = 0
+            if set_is_decided(bg1, bg2):
+                bg1 = bg2 = 0
+            srv = servers[k]
+            # who serves the next point, for the post-point frame: the same
+            # player unless this point ended a game, in which case it passes
+            srv_next = (not srv) if str(getattr(r, "GameWinner", "0")) != "0" else srv
+            ap1, ap2 = pre_pts[k]
+            bp1, bp2 = post_pts[k]
             rows.append((mid, r.point_no, y1,
-                         wp(base, base, s1, s2, gm1, gm2, srv, bo),   # arm A
-                         wp(c1, c2, s1, s2, gm1, gm2, srv, bo),       # arm C
-                         p_pre))
+                         wp(base, base, a1, a2, ag1, ag2, srv, bo, ap1, ap2),
+                         wp(c1, c2, a1, a2, ag1, ag2, srv, bo, ap1, ap2),
+                         p_pre,
+                         wp(base, base, b1, b2, bg1, bg2, srv_next, bo, bp1, bp2),
+                         wp(c1, c2, b1, b2, bg1, bg2, srv_next, bo, bp1, bp2)))
+
     log(f"scored {len({r[0] for r in rows}):,} matches, {len(rows):,} points "
         f"({skipped} matches skipped: no pre-match number or no clean result)")
 
-    res = pd.DataFrame(rows, columns=["match_id", "point_no", "y1", "p_a", "p_c", "p_pre"])
+    res = pd.DataFrame(rows, columns=["match_id", "point_no", "y1", "p_a", "p_c", "p_pre",
+                                      "p_a_post", "p_c_post"])
+    # What winning the point was worth, in match-win-probability terms. The
+    # post-point number of one point is the pre-point number of the next, so
+    # this is the per-point increment the live product would actually show.
+    res["swing_c"] = res["p_c_post"] - res["p_c"]
 
     # ---- anchor C2: at 0-0 arm C must restate the pre-match number
     first = res.sort_values("point_no").groupby("match_id").first()
@@ -227,7 +270,13 @@ def main() -> None:
     log(f"anchor C3 winner above 0.5 on the final point: {share:.1%} "
         f"{'PASS' if share > 0.90 else 'FAIL'}")
 
-    log("\n=== calibration over every point ===")
+    sw = res["swing_c"].abs()
+    log(f"\nper-point swing in arm C: mean |delta| {sw.mean():.4f}, "
+        f"median {sw.median():.4f}, p99 {sw.quantile(0.99):.4f}, max {sw.max():.4f}")
+    log("  (the pre-point number of a point is the post-point number of the one "
+        "before it, so this is the increment the live product would show)")
+
+    log("\n=== calibration over every point, scored as each point BEGAN ===")
     out = []
     for arm, col in (("A fixed skill (ticket 37)", "p_a"), ("C model-seeded", "p_c")):
         e, l = ece(res[col], res["y1"]), logloss(res[col], res["y1"])

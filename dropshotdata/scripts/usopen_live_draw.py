@@ -223,6 +223,102 @@ def _player(team: dict) -> tuple[str, str] | None:
     return f"{team['firstNameA']} {team['lastNameA']}", team.get("idA") or ""
 
 
+from ticket09_live_modes import parse_game_score, set_is_decided  # noqa: E402
+
+
+def live_state(m: dict) -> dict | None:
+    """The current (sets, games, server) of a match under way, or None.
+
+    The feed carries this on every match and the repo has never read it: only
+    `winner` was ever extracted, so an in-progress match looked exactly like an
+    unplayed one to the simulator. Fields used, all verified against a
+    completed R4 match on 2026-09-07:
+
+      teamN.totalSetsWon  sets won so far
+      teamN.serve         True for whoever serves the next point
+      scores.sets         one entry per set STARTED, each [team1, team2] with
+                          a `score` per side; the last entry is the set in
+                          progress when there are more entries than sets won
+
+    `p1_served_first` is derived, not given. Service alternates every game and
+    carries across sets, so the player serving now also served the first game
+    of the match exactly when an even number of games has been completed. A
+    tiebreak counts as one game, which this parity handles correctly.
+
+    Returns None for a match that has not started, both because there is
+    nothing to condition on and because a fresh state is by construction
+    identical to the pre-match probability - so the caller can treat "no live
+    state" and "no change" as the same thing.
+    """
+    if m.get("winner") in ("1", "2"):
+        return None
+    t1, t2 = m.get("team1") or {}, m.get("team2") or {}
+    if _player(t1) is None or _player(t2) is None:
+        return None
+    mid = m.get("match_id")
+    sets1, sets2 = int(t1.get("totalSetsWon") or 0), int(t2.get("totalSetsWon") or 0)
+    raw_sets = ((m.get("scores") or {}).get("sets")) or []
+    games = [[int(side["score"]) for side in st]
+             for st in raw_sets if isinstance(st, list) and len(st) == 2
+             and all(isinstance(side, dict) and side.get("score") is not None for side in st)]
+
+    # `scores.sets` must be the whole history: one entry per set decided, plus
+    # at most one for a set in progress. Anything else and the game score
+    # cannot be located, so this reports nothing rather than a number it
+    # guessed. Defaulting a missing field to 0 here would publish "just started
+    # the set" for a match that is 4-2 down it, which reads as an ordinary
+    # projection and is wrong in the direction of the score it failed to see.
+    if len(games) != len(raw_sets) or len(games) not in (sets1 + sets2, sets1 + sets2 + 1):
+        print(f"[{mid}] WARNING: sets won {sets1}-{sets2} but scores.sets carries "
+              f"{len(raw_sets)} entries of which {len(games)} are well formed; "
+              f"cannot locate the game score, leaving this match pre-match")
+        return None
+    games1, games2 = games[-1] if len(games) > sets1 + sets2 else (0, 0)
+    if sets1 + sets2 + games1 + games2 == 0:
+        return None
+
+    # The set said to be in progress must not already be won. The two fields
+    # disagreeing means `totalSetsWon` has lagged `scores.sets` by a poll, and
+    # scoring the contradiction is worse than skipping it: the recursion treats
+    # "the set in progress stands at 6-4" as a set the leader is about to lose
+    # on the next game rather than one they have just won.
+    if set_is_decided(games1, games2):
+        print(f"[{mid}] WARNING: sets won {sets1}-{sets2} but the set in progress "
+              f"reads {games1}-{games2}, which is already a finished set; the feed "
+              f"has lagged itself, leaving this match pre-match")
+        return None
+
+    # Exactly one player serves. Missing or duplicated is a malformed payload,
+    # not a default: `bool(t1["serve"])` would silently hand the serve to
+    # player 2 whenever the field went missing on both.
+    s1, s2 = bool(t1.get("serve")), bool(t2.get("serve"))
+    if s1 == s2:
+        print(f"[{mid}] WARNING: serve is {s1}/{s2} on the two sides, so who is "
+              f"serving cannot be read; leaving this match pre-match")
+        return None
+
+    # Who served the match's first game. Service alternates every game and
+    # carries across sets, so the player serving now also served first exactly
+    # when an even number of games has been completed - EXCEPT inside a
+    # tiebreak, where `serve` names a POINT server that rotates every one or
+    # two points, so the parity flips from point to point and the answer is
+    # wrong roughly half the time it is asked. None means "not known", and the
+    # solver symmetrises over both orders rather than guessing.
+    played = sum(sum(g) for g in games)
+    in_tiebreak = games1 == 6 and games2 == 6
+
+    # The score within the game being played. Absent, empty and [null, null]
+    # all mean no game under way, which is 0-0. An advantage arrives as
+    # ['A', null], where the null means 40 - see parse_game_score, which is
+    # where every one of these shapes is decided, once.
+    points1, points2 = parse_game_score(
+        (m.get("scores") or {}).get("gameScore"), in_tiebreak)
+    return {"sets1": sets1, "sets2": sets2, "games1": games1, "games2": games2,
+            "p1_serves": s1, "in_tiebreak": in_tiebreak,
+            "points1": points1, "points2": points2,
+            "p1_served_first": None if in_tiebreak else (s1 == (played % 2 == 0))}
+
+
 def load_live_draw(tour: str, name2uid: dict[str, str], *,
                    cache_path: str | Path | None = None,
                    use_cache: bool = False) -> dict:
@@ -235,6 +331,10 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
         1102 team1, ...). Index i faces index i^1 in round 1.
     results : dict[str, str]
         match_id -> winning uid, for matches the feed reports as decided.
+    live : dict[str, dict]
+        match_id -> the current score of a match UNDER WAY, as returned by
+        `live_state`, plus the two players' uids. Empty when nothing is in
+        progress. Decided matches are in `results`, never here.
     losers : set[str]
         Every uid that has lost a decided match, i.e. is out of the
         tournament. Read straight off the feed rather than inferred from a
@@ -297,9 +397,15 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
     # simulated probability being zero.
     results: dict[str, str] = {}
     losers: set[str] = set()
+    live: dict[str, dict] = {}
     for m in matches:
         w = m.get("winner")
         if w not in ("1", "2"):
+            st = live_state(m)
+            if st is not None:
+                u1, u2 = uid_for(m["team1"]), uid_for(m["team2"])
+                if u1 is not None and u2 is not None:
+                    live[m["match_id"]] = {**st, "uid1": u1, "uid2": u2}
             continue
         uid = uid_for(m["team1" if w == "1" else "team2"])
         lost = uid_for(m["team2" if w == "1" else "team1"])
@@ -309,7 +415,7 @@ def load_live_draw(tour: str, name2uid: dict[str, str], *,
             losers.add(lost)
 
     return {"tour": tour, "code": code, "draw_size": draw_size,
-            "bracket": bracket, "results": results, "losers": losers,
+            "bracket": bracket, "results": results, "losers": losers, "live": live,
             "names": names, "seed_map": seed_map, "unmatched": unmatched,
             "event": ev, "raw": data}
 

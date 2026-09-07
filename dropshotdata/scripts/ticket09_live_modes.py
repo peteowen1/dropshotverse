@@ -66,21 +66,243 @@ def games_from_tape(pts):
     return out
 
 
+def set_is_decided(a: int, b: int) -> bool:
+    """Is a standard set already won at this game score?
+
+    6-4 and 6-0 (six games, two clear), 7-5, and 7-6 off the tiebreak. 6-5 is
+    not: the set continues. Shared with usopen_live_draw so the two cannot
+    drift apart about what a finished set looks like.
+
+    Standard sets only. A format whose deciding set is settled by a
+    super-tiebreak at some other game score would need its own rule; the 2026
+    US Open uses a 6-6 tiebreak in every set including the decider, which is
+    the only event this code runs on.
+    """
+    hi, lo = max(a, b), min(a, b)
+    return (hi == 7 and lo <= 6) or (hi == 6 and hi - lo >= 2)
+
+
+# A game's point score is written 0/15/30/40/AD; a TIEBREAK's is written as
+# plain numbers, and both arrive as strings from the tape and from the feed.
+# One table, shared, so the screen that measures and the simulator that serves
+# cannot disagree about what "40" means.
+_POINT_VALUE = {"0": 0, "15": 1, "30": 2, "40": 3, "AD": 4, "A": 4, "ADV": 4}
+
+
+def point_count(value, in_tiebreak: bool = False) -> int:
+    """Points won, as a count, from whatever the source calls it."""
+    s = str(value).strip().upper()
+    if in_tiebreak:
+        return int(s) if s.isdigit() else 0
+    if s in _POINT_VALUE:
+        return _POINT_VALUE[s]
+    return int(s) if s.isdigit() else 0
+
+
+_ADVANTAGE = {"A", "AD", "ADV"}
+
+
+def parse_game_score(raw, in_tiebreak: bool = False) -> tuple[int, int]:
+    """The live feed's `scores.gameScore` as two point counts.
+
+    The feed writes an advantage game as ['A', None] or [None, 'A'], and that
+    None is NOT "no score" - it means the other player is on 40. Reading it as
+    zero gives 4-0, which `p_game_from_state` resolves to a WON GAME at
+    probability 1.0, on the poll where somebody reaches advantage. Confirmed
+    across 289 captured polls; deuce, by contrast, arrives as ['40', '40'] and
+    was always read correctly.
+
+    Absent, empty and [None, None] all mean no game under way, which is 0-0.
+    Any other shape carrying exactly one side is not something this format is
+    known to produce, so it degrades to 0-0 - a game-level number, which is
+    what this code produced for its whole life - and says so rather than
+    inventing the missing half.
+    """
+    if not raw:
+        return 0, 0
+    a = raw[0] if len(raw) > 0 else None
+    b = raw[1] if len(raw) > 1 else None
+    if a is None and b is None:
+        return 0, 0
+    a_adv = a is not None and str(a).strip().upper() in _ADVANTAGE
+    b_adv = b is not None and str(b).strip().upper() in _ADVANTAGE
+    if in_tiebreak and (a_adv or b_adv):
+        # A tiebreak has no advantage scoring, so this is a malformed payload
+        # rather than a score to interpret. Never seen in 15,385 captured
+        # polls - none of the 289 advantage records is at 6-6 - but the
+        # advantage branch below would otherwise answer it with a GAME score.
+        print(f"WARNING: gameScore {raw!r} carries an advantage inside a tiebreak, "
+              f"which does not exist; reading the tiebreak as not started")
+        return 0, 0
+    if a_adv and b is None:
+        return 4, 3
+    if b_adv and a is None:
+        return 3, 4
+    if a is None or b is None:
+        print(f"WARNING: gameScore {raw!r} carries only one side and it is not an "
+              f"advantage; reading the game as not started rather than guessing")
+        return 0, 0
+    return point_count(a, in_tiebreak), point_count(b, in_tiebreak)
+
+
+def p_game_from_state(p: float, a: int, b: int) -> float:
+    """P(the SERVER wins this game) from an arbitrary point score.
+
+    `a` and `b` are points won by the server and the returner, as counts:
+    0/15/30/40/AD is 0/1/2/3/4. The tape and the feed both give the tennis
+    strings; the caller converts.
+
+    p_game(p) is the same quantity from 0-0 and stays the entry point for a
+    game not yet started. This exists because the recursion above it only ever
+    knew games and sets, so 84.6% of the points on the 2026 tape were scored
+    from a state that had thrown away a real, non-zero game score: 40-0 up on
+    serve and 0-40 down returned the identical number.
+
+    From 3-3 on this is the classic deuce chain, which has a closed form:
+    the server wins from deuce with p^2 / (p^2 + (1-p)^2), because any split
+    pair returns to deuce. Only the offset from deuce matters after that, so
+    every score at or beyond 3-3 collapses to one of three states.
+    """
+    if p <= 0.0:
+        return 0.0
+    if p >= 1.0:
+        return 1.0
+    if a >= 4 and a - b >= 2:
+        return 1.0
+    if b >= 4 and b - a >= 2:
+        return 0.0
+    if a >= 3 and b >= 3:
+        pd = p * p / (p * p + (1 - p) * (1 - p))     # from deuce
+        d = a - b
+        if d == 0:
+            return pd
+        return p + (1 - p) * pd if d == 1 else p * pd
+    return p * p_game_from_state(p, a + 1, b) + (1 - p) * p_game_from_state(p, a, b + 1)
+
+
+def _tb_tail(pa: float, pb: float) -> float:
+    """P(A eventually wins) from any TIE in a tiebreak, A's serve prob `pa`.
+
+    From a tie the next two points are always one serve each. That is not an
+    approximation: A serves point t iff (t-1) mod 4 is 0 or 3, and at a tie an
+    even number of points has been played, so the next two always split. Order
+    does not matter to the product, so A takes both with pa*(1-pb), B takes
+    both with (1-pa)*pb, and anything else returns to a tie.
+    """
+    up, dn = pa * (1 - pb), (1 - pa) * pb
+    tot = up + dn
+    return 0.5 if tot <= 0 else up / tot
+
+
+def p_tiebreak_from_state(pa: float, pb: float, a: int, b: int,
+                          a_serves_next: bool, target: int = 7) -> float:
+    """P(A wins the tiebreak) from an arbitrary point score.
+
+    p_tiebreak(pa, pb) is the same quantity from 0-0 with A serving first, and
+    is left alone as the entry point for a tiebreak not yet started.
+
+    Who served point ONE is recovered from the rotation rather than asked for:
+    A serves point t iff (t-1) mod 4 is 0 or 3, so with `t0 = a + b` points
+    played, whether A serves next pins down whether A served first.
+    """
+    if a >= target and a - b >= 2:
+        return 1.0
+    if b >= target and b - a >= 2:
+        return 0.0
+    t0 = a + b
+    on_pattern = (t0 % 4) in (0, 3)          # would A serve point t0+1 if A served point 1
+    a_first = (a_serves_next == on_pattern)
+    tail = _tb_tail(pa, pb)
+    if a == b and a >= target - 1:
+        return tail
+
+    states = {(a, b): 1.0}
+    win_a = 0.0
+    for t in range(t0 + 1, t0 + 40):
+        if not states:
+            break
+        on = (t - 1) % 4 in (0, 3)
+        a_serves = on if a_first else (not on)
+        pt = pa if a_serves else (1 - pb)
+        nxt: dict[tuple[int, int], float] = {}
+        for (x, y), pr in states.items():
+            for (nx, ny), w in (((x + 1, y), pt), ((x, y + 1), 1 - pt)):
+                prob = pr * w
+                if prob == 0.0:
+                    continue
+                if nx >= target and nx - ny >= 2:
+                    win_a += prob
+                elif ny >= target and ny - nx >= 2:
+                    pass
+                elif nx == ny and nx >= target - 1:
+                    win_a += prob * tail          # exact geometric tail, no cap
+                else:
+                    nxt[(nx, ny)] = nxt.get((nx, ny), 0.0) + prob
+        states = nxt
+    return win_a + sum(states.values()) * tail
+
+
 def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
-                     p1_serves_next: bool) -> float:
-    """P(player1 wins the SET) from an arbitrary in-progress game score."""
+                     p1_serves_next: bool, points1: int = 0, points2: int = 0) -> float:
+    """P(player1 wins the SET) from an arbitrary in-progress game score.
+
+    `points1`/`points2` are the point score WITHIN the game now being played
+    (or within the tiebreak, at 6-6). They default to 0-0, which is the game
+    not yet started and reproduces this function's previous behaviour exactly -
+    asserted in tune_scratch/test_inmatch_seeding.py, because every caller that
+    does not pass them must keep getting the number it got before.
+
+    Only the CURRENT game uses them. Every later game in the recursion starts
+    at 0-0, which is what p_game and p_tiebreak already assume."""
     states = {(games1, games2): 1.0}
     final = 0.0
     for _ in range(20):
         nxt = {}
         for (a, b), pr in states.items():
-            if (a >= 6 or b >= 6) and abs(a - b) >= 2 and max(a, b) <= 7:
+            if set_is_decided(a, b):
+                # This fires only for a score handed IN as the set in progress:
+                # the transitions below score a finished set directly and never
+                # put one back in `states`. It used to `continue`, which drops
+                # the mass instead of awarding it, so the function returned 0.0
+                # for every already-won set - 6-4, 7-5, 7-6, all of them.
+                #
+                # Reached whenever the feed's `totalSetsWon` lags its
+                # `scores.sets` by one poll, and the shape is the worst kind:
+                # at 5-4 the server sat at 0.946, and WINNING that set 6-4 took
+                # them to 0.649. usopen_live_draw now refuses that state
+                # outright; this makes the function correct for it regardless
+                # of who calls it.
+                final += pr if a > b else 0.0
                 continue
-            if a == 7 or b == 7:
+            if a == 6 and b == 6:
+                # A set at 6-6 IS the tiebreak: no thirteenth game is played,
+                # so the set-winner is p_tiebreak and nothing else.
+                #
+                # This used to fall through to the game step below, which
+                # played one more game and THEN applied the tiebreak on top,
+                # giving pa*tb + (1-pa)*(1-tb) instead of tb. The error reached
+                # 0.42, and it showed up as the same 6-6 position being worth
+                # 0.687 or 0.443 depending only on who was marked as serving -
+                # when a tiebreak's outcome here does not depend on that at all.
+                #
+                # It survived because the anchor anyone would reach for hides
+                # it: with two equal players pa = 0.5 and tb = 0.5, so the
+                # wrong expression returns exactly 0.5, which is also the right
+                # answer. Asymmetric pairings are where it bites, which is
+                # every pairing that matters.
+                final += pr * (p_tiebreak_from_state(p1, p2, points1, points2,
+                                                     p1_serves_next)
+                               if (a, b) == (games1, games2)
+                               else p_tiebreak(p1, p2))
                 continue
             idx = (a + b) - (games1 + games2)
             a_serves = (idx % 2 == 0) == p1_serves_next
-            pa = p_game(p1) if a_serves else 1 - p_game(p2)
+            if idx == 0 and (points1 or points2):
+                # the game actually in progress, from the score it is at
+                pa = (p_game_from_state(p1, points1, points2) if a_serves
+                      else 1 - p_game_from_state(p2, points2, points1))
+            else:
+                pa = p_game(p1) if a_serves else 1 - p_game(p2)
             for winner, w in ((0, pa), (1, 1 - pa)):
                 na, nb = (a + 1, b) if winner == 0 else (a, b + 1)
                 prob = pr * w
@@ -102,7 +324,7 @@ def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
 
 def p_match_from_state(p1: float, p2: float, sets1: int, sets2: int,
                        games1: int, games2: int, p1_serves_next: bool,
-                       best_of: int) -> float:
+                       best_of: int, points1: int = 0, points2: int = 0) -> float:
     """P(player1 wins the match) from an arbitrary (sets, games) state.
 
     Bug caught by the (0,0,0,0)-boundary self-test: an earlier version gave
@@ -116,13 +338,21 @@ def p_match_from_state(p1: float, p2: float, sets1: int, sets2: int,
         return 1.0
     if sets2 == need:
         return 0.0
-    # Verified against p_match at the (0,0,0,0) boundary: matches to within
-    # ~0.4% rather than exactly. The residual is a real, understood convention
-    # difference, not a bug - p_match always symmetrises who serves set 1
-    # (it never knows); here the actual current-set server is genuinely known,
-    # which is strictly more informative and the correct choice for replaying
-    # a real in-progress match.
-    q_current = p_set_from_state(p1, p2, games1, games2, p1_serves_next)
+    # Verified against p_match at the (0,0,0,0) boundary. Symmetrised over
+    # serve order it now matches to machine precision.
+    #
+    # It used to sit ~0.4% off, and that residual was written up here as "a
+    # real, understood convention difference, not a bug". It was a bug: the
+    # 6-6 handling in p_set_from_state played a thirteenth game and then
+    # applied the tiebreak on top of it. Explaining a discrepancy away is how
+    # it survived, so the boundary agreement is now asserted in
+    # tune_scratch/test_inmatch_seeding.py rather than described in a comment.
+    #
+    # The remaining asymmetry is genuine and is the reason both orders are
+    # averaged above: p_match never knows who serves first, while a real
+    # in-progress match does.
+    q_current = p_set_from_state(p1, p2, games1, games2, p1_serves_next,
+                                 points1, points2)
     q_fresh = 0.5 * (p_set_from_state(p1, p2, 0, 0, True)
                      + p_set_from_state(p1, p2, 0, 0, False))
     states = {(sets1, sets2): 1.0}

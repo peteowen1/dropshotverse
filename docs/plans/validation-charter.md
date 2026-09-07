@@ -298,3 +298,355 @@ after the final. The earlier "do not ship" here was written against arm A
 rather than against what the site does, which understated the gain by an order
 of magnitude and named a join bug that does not exist.
 
+## Round 4 arrives, and it splits the answer (2026-09-07, later)
+
+Pete asked why the late-round check had to wait. Most of it does - the
+quarter-finals, semi-finals and final have not been played - but the point
+table was a stale snapshot, and eight fourth-round matches had finished since
+it was built. Rebuilding it (88,993 points, 562 matches) and re-scoring adds a
+first, small look at late rounds: 231 matches and 42,657 points overall, of
+which 7 matches and 1,197 points are round 4.
+
+**All rounds**
+
+| | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A | 0.0286 | 0.57013 | 0.712 |
+| arm C, seeded | 0.0456 | 0.52184 | 0.784 |
+| arm D, seeded + recalibrated | 0.0337 | 0.48715 | 0.784 |
+
+**Round 4 only, 7 matches, so read it as a signal and not a result**
+
+| | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1711 | 0.38008 | 0.825 |
+| arm A | 0.1841 | 0.37622 | 0.892 |
+| **arm C, seeded** | **0.1277** | **0.22445** | 0.909 |
+| arm D, seeded + recalibrated | 0.1747 | 0.27189 | 0.909 |
+
+**Two things follow, and they point in different directions.**
+
+1. **Conditioning on the live score is settled.** In every round, both seeded
+   arms beat what the site publishes today by a wide margin: overall 0.487 or
+   0.522 log-loss against 0.591, accuracy 0.784 against 0.747, and calibration
+   0.034 or 0.046 against 0.106. There is no reading of this table in which
+   ignoring the score is the right thing to keep doing.
+2. **Whether to recalibrate is NOT settled, and round 4 argues against it.**
+   The temperature that helps in rounds 1-3 hurts in round 4, where arm C
+   beats arm D on both calibration (0.128 against 0.175) and log-loss (0.224
+   against 0.272). That is coherent: late-round matches here were lopsided
+   (accuracy 0.909), and shrinking confidence is exactly the wrong move when
+   the confident answer keeps being right. It rests on 7 matches, so it is a
+   warning rather than a finding, and it is the first evidence that the
+   early-round temperature does not transfer.
+
+**Recommendation, updated again.** Ship the seeding. Do not ship the
+recalibration on this evidence. The clean decision between C and D needs the
+quarter-finals onward, which arrive on 2026-09-13, and the same rebuild-and
+re-score will answer it in ten minutes. Note also that with round 4 included
+arm A's ECE falls to 0.0286 and now passes the 0.03 bar the candidates were
+being held to, which is a reminder that these calibration numbers move
+materially on 12 extra matches.
+
+## Arm C moved into the live simulator (2026-09-07, later still)
+
+Built on `feat/inmatch-seeding`, behind `--live-score`, which is OFF by
+default. That default is not caution for its own sake: the scheduled task runs
+this checkout's working tree, so anything on by default here is published
+within 30 minutes and never passes a review gate.
+
+The solve was about to exist twice, once in the screen and once in the
+simulator. That is the exact shape of the F4 head-to-head defect - training
+counted one thing, serving counted another, and nothing failed - so it now
+lives once, in `dropshotdata/scripts/inmatch_seeding.py`, and both callers
+import it. The screen was re-run through the shared module to prove the
+refactor did not change what was measured:
+
+| arm C | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| as recorded above | 0.0456 | 0.52184 | 0.784 |
+| through the shared module | 0.0460 | 0.52146 | 0.785 |
+
+The small drift is intended and is an improvement. The recursion is memoised
+on serve rates, and the key rounded them to 1e-3, which is the solve's real
+resolution: anchor C2 sat at 0.00495 against a 0.005 bar, passing on a
+rounding error rather than on being right. At 1e-4 it is 0.00059. Anchors C1
+(100% agreement on 231 matches) and C3 (100%) are unchanged.
+
+**Before the flag is turned on**, one thing is still open beyond the late-round
+question. The published `live_predictions.parquet` has a `source` column hard
+coded to `"live"`, so a seeded projection and an unseeded one are
+indistinguishable in the artifact the site actually reads. The JSON carries
+`_meta.live_score` and `_meta.n_live_conditioned`, but the site does not read
+the JSON. Either widen that column or accept that the published copy cannot
+say which model produced it - and that is a decision to make deliberately,
+not to discover during an incident.
+
+## A review found a bug in the recursion itself (2026-09-07, last)
+
+Reviewing the branch above turned up a defect in `p_set_from_state`, which is
+the set-level recursion every in-match arm on this page is built on. It is
+pre-existing, it is not small, and it has never published anything wrong.
+
+**What it did.** A set at 6-6 IS the tiebreak: no thirteenth game is played, so
+the set-winner is `p_tiebreak` and nothing else. The code instead played one
+more game and applied the tiebreak on top of it, computing
+`pa*tb + (1-pa)*(1-tb)`. The error reached **0.42**.
+
+**Why it survived.** With two equal players `pa` and `tb` are both 0.5, and the
+wrong expression returns exactly 0.5 - which is also the right answer. The
+anchor anyone reaches for first cannot see this. The visible tell was that the
+same 6-6 position was worth 0.687 or 0.443 depending only on who was marked as
+serving, when a tiebreak's outcome in this model does not depend on that at
+all.
+
+**It was written up in the code as not a bug.** `p_match_from_state` carried a
+comment saying it agreed with `hm.p_match` at the opening boundary "to within
+~0.4% rather than exactly", and that the residual was "a real, understood
+convention difference, not a bug". Symmetrised over serve order the two now
+agree **to machine precision**. The 0.4% was the defect, and explaining it away
+is how it lasted. That check is now an assertion in
+`tune_scratch/test_inmatch_seeding.py` instead of a sentence in a comment.
+
+**Nothing published was affected.** The scheduled refresh runs
+`simulate_usopen_live.py` then `upload_blog_data.py`, and on `dev` neither
+reaches `ticket09_live_modes`. The three things that do are all research
+scripts. This branch is what would have wired the recursion into the live path,
+so the review caught it in the last window where it was still free.
+
+**Every number on this page is re-measured below.** Fixing it makes the arms
+slightly WORSE, which is the expected shape: the arms were being flattered by
+the bug damping their confidence at 6-6, exactly the way a correction tuned
+against a defect turns into a defect once the defect is fixed.
+
+| all rounds, 231 matches, 42,657 points | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0306 | 0.57014 | 0.720 |
+| arm C, seeded | 0.0501 | 0.52330 | 0.784 |
+| arm D, seeded + recalibrated | 0.0338 | 0.48717 | 0.784 |
+
+| late rounds, temperature fitted on rounds 1-3 | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C, seeded** | **0.1271** | **0.22265** | 0.908 |
+| arm D, seeded + recalibrated | 0.1786 | 0.28145 | 0.908 |
+
+Arm D's anchors all pass on the corrected points (D1 T = 1.395 / 1.513, D2
+accuracy moved 0.0000, D3 spread 0.118), and arm C's do too (C1 100% on 231
+matches, C2 0.00062, C3 100%).
+
+**The recommendation is unchanged and slightly stronger.** Ship the seeding.
+Do not ship the recalibration: on the only late-round evidence available it
+still loses to plain arm C on both calibration and log-loss, now by a wider
+relative margin. Settle it properly after the 2026-09-13 final.
+
+## The tape was being read wrong, and every number above was affected (2026-09-07, final)
+
+The 6-6 fix should have improved the arms and instead made them slightly worse.
+That contradiction was the useful part. Chasing it meant walking actual rows of
+the point tape across a set boundary, which is where the real defect was.
+
+**Match 1101, points 67 to 71.** The tape records state AFTER the point, and on
+the point that ENDS a set it does two things at once: it increments the set
+count and it leaves the games showing the set just finished.
+
+| point | sets | games | SetWinner |
+|---|---|---|---|
+| 69 | 0-0 | 5-4 | 0 |
+| **70** | **1-0** | **6-4** | **1** |
+| 71 | 1-0 | 0-0 | 0 |
+
+So on point 70 the set is already counted in the set score, and `6-4` is a
+leftover, not a set in progress. **1,410 points - 1.58% of the tape - are on
+such a row.** Both previous readings of them were wrong, in opposite
+directions: the original code scored `6-4` as a set the leader was about to
+LOSE, and the terminal-state fix scored it as a set they win on top of the one
+already counted. The screen now zeroes those games, which is what the tape is
+actually saying.
+
+This is the third re-measurement on this page, and it invalidates the two
+above it. These are the numbers that stand.
+
+| all rounds, 231 matches, 42,657 points | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0306 | 0.52953 | 0.721 |
+| arm C, seeded | 0.0491 | 0.48286 | 0.785 |
+| arm D, seeded + recalibrated | 0.0272 | 0.47351 | 0.785 |
+
+| late rounds, temperature fitted on rounds 1-3 | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C, seeded** | **0.1285** | **0.22333** | 0.907 |
+| arm D, seeded + recalibrated | 0.1703 | 0.26865 | 0.907 |
+
+**Arm D now clears the W4 bar it previously failed** - ECE 0.0272 against 0.03,
+log-loss 0.47351 against 0.55 - so on the headline metric it is a GO.
+
+**It fails its own anchor anyway, and the anchor wins.** D3 requires the two
+tours' temperatures to agree within 0.15; they are 1.209 for the men and 1.458
+for the women, a spread of **0.248**. A single temperature is the whole premise
+of arm D, and the two halves of the data disagree about what it is. That is the
+method saying it is not one correction, which is a fact about the method rather
+than a threshold to relax. It points the same way as the late-round evidence,
+which independently still prefers plain arm C on both calibration and log-loss.
+
+**Ship arm C. Do not ship arm D.** Two independent signals now say so where
+before there was one, and the headline metric that favours D is exactly the
+metric a temperature is fitted to move.
+
+Arm C's own anchors all pass on the corrected tape: C1 100% agreement on 231
+matches, C2 0.00062, C3 100%.
+
+## Which side of the point are we standing on? (2026-09-07, Pete)
+
+Pete asked whether the win probability is being modelled before the point or
+after it. It was neither, consistently.
+
+Every STATE column on the tape is recorded AFTER the point - at point 1 the
+score already reads 15-0, and on the last point of match 1101 `P1SetsWon` is 3,
+so the match is over. `PointServer`, by contrast, is the server OF that point,
+which is a before-the-point fact. The screen paired the two.
+
+**Two things were wrong because of it.**
+
+1. Serve passes when a point ends a game, so on every game-ending point the
+   recursion was told the wrong player serves next.
+2. **Anchor C3 could not fail.** "The eventual winner is above 0.5 on the final
+   point" was being asked of the final point's POST-state, which is the
+   finished match, so the recursion returned exactly 1.0 and the anchor
+   reported 100% for every arm. It would have reported 100% for any model at
+   all. In the pre-point frame it reads **99.1%** - a real check with real
+   headroom, and the two matches it misses are genuine.
+
+The screen now scores each point from the state as that point BEGAN (the
+previous point's post-state, and 0-0 for the first), paired with that point's
+own server. This also makes the first point's probability the pre-match number
+by construction, which is anchor C2 - now 0.00062.
+
+| all rounds, pre-point frame, 231 matches, 42,657 points | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0306 | 0.53214 | 0.719 |
+| arm C, seeded | 0.0503 | 0.48467 | 0.784 |
+| arm D, seeded + recalibrated | 0.0270 | 0.47536 | 0.784 |
+
+| late rounds | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C, seeded** | **0.1287** | **0.22269** | 0.910 |
+| arm D | 0.1736 | 0.26831 | 0.910 |
+
+The numbers barely moved and **every conclusion stands**: arm D still fails
+anchor D3 (temperatures 1.209 and 1.452, spread 0.243 against a 0.15 bar), late
+rounds still prefer arm C, and arm C still beats what the site publishes by a
+wide margin. What changed is that the measurement is now answering a coherent
+question.
+
+**The post-point number is kept alongside the pre-point one**, so the value of
+winning a given point is now visible. Across 42,657 points, arm C moves by:
+
+| mean abs | median | p99 | max |
+|---:|---:|---:|---:|
+| 0.0065 | **0.0000** | 0.1176 | 0.6911 |
+
+**That median of exactly zero is a finding, not a rounding artefact.** The
+recursion works at GAME granularity: it takes sets and games and who serves
+next, and never sees the point score within a game. So the published number
+cannot move on 30-0, or on a break point saved - it moves only when a game or a
+set completes. For a live product that is the wrong grain, and it is the next
+thing worth fixing after this ships. It is not a defect in what is being
+shipped here, which is strictly better than the pre-match number it replaces,
+but it does bound how good this can get.
+
+## Point level, because game level was throwing away 84.6% of what we had (2026-09-07, Pete)
+
+Pete asked whether the data was point level or game level. The answer was
+both, in the wrong combination.
+
+**The data is point level**: 88,993 rows, one per point, carrying the
+within-game score (`P1Score`/`P2Score`, written 0/15/30/40/AD) and a tiebreak
+flag on 2,404 of them. **The model was game level**: its entire state was sets,
+games and who serves next, with `p_game(p)` computing a game only from 0-0. So
+the richer half of every row was discarded.
+
+| | points | share |
+|---|---:|---:|
+| start a game, so game level is exact | 13,709 | 15.4% |
+| carried a non-zero game score the model never saw | 75,284 | **84.6%** |
+
+At 40-0 up on serve and 0-40 down, the model returned the identical number.
+
+**What was added.** `p_game_from_state(p, a, b)` for a game from any point
+score - the deuce chain, which collapses to a closed form at 3-3 and beyond -
+and `p_tiebreak_from_state` for a tiebreak from any point score, recovering who
+served point one from the rotation rather than being told. Both are threaded
+through `p_set_from_state` and `p_match_from_state` as arguments that DEFAULT TO
+0-0, so every existing caller gets exactly the number it got before. That is
+asserted, not assumed: the difference is 0.00e+00.
+
+The tiebreak tail is exact rather than capped. From any tie the next two points
+are always one serve each - A serves point t iff (t-1) mod 4 is 0 or 3, and a
+tie has been reached after an even number of points - so A takes both with
+pa(1-pb), B with (1-pa)pb, and the geometric sum is closed form.
+
+| all rounds, pre-point frame, point level | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0297 | 0.52936 | 0.724 |
+| arm C, seeded | 0.0484 | 0.48310 | 0.782 |
+| arm D, seeded + recalibrated | 0.0278 | 0.47283 | 0.782 |
+
+| late rounds | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C** | **0.1266** | **0.22068** | 0.906 |
+| arm D | 0.1672 | 0.26615 | 0.906 |
+
+**The aggregate barely moved and that is the honest headline.** Arm C goes from
+0.0503 to 0.0484 on calibration and 0.48467 to 0.48310 on log-loss. Anyone
+sizing this on the metric alone would call it not worth doing.
+
+**The product behaviour changed completely, and the metric cannot see it.**
+
+| arm C per-point change | mean abs | median | p99 | max |
+|---|---:|---:|---:|---:|
+| game level | 0.0065 | **0.0000** | 0.1176 | 0.6911 |
+| point level | 0.0163 | **0.0109** | 0.0851 | 0.4199 |
+
+A median of zero meant the published number was frozen for the whole of a game
+and then jumped. It now moves on every point. A break point at 5-5 in a
+deciding set is worth 0.363 against 0.782 at 40-0 - a spread of 0.419 that used
+to be a single number. That is the difference between a live win probability
+and a scoreboard that updates every six points, and no aggregate log-loss over
+42,657 points was ever going to report it.
+
+Every conclusion is unchanged: arm D still fails anchor D3 (temperatures 1.202
+and 1.458, spread 0.256), late rounds still prefer arm C, and arm C still beats
+what the site publishes by a wide margin.
+
+One note on anchor C3, which reads 100% again here against 99.1% at game level.
+That is not the old degeneracy returning: the final point's pre-state is still a
+live position (games 5-4, not a finished match), and it reaches 100% because
+knowing the point score genuinely tells you more. The check retains its
+teeth - it is asked of a state the match could still turn from.
+
+### Review caught an advantage point reading as a won game (2026-09-07)
+
+The live feed writes an advantage game as `['A', null]`, and that null is not
+"no score" - it means the other player is on 40. Reading it as zero gives 4-0,
+which `p_game_from_state` resolves to a **won game at probability 1.0**, on the
+poll where somebody reaches advantage. Correct is 0.9213 at p=0.65.
+
+Confirmed against 289 of 15,385 captured polls. Every gameScore shape the feed
+sends is now decided in one place, `parse_game_score`, and asserted in test 21.
+
+**The measured numbers were never affected.** The point tape writes advantage
+as `AD` in `P1Score` with `40` on the other side, which converted correctly all
+along. This was purely the live path - the one that publishes - and it would
+have fired on exactly the break-point case the point-level work exists to
+represent.
+
+Also tightened: the screen took a new game from the score column having been
+reset to 0-0, which holds at 13,200 of 13,203 boundaries. The three exceptions
+are rows missing from the tape or a live score correction. It now reads
+`(SetNo, GameNo)`, so a stale score cannot leak into a new game at all.
+
