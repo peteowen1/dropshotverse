@@ -89,17 +89,56 @@ def get(path: str, cache_key: str | None = None) -> dict | list:
     return body
 
 
+PAGE_SIZE = 100
+MAX_PAGES = 20          # 2,000 tournaments; the tour plays nothing like that
+
+
 def calendar(date_from: str, date_to: str) -> pd.DataFrame:
-    j = get(f"/tournaments/?from={date_from}&to={date_to}&page=0&pageSize=100",
-            cache_key=f"cal_{date_from}_{date_to}")
+    """Every tournament in the window, following the endpoint's paging.
+
+    This used to request `page=0&pageSize=100` and stop, which is one page. A
+    WTA season plus the ITF events the endpoint returns runs well past 100, so
+    a full-year window came back ending in early March and everything after it
+    was invisible. Beijing 2026 starts on 30 September, so the event-forecast
+    workflow failed with "no cached calendar row for group 1020" - after
+    successfully fetching that same event's entry list, which does not go
+    through here. Caught by a dry run on 2026-09-07, sixteen days before the
+    forecast was due to be published.
+
+    Paging stops on the first short or empty page, and `totalElements` is
+    checked against what was actually collected so a silent truncation cannot
+    happen again quietly. Each page is cached separately.
+    """
     rows = []
-    for t in j.get("content", []):
-        g = t.get("tournamentGroup") or {}
-        rows.append(dict(
-            group_id=g.get("id"), name=t.get("title"), start=t.get("startDate"),
-            end=t.get("endDate"), level=t.get("level"), surface=t.get("surface"),
-            draw=t.get("singlesDrawSize"), status=t.get("status"),
-            year=t.get("year"), indoor=t.get("inOutdoor")))
+    total = None
+    for page in range(MAX_PAGES):
+        j = get(f"/tournaments/?from={date_from}&to={date_to}"
+                f"&page={page}&pageSize={PAGE_SIZE}",
+                cache_key=f"cal_{date_from}_{date_to}_p{page}")
+        content = j.get("content", [])
+        if total is None:
+            total = j.get("totalElements")
+        for t in content:
+            g = t.get("tournamentGroup") or {}
+            rows.append(dict(
+                group_id=g.get("id"), name=t.get("title"), start=t.get("startDate"),
+                end=t.get("endDate"), level=t.get("level"), surface=t.get("surface"),
+                draw=t.get("singlesDrawSize"), status=t.get("status"),
+                year=t.get("year"), indoor=t.get("inOutdoor")))
+        if len(content) < PAGE_SIZE:
+            break
+    else:
+        log(f"  WARNING: stopped at the {MAX_PAGES}-page guard with a full last "
+            f"page; the window may still be truncated")
+
+    if total is not None and len(rows) < total:
+        raise SystemExit(
+            f"calendar {date_from} to {date_to}: the endpoint reports "
+            f"{total} tournaments and only {len(rows)} were collected. "
+            f"Refusing to return a truncated calendar - a missing row here "
+            f"reads downstream as 'that event does not exist'.")
+    log(f"  {len(rows)} tournaments over {page + 1} page(s)"
+        + (f", endpoint reports {total}" if total is not None else ""))
     return pd.DataFrame(rows)
 
 
