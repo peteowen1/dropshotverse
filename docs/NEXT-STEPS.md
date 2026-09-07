@@ -171,12 +171,19 @@ Still open from those reviews, in the order they are worth doing:
    editorial call. Detail and the table:
    [plans/validation-charter.md](plans/validation-charter.md).
    Script: `tune_scratch/screen_market_blend.py`.
-5. **W3 and W4 remain, and are now judgeable.** W3 (the live simulator freezes
-   layoff and fatigue at the draw date for every round) has its own
-   stage-reaching scorecard in `simulate_tournament_xgb.py`. W4 (matches in
-   progress are simulated as unplayed, so a player two sets up is published
-   near his pre-match number) is the biggest user-visible one and, unlike W1,
-   is squarely inside the product's own remit.
+5. **W4 MEASURED 2026-09-07: NO-GO on the pre-registered bar, and the reason
+   is worth knowing.** Seeding the in-match recursion with the model's own
+   pre-match skill (arm C) cuts per-point log-loss from 0.572 to 0.532 and
+   lifts accuracy from 0.720 to 0.779 over 40,260 points, but ECE worsens from
+   0.034 to 0.051 against a 0.03 bar. It is sharper and overconfident. The
+   next experiment is a recalibrated arm C fitted on earlier events and scored
+   once here - as a NEW candidate, not by re-running this one until it passes.
+   `tune_scratch/screen_inmatch_seeded.py`;
+   [plans/validation-charter.md](plans/validation-charter.md).
+6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw
+   date for every round) and has its own stage-reaching scorecard in
+   `simulate_tournament_xgb.py`. W5 (new players enter at 1500 with no prior)
+   is the last unexamined item.
 
 ## Known and NOT chased
 
