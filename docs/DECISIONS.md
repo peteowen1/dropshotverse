@@ -177,4 +177,17 @@ Consequences to hold onto:
   nothing looked wrong. Found by dry-running the forecast 16 days early rather
   than on the day. It now pages and refuses a calendar shorter than the
   endpoint's reported `totalElements`.
+- **D-24 (2026-09-07)** — The truncation guard added in D-23 was dead code. It
+  read `totalElements`, which this endpoint does not send: the response has two
+  top-level keys, `pageInfo` and `content`, and the count is
+  `pageInfo.numEntries`. So the comparison never ran while the docstring
+  claimed silent truncation was impossible. Now reads the right field, raises
+  when the count is absent as well as when it is short, and both paths are
+  exercised rather than asserted. A check that cannot fail is worse than no
+  check, because it stops anyone looking.
+- **D-25 (2026-09-07)** — Pre-paging runs cached a whole window under one key
+  holding only its first page, and `simulate_wta_event.py` globs that directory
+  with `cal_*.json`, so a fixed fetch could still be undone by a stale file.
+  The glob is now `cal_*_p*.json`, `calendar()` deletes a same-window
+  single-page cache when it pages, and the two on disk were removed.
 

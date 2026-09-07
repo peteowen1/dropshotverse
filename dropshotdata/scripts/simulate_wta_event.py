@@ -71,7 +71,11 @@ def log(m: str = "") -> None:
 # ------------------------------------------------------------------ inputs
 def calendar_row(group_id: int, year: int) -> dict:
     hits = []
-    for p in sorted(CACHE.glob("cal_*.json")):
+    # `cal_*_p*.json` and not `cal_*.json`: the second also matches the
+    # pre-paging cache files, which hold only the first 100 tournaments of
+    # their window. Reading one of those here is how a fixed fetch still
+    # produces "that event does not exist".
+    for p in sorted(CACHE.glob("cal_*_p*.json")):
         body = json.loads(p.read_text(encoding="utf-8"))
         items = body if isinstance(body, list) else next((v for v in body.values() if isinstance(v, list)), [])
         for t in items:
