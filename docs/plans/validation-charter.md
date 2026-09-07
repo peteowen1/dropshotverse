@@ -258,22 +258,43 @@ confirming arm C was overconfident rather than the diagnosis being wrong.
 **D3 FAIL**, the two temperatures differ by 0.155 against a 0.15 bar, a
 marginal miss suggesting the tours may want their own temperature.
 
-**Two limitations that travel with this number, both larger than the miss.**
+**The comparison above is against the wrong baseline, corrected here.** Arm A
+is ticket 37's yardstick and has never been live. What the site actually does
+with a match in progress is at `simulate_usopen_live.py:88-91`: only COMPLETED
+matches are respected, so an in-progress match falls through to the pre-match
+probability and the score is ignored entirely. Scored on the same 40,260
+points, that incumbent is:
+
+| | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **what the site publishes today** | **0.1058** | 0.60332 | 0.737 |
+| arm A, ticket 37's yardstick, never live | 0.0342 | 0.57166 | 0.720 |
+| **arm D** | **0.0346** | **0.49358** | **0.779** |
+
+Against the thing it would actually replace, arm D is **three times better
+calibrated** (0.035 against 0.106), 0.110 better on log-loss and 4.2 accuracy
+points better. The 0.106 is the visible cost of publishing a player two sets
+up at his pre-match number.
+
+**Two limitations, both smaller than that gap.**
 
 1. **No earlier point tape exists**, so the temperature could not be fitted on
    a previous event as this charter requires. It is cross-fitted by tour -
    fitted on the men's draw, scored on the women's, and the reverse - so no
    match calibrates itself, but both halves are one tournament, one surface,
    one fortnight. Weaker than the charter's standard, and labelled so.
-2. **The evaluation covers rounds 1-3 only** (219 matches: 128, 64, 27). The
-   point tape holds later-round matches whose ids did not join to the draw
-   feed, so late-round calibration is entirely untested - and late rounds are
-   exactly where a live win-probability number gets watched. This gap should
-   be closed before anything ships, and it is a capture-join question, not a
-   modelling one.
+2. **The evaluation covers rounds 1-3 only** (219 matches: 128, 64, 27).
+   Diagnosed properly on 2026-09-07: this is **not** a join bug, as an earlier
+   version of this section claimed. The capture holds 334 main-draw match
+   directories and the tournament is still being played - 8 fourth-round
+   matches had finished and 1 was in progress at the time of writing, and
+   `usopen_2026_points.parquet` is a snapshot built earlier the same morning.
+   There is simply no completed late-round data yet. Late rounds are where a
+   live number is watched, so this matters, and it resolves itself: after the
+   final on 2026-09-13, rebuild the point table and re-score.
 
-**Recommendation.** Do not ship on this evidence. Close the round 4-plus join
-gap, re-score, and refit the temperature on the first event that provides a
-second tape. If it holds up there, it is a large and real improvement to the
-live product: a player two sets up would finally be published as two sets up.
+**Recommendation, corrected.** Ship it, subject to the late-round re-score
+after the final. The earlier "do not ship" here was written against arm A
+rather than against what the site does, which understated the gain by an order
+of magnitude and named a join bug that does not exist.
 
