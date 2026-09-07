@@ -1,4 +1,10 @@
-"""Exercise the live-score seeding on the real feed plus synthetic states."""
+"""Exercise the live-score seeding on a feed fixture plus synthetic states.
+
+Deterministic and offline by default, so CI can run it on every pull
+request. Anything that genuinely needs the live feed or the point tape
+says so and skips when they are absent.
+"""
+import json
 import sys
 from pathlib import Path
 
@@ -19,16 +25,45 @@ def hdr(t):
     print("\n=== " + t + " ===")
 
 
-hdr("1. live_state on the real feed")
-data = d.fetch_draw("MS")
-ms = data["matches"]
-live = [m for m in ms if d.live_state(m) is not None]
-print(f"matches in the feed: {len(ms)}; under way right now: {len(live)}")
-for m in live:
-    print(" ", m["match_id"], d.live_state(m))
-done = [m for m in ms if m.get("winner") in ("1", "2")]
-assert all(d.live_state(m) is None for m in done), "a decided match was called live"
-print(f"all {len(done)} decided matches correctly return None")
+# CHECKED-IN FIXTURES: both complete draws as the feed served them. The suite
+# is therefore deterministic and needs no network, which is what lets CI run it
+# on every pull request.
+#
+# Both draws in full, rather than the one match the synthetic tests actually
+# mutate, because the check below used to run over every decided match in a
+# live fetch and a single fixture would have quietly cut it from 116 matches to
+# 1. Offline it now covers 232 across the two tours - more than the live fetch
+# ever did, since that only pulled the men's draw.
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+draws = {c: json.loads((FIXTURES / f"usopen_feed_{c}.json").read_text(encoding="utf-8"))
+         for c in ("MS", "WS")}
+done = [m for m in draws["MS"]["matches"] if m.get("winner") in ("1", "2")]
+
+hdr("1. no decided match anywhere in either draw is reported as live")
+n_dec = 0
+for code, data in draws.items():
+    dec = [m for m in data["matches"] if m.get("winner") in ("1", "2")]
+    bad = [m["match_id"] for m in dec if d.live_state(m) is not None]
+    assert not bad, f"{code}: decided matches called live: {bad[:5]}"
+    n_dec += len(dec)
+    print(f"  {code}: {len(data['matches'])} matches, {len(dec)} decided, none called live")
+assert n_dec == 232, f"fixture drifted: {n_dec} decided matches, expected 232"
+print(f"  {n_dec} decided matches checked with no network")
+
+hdr("1b. the live feed itself, when it is reachable")
+try:
+    ms = d.fetch_draw("MS")["matches"]
+except Exception as e:                                   # noqa: BLE001
+    print(f"  skipped, feed not reachable: {type(e).__name__}")
+    print("  (every check below runs off the fixture and does not need it)")
+else:
+    live = [m for m in ms if d.live_state(m) is not None]
+    print(f"  matches in the feed: {len(ms)}; under way right now: {len(live)}")
+    for m in live:
+        print("   ", m["match_id"], d.live_state(m))
+    decided = [m for m in ms if m.get("winner") in ("1", "2")]
+    assert all(d.live_state(m) is None for m in decided), "a decided match was called live"
+    print(f"  all {len(decided)} decided matches correctly return None")
 
 hdr("2. live_state on a synthetic in-progress match")
 import copy
@@ -350,3 +385,4 @@ else:
     print("  skipped: point tape not present")
 
 print("\nALL SEEDING TESTS PASSED")
+sys.exit(0)
