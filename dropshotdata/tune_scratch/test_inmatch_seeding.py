@@ -324,6 +324,13 @@ print(f"  advantage as 4-0 would be {p_game_from_state(0.65, 4, 0):.4f}; "
       f"as 4-3 it is {adv:.4f}")
 assert adv < 1.0
 
+# A tiebreak has no advantage scoring, so an advantage token there is a
+# malformed payload, not a score. The advantage branch would otherwise answer
+# it with a GAME score of 4-3.
+assert parse_game_score(["A", None], True) == (0, 0)
+assert parse_game_score([None, "A"], True) == (0, 0)
+print("  an advantage inside a tiebreak does not exist, and is refused")
+
 hdr("22. a game boundary is taken from the tape's numbering, not from a reset")
 if tape.exists():
     t2 = pd.read_parquet(tape, columns=["match_id", "point_no", "SetNo", "GameNo",

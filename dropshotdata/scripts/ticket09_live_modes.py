@@ -126,6 +126,14 @@ def parse_game_score(raw, in_tiebreak: bool = False) -> tuple[int, int]:
         return 0, 0
     a_adv = a is not None and str(a).strip().upper() in _ADVANTAGE
     b_adv = b is not None and str(b).strip().upper() in _ADVANTAGE
+    if in_tiebreak and (a_adv or b_adv):
+        # A tiebreak has no advantage scoring, so this is a malformed payload
+        # rather than a score to interpret. Never seen in 15,385 captured
+        # polls - none of the 289 advantage records is at 6-6 - but the
+        # advantage branch below would otherwise answer it with a GAME score.
+        print(f"WARNING: gameScore {raw!r} carries an advantage inside a tiebreak, "
+              f"which does not exist; reading the tiebreak as not started")
+        return 0, 0
     if a_adv and b is None:
         return 4, 3
     if b_adv and a is None:
