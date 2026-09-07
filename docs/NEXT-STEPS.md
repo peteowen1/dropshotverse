@@ -3,7 +3,7 @@
 > Living queue. Sessions update this when they finish work (rule in `C:\dev\CLAUDE.md`).
 > Decision log: [DECISIONS.md](DECISIONS.md) · Vault map: [HOME.md](HOME.md) ·
 > Rolled-off narrative: [backlog/](backlog/)
-> Last updated: **2026-09-06 evening.**
+> Last updated: **2026-09-07 evening.**
 >
 > **Read first if you are cold:**
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
@@ -13,6 +13,86 @@
 >   Actions is the armed backup, dispatched by the ITG Worker only when R2
 >   goes stale (D-13, D-14). Nothing is waiting on Pete for it.
 > - `main` is real: PRs #8-#12 merged 2026-09-06, each reviewed.
+
+## Session handover — 2026-09-07
+
+**Shipped to `main`** (five PRs, each reviewed before the PR existed):
+
+| PR | what |
+|---|---|
+| #31 | in-match seeding at POINT-level resolution, behind `--live-score`, off by default |
+| #32 | CI — the in-match suite plus a guard that fails the build if a producer passes `--live-score` |
+| #33 | WTA calendar paging fix, and `rescore_after_final.py` |
+| #35 | daily tennismylife archive, and Wimbledon capture |
+
+**Running when this session ended.** A four-year US Open backfill, detached and
+already orphaned from the session that started it, so it survives a close.
+Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
+
+- progress: `ls dropshotdata/raw/usopen/<year>/matches | measure` (expect ~944)
+- log: `%TEMP%\claude\C--dev-dropshotverse\...\scratchpad\backfill.log`
+- **resumable**: `backfill_done.json` per year, saved every 25 matches. If it
+  dies, re-run `capture_usopen.py backfill --year <y>` and it skips what is done.
+- nothing alarms if it fails. Nobody is watching it.
+
+**Dated, needs nothing from anyone:**
+
+- **2026-09-13** — US Open men's final.
+- **2026-09-14 08:00** — scheduled task `DropshotverseRescoreAfterFinal` runs
+  `rescore_after_final.cmd`, settling arm C against arm D on real late rounds.
+  Log: `dropshotdata/raw/usopen/rescore.log`.
+- **2026-09-16 12:00** — the 5-minute capture and 30-minute live sim tasks stop.
+- **~2026-09-23** — dispatch `event-forecast.yml` group `1020` for Beijing once
+  the field shows 96 entrants and 32 seeds. **Dispatch with `--ref` matching
+  where the code lives**; `gh workflow run` defaults to the default branch,
+  which cost two confusing failures. Related and worth knowing generally: a
+  `schedule:` trigger only ever fires from the DEFAULT branch, so a cron
+  workflow sitting on `dev` does nothing at all - that is why the tennismylife
+  archive had to reach `main` to work, not merely to be tidy.
+
+**Queued, ranked:**
+
+1. **Merge [PR #34](https://github.com/peteowen1/dropshotverse/pull/34) after
+   the 09-14 re-score.** Round-aware layoff and fatigue, reviewed, CI green,
+   deliberately held: merging puts it in production within 30 minutes, and the
+   re-score should score the model that produced the published numbers.
+2. **Verify per-year field coverage** on the backfilled 2022-24 tapes before
+   anything uses them. Feeds change shape across years and that has caught this
+   session twice.
+3. **Re-estimate the shrink factors** on the full five-year sample, then settle
+   hier versus serve/return Elo (see below). Blocked on 2.
+
+**Undecided, and why — the serve/return rating.** Branch
+`feat/serve-return-ratings`, NOT merged, research-grade.
+
+- The hierarchical model has always carried a per-player serve and return skill.
+  `ratings.parquet` ships only `elo_overall`, `bt_rating`, `age`.
+- A paired serve/return Elo was built (D-33) at both point and game level.
+- **hier is ahead on ordering** on the only test with no absorption in it: the
+  2026 tape, ratings frozen before the event. hier +0.478, best Elo +0.444.
+- **The K sweep was invalid** (D-40). It scored each K by aggregating pre-match
+  ratings across 2022-23 and correlating with performance over that same
+  window, so a fast-adapting rating absorbed the outcomes it was judged on.
+  Correlation rose monotonically with K and never turned over — the tell. On
+  the tape the ordering reverses.
+- **The shrink is free** (D-41), confirmed out of sample by a hash split:
+  correlation identical to three decimals, calibration recoverable without
+  spending a model parameter.
+- **But the shrink factor cannot be estimated from one tournament** (D-42), and
+  this undercuts every dispersion figure quoted this session. hier reads **1.38
+  on one random half of the tape and 2.40 on the other**. 1.96, 0.95 and 0.78
+  are point estimates with error bars wide enough to contain each other.
+
+**Deliberately not done:**
+
+- **Nothing published to ITG.** Publishing a serve rating whose spread is not
+  yet estimable would be the plausible-looking wrong number this repo keeps
+  getting bitten by.
+- **`--live-score` left off.** Measured and better, but the switch-on checklist
+  is unfinished, and one item needs a match actually in progress.
+- **Roland Garros and the Australian Open not added** to the capturer. RG
+  serves nothing on this path shape; ausopen.com returns 200 HTML for every
+  path, a soft 404 that briefly looked like a hit (D-37).
 
 ## Awaiting Pete
 
