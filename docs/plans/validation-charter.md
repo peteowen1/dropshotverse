@@ -228,3 +228,52 @@ next experiment rather than folded into this one.
   checking: an inverted mapping would have made every number confidently
   backwards.
 
+## Fourth result: W4 arm D, arm C with its overconfidence taken out (2026-09-07)
+
+`tune_scratch/screen_inmatch_recalibrated.py`. W4 failed on calibration, not
+discrimination, so this is the named follow-up candidate rather than a re-run
+of the one that failed. `logit(p_D) = logit(p_C) / T`.
+
+| arm | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| A fixed skill (ticket 37) | 0.0342 | 0.57166 | 0.720 |
+| C model-seeded (W4) | 0.0507 | 0.53188 | 0.779 |
+| **D recalibrated** | **0.0346** | **0.49358** | **0.779** |
+| the bar, unchanged | < 0.03 | < 0.55 | |
+
+**Verdict on the letter of the bar: NO-GO.** ECE 0.0346 misses 0.03.
+
+**In substance arm D dominates the incumbent on every axis**: the same
+calibration as arm A (0.0346 against 0.0342), a log-loss 0.078 better, and 5.9
+accuracy points. And the bar is worth looking at now it has been applied twice:
+**0.03 is below arm A's own ECE of 0.0342**, so it demanded a candidate be
+better calibrated than the thing it replaces while also being sharper. No
+candidate that merely matches the incumbent's calibration could ever pass it.
+That is an observation about the rule, not a request to change it after the
+fact - the rule stands and the verdict stands with it.
+
+Anchors: **D1 PASS**, both fitted temperatures exceed 1 (1.40 ATP, 1.56 WTA),
+confirming arm C was overconfident rather than the diagnosis being wrong.
+**D2 PASS**, accuracy moved 0.0000, as a monotone transform should.
+**D3 FAIL**, the two temperatures differ by 0.155 against a 0.15 bar, a
+marginal miss suggesting the tours may want their own temperature.
+
+**Two limitations that travel with this number, both larger than the miss.**
+
+1. **No earlier point tape exists**, so the temperature could not be fitted on
+   a previous event as this charter requires. It is cross-fitted by tour -
+   fitted on the men's draw, scored on the women's, and the reverse - so no
+   match calibrates itself, but both halves are one tournament, one surface,
+   one fortnight. Weaker than the charter's standard, and labelled so.
+2. **The evaluation covers rounds 1-3 only** (219 matches: 128, 64, 27). The
+   point tape holds later-round matches whose ids did not join to the draw
+   feed, so late-round calibration is entirely untested - and late rounds are
+   exactly where a live win-probability number gets watched. This gap should
+   be closed before anything ships, and it is a capture-join question, not a
+   modelling one.
+
+**Recommendation.** Do not ship on this evidence. Close the round 4-plus join
+gap, re-score, and refit the temperature on the first event that provides a
+second tape. If it holds up there, it is a large and real improvement to the
+live product: a player two sets up would finally be published as two sets up.
+

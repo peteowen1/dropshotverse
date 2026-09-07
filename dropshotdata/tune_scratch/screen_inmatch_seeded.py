@@ -243,6 +243,11 @@ def main() -> None:
 
     pd.DataFrame(out).to_parquet(OUT, index=False)
     log(f"\nwrote {OUT}")
+    # Per-point frame too: recalibration candidates need arm C's predictions
+    # and must not pay the model + matrix rebuild again to get them.
+    pts_out = _common.SCRATCH / "screen_inmatch_seeded_points.parquet"
+    res.to_parquet(pts_out, index=False)
+    log(f"wrote {pts_out} ({len(res):,} points)")
     log("INMATCH_SEEDED_COMPLETE")
 
 

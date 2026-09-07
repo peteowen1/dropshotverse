@@ -176,9 +176,17 @@ Still open from those reviews, in the order they are worth doing:
    pre-match skill (arm C) cuts per-point log-loss from 0.572 to 0.532 and
    lifts accuracy from 0.720 to 0.779 over 40,260 points, but ECE worsens from
    0.034 to 0.051 against a 0.03 bar. It is sharper and overconfident. The
-   next experiment is a recalibrated arm C fitted on earlier events and scored
-   once here - as a NEW candidate, not by re-running this one until it passes.
-   `tune_scratch/screen_inmatch_seeded.py`;
+   The recalibrated follow-up (arm D) was then run as its own candidate:
+   **ECE 0.0346, log-loss 0.49358, accuracy 0.779** - the same calibration as
+   the incumbent arm A, 0.078 better log-loss, 5.9 more accuracy points. Still
+   NO-GO on the letter of the 0.03 bar, which is itself below arm A's own
+   0.0342. **Not to be shipped yet for two reasons bigger than the miss**: the
+   evaluation covers rounds 1-3 only, because later-round tape ids did not
+   join to the draw feed, and the temperature had to be cross-fitted within
+   one tournament since no earlier point tape exists. Closing the round 4-plus
+   join is the next concrete task and is a capture question, not a modelling
+   one. `tune_scratch/screen_inmatch_seeded.py`,
+   `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw
    date for every round) and has its own stage-reaching scorecard in
