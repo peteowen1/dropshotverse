@@ -73,6 +73,11 @@
 
 ## Live deadlines (absolute dates)
 
+- **2026-09-13, after the final** — rebuild `usopen_2026_points.parquet`
+  (`python build_point_table.py`) and re-run `screen_inmatch_seeded.py` then
+  `screen_inmatch_recalibrated.py`. That is the late-round validation arm D
+  needs before it ships, and it cannot be done earlier because the matches
+  have not been played.
 - **2026-09-13** — US Open men's final. `live-projection.yml` has no expiry.
   The laptop tasks run to **2026-09-16 12:00 local** (2026-09-15 22:00 New
   York); the point capture still depends on the laptop.
@@ -180,12 +185,14 @@ Still open from those reviews, in the order they are worth doing:
    **ECE 0.0346, log-loss 0.49358, accuracy 0.779** - the same calibration as
    the incumbent arm A, 0.078 better log-loss, 5.9 more accuracy points. Still
    NO-GO on the letter of the 0.03 bar, which is itself below arm A's own
-   0.0342. **Not to be shipped yet for two reasons bigger than the miss**: the
-   evaluation covers rounds 1-3 only, because later-round tape ids did not
-   join to the draw feed, and the temperature had to be cross-fitted within
-   one tournament since no earlier point tape exists. Closing the round 4-plus
-   join is the next concrete task and is a capture question, not a modelling
-   one. `tune_scratch/screen_inmatch_seeded.py`,
+   0.0342. **But arm A was never live.** What the site does with an in-progress
+   match is publish the pre-match number and ignore the score
+   (`simulate_usopen_live.py:88-91`), which scores ECE **0.1058**, log-loss
+   0.60332. So against the real incumbent arm D is three times better
+   calibrated and 0.110 better on log-loss. **Recommended to ship**, subject to
+   one thing: the evaluation covers rounds 1-3 because the tournament is still
+   being played and the point table is a snapshot, not because of any join bug.
+   Rebuild the point table and re-score after the final. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw
