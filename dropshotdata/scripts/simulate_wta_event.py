@@ -294,10 +294,24 @@ def main() -> None:
     # computed as though everyone started together, and in the round after the
     # byes a seed with nothing in their legs is treated as having played a
     # match (D-28).
-    first_round = {u: (1 if seed_map.get(u, n_byes + 1) <= n_byes else 0)
-                   for u in field_uids}
-    n_with_bye = sum(first_round.values())
-    log(f"  {n_with_bye} of {len(field_uids)} entrants enter in round two on a bye")
+    # Only when there are at least as many seeds as byes. Below that,
+    # random_bracket_with_byes hands the LEFTOVER byes to random free slots and
+    # redraws them on every simulation, so no fixed mapping can describe the
+    # bracket - the features would name one set of bye recipients while the
+    # draw kept picking another. That only happens on the --allow-partial path,
+    # which is explicitly for a look rather than for the site, so it falls back
+    # to modelling no byes at all and says so.
+    if n_byes and n_seeds >= n_byes:
+        first_round = {u: (1 if seed_map.get(u, n_byes + 1) <= n_byes else 0)
+                       for u in field_uids}
+        log(f"  {sum(first_round.values())} of {len(field_uids)} entrants enter "
+            f"in round two on a bye")
+    else:
+        first_round = None
+        if n_byes:
+            log(f"  {n_seeds} seeds for {n_byes} byes: the leftover byes are drawn at "
+                f"random per simulation, so fatigue and layoff are NOT modelled for "
+                f"them this run")
     matrices = build_round_pred_matrices(field_uids, ptab, tour, surface, 3, level, h2h, date0,
                                          cat_levels, models, STAGE_ORDER[:-1],
                                          first_round=first_round)

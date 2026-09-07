@@ -97,8 +97,15 @@ def run_tour(tour: str, meta: dict, snap: dict, models: list, cat_levels: dict, 
     ptab = build_player_table(field_uids, tour, DATE0, SURFACE, snap, playstyle_full, age_table)
 
     rounds_needed = STAGE_ORDER[:-1]
+    # round_aware=False on purpose. This script is the LOCKED pre-tournament
+    # forecast - a record of what was predicted before a ball was hit, not a
+    # current estimate. The round-aware layoff and fatigue added on 2026-09-07
+    # are an improvement to the live simulator, and applying them here would
+    # silently rewrite an already-published number by a mean of about 0.02.
+    # A locked forecast that moves is not locked.
     round_matrices = build_round_pred_matrices(field_uids, ptab, tour, SURFACE, best_of, "G", h2h, DATE0,
-                                                cat_levels, models, rounds_needed)
+                                                cat_levels, models, rounds_needed,
+                                                round_aware=False)
 
     idx = {u: k for k, u in enumerate(field_uids)}
     seed = hash(tour + "2026usopen") % 100000

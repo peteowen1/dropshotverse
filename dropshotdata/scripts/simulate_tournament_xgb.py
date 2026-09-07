@@ -52,7 +52,8 @@ IN_EVENT_WEEKS = 2.0 / 7.0
 def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: str, surface: str, best_of: int,
                               tourney_level: str, h2h: dict, date0, cat_levels: dict,
                               models: list, rounds: list[str],
-                              first_round: dict[str, int] | None = None) -> dict[str, np.ndarray]:
+                              first_round: dict[str, int] | None = None,
+                              round_aware: bool = True) -> dict[str, np.ndarray]:
     """One full round-robin prediction pass per round value. Features other
     than `round` are identical across rounds (frozen pre-tournament state),
     so the shared base feature matrix is built once and only the `round`
@@ -93,6 +94,14 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     player's FIRST match. Omit it and everyone starts in round one, which is
     the no-byes case and reproduces the previous behaviour for
     `fatigue_diff` exactly.
+
+    `round_aware=False` restores the pre-2026-09-07 behaviour completely:
+    layoff frozen at the pre-tournament gap in every round, fatigue always 0.
+    That exists for one caller. `simulate_us_open_2026.py` produces the LOCKED
+    pre-tournament forecast, which is a record of what was predicted before the
+    event rather than a current estimate. Improving the model underneath it
+    would silently rewrite an already-published number, so it opts out and
+    keeps reproducing the vintage it published.
     """
     n = len(field_uids)
     idx = {u: k for k, u in enumerate(field_uids)}
@@ -114,12 +123,16 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     for k, rnd in enumerate(rounds):
         Xdf = base.copy()
         Xdf["round"] = rnd
-        # matches each player has already played at this event by this round
-        played_i = np.maximum(k - fr_i, 0)
-        played_j = np.maximum(k - fr_j, 0)
-        Xdf["fatigue_diff"] = (played_i - played_j).astype(float)
-        Xdf["weeks_since_last_diff"] = (np.where(played_i > 0, IN_EVENT_WEEKS, wsl_i)
-                                        - np.where(played_j > 0, IN_EVENT_WEEKS, wsl_j))
+        if round_aware:
+            # matches each player has already played at this event by this
+            # round. Assigned as numpy arrays, so pandas aligns them by
+            # POSITION, and base's rows are in the same order as pairs_i_uid /
+            # pairs_j_uid because one loop appends to both.
+            played_i = np.maximum(k - fr_i, 0)
+            played_j = np.maximum(k - fr_j, 0)
+            Xdf["fatigue_diff"] = (played_i - played_j).astype(float)
+            Xdf["weeks_since_last_diff"] = (np.where(played_i > 0, IN_EVENT_WEEKS, wsl_i)
+                                            - np.where(played_j > 0, IN_EVENT_WEEKS, wsl_j))
         X = prep_X_d(Xdf, cat_levels)
         dmat = xgb.DMatrix(X, enable_categorical=True)
         p = np.clip(np.mean([m.predict(dmat) for m in models], axis=0), 1e-9, 1 - 1e-9)

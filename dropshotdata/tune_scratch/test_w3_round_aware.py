@@ -94,4 +94,24 @@ for k in (0, 1, 3):
     assert np.allclose(a, [-x for x in b]), (k, a, b)
 print("  swapping the two players negates both columns, in every round")
 
+hdr("7. the locked forecast opts out, and opting out is really the old behaviour")
+import inspect
+sig = inspect.signature(stx.build_round_pred_matrices)
+assert "round_aware" in sig.parameters, "no way to reproduce the published vintage"
+assert sig.parameters["round_aware"].default is True, "round-aware must be the default"
+src = inspect.getsource(stx.build_round_pred_matrices)
+assert "if round_aware:" in src, "the opt-out does not gate the new columns"
+locked = (SCRIPTS / "simulate_us_open_2026.py").read_text(encoding="utf-8")
+assert "round_aware=False" in locked, \
+    "the locked pre-tournament forecast would be silently rewritten by this change"
+print("  build_round_pred_matrices takes round_aware, defaulting True")
+print("  simulate_us_open_2026 passes False, so the published locked numbers stand")
+
+hdr("8. the provisional path does not claim byes it cannot place")
+wta = (SCRIPTS / "simulate_wta_event.py").read_text(encoding="utf-8")
+assert "n_seeds >= n_byes" in wta, \
+    "first_round is passed even when leftover byes are drawn at random per sim"
+assert "first_round = None" in wta, "no fallback for the provisional path"
+print("  first_round is only passed when every bye sits opposite a known seed")
+
 print("\nALL W3 ANCHORS PASSED")
