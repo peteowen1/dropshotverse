@@ -223,6 +223,9 @@ def _player(team: dict) -> tuple[str, str] | None:
     return f"{team['firstNameA']} {team['lastNameA']}", team.get("idA") or ""
 
 
+from ticket09_live_modes import set_is_decided  # noqa: E402
+
+
 def live_state(m: dict) -> dict | None:
     """The current (sets, games, server) of a match under way, or None.
 
@@ -272,6 +275,17 @@ def live_state(m: dict) -> dict | None:
         return None
     games1, games2 = games[-1] if len(games) > sets1 + sets2 else (0, 0)
     if sets1 + sets2 + games1 + games2 == 0:
+        return None
+
+    # The set said to be in progress must not already be won. The two fields
+    # disagreeing means `totalSetsWon` has lagged `scores.sets` by a poll, and
+    # scoring the contradiction is worse than skipping it: the recursion treats
+    # "the set in progress stands at 6-4" as a set the leader is about to lose
+    # on the next game rather than one they have just won.
+    if set_is_decided(games1, games2):
+        print(f"[{mid}] WARNING: sets won {sets1}-{sets2} but the set in progress "
+              f"reads {games1}-{games2}, which is already a finished set; the feed "
+              f"has lagged itself, leaving this match pre-match")
         return None
 
     # Exactly one player serves. Missing or duplicated is a malformed payload,

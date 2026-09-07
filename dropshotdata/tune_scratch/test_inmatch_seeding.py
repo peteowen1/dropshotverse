@@ -8,7 +8,8 @@ sys.path.insert(0, str(ROOT / "dropshotdata" / "scripts"))
 import usopen_live_draw as d          # noqa: E402
 from inmatch_seeding import (SERVE_BASE, TOLERANCE, seeded_probability,  # noqa: E402
                              solve_serves, wp)
-from ticket09_live_modes import p_set_from_state, p_tiebreak  # noqa: E402
+from ticket09_live_modes import (p_set_from_state, p_tiebreak,  # noqa: E402
+                                 set_is_decided, p_match_from_state)
 
 
 def hdr(t):
@@ -165,5 +166,77 @@ try:
     print(f"  a reachable target solves (tolerance {TOLERANCE})")
 except ValueError as e:
     raise AssertionError(f"a reachable target should not raise: {e}")
+
+hdr("12. an already decided set score is scored, not dropped")
+for a, b, want in ((6, 4, True), (6, 0, True), (7, 5, True), (7, 6, True),
+                   (4, 6, True), (6, 5, False), (5, 5, False), (6, 6, False)):
+    assert set_is_decided(a, b) is want, (a, b)
+for a, b in ((6, 4), (7, 6), (6, 0), (7, 5), (4, 6), (6, 7)):
+    got, want = p_set_from_state(0.65, 0.55, a, b, True), (1.0 if a > b else 0.0)
+    assert abs(got - want) < 1e-12, f"{a}-{b} scored {got}, should be {want}"
+print("  every decided score returns 1.0 or 0.0; it used to return 0.0 for all of them")
+# The shape that made this dangerous: winning a set made you look WORSE.
+close = p_match_from_state(0.65, 0.55, 1, 1, 5, 4, True, 5)
+won = p_match_from_state(0.65, 0.55, 1, 1, 6, 4, True, 5)
+print(f"  1 set all: 5-4 -> {close:.4f}, then winning that set 6-4 -> {won:.4f}")
+assert won > close, "winning a set still lowers the match probability"
+
+hdr("13. probability mass is conserved from every undecided start")
+for g1, g2 in ((0, 0), (5, 5), (6, 6), (6, 5), (3, 1), (0, 5)):
+    t = (p_set_from_state(0.65, 0.55, g1, g2, True)
+         + p_set_from_state(0.55, 0.65, g2, g1, False))
+    assert abs(t - 1.0) < 1e-9, f"{g1}-{g2} sums to {t}"
+print("  p + mirror == 1 from 0-0, 5-5, 6-6, 6-5, 3-1 and 0-5")
+
+hdr("14. a feed that lags itself is refused, not scored")
+mm = copy.deepcopy(base)
+mm["team1"]["totalSetsWon"], mm["team2"]["totalSetsWon"] = 0, 0
+mm["scores"]["sets"] = [[{"score": 6}, {"score": 4}]]
+assert d.live_state(mm) is None, "a finished set was accepted as in progress"
+print("  sets won 0-0 while the set in progress reads 6-4: None")
+
+hdr("15. the recursion agrees with the pre-match model at the opening state")
+import hierarchical_model as hm
+worst = 0.0
+for tour, bo in (("atp", 5), ("wta", 3)):
+    b = SERVE_BASE[tour]
+    for delta in (0.0, 0.02, 0.05, 0.10, 0.20):
+        pm = hm.p_match(b + delta, b - delta, bo)
+        sym = 0.5 * (p_match_from_state(b + delta, b - delta, 0, 0, 0, 0, True, bo)
+                     + p_match_from_state(b + delta, b - delta, 0, 0, 0, 0, False, bo))
+        worst = max(worst, abs(sym - pm))
+print(f"  worst gap, symmetrised over serve order: {worst:.2e}")
+# This was ~0.4% and the code described it as a convention difference rather
+# than a defect. It was the 6-6 bug. Asserted so it cannot be explained away.
+assert worst < 1e-9, "the recursion and p_match have drifted apart again"
+
+hdr("16. the point tape's set-ending row means 'set won', not 'set in progress'")
+import pandas as pd
+import _common
+tape = _common.DD / "usopen_2026_points.parquet"
+if tape.exists():
+    t = pd.read_parquet(tape, columns=["match_id", "point_no", "P1SetsWon", "P2SetsWon",
+                                       "P1GamesWon", "P2GamesWon", "SetWinner"])
+    t = t[t["match_id"] == t["match_id"].iloc[0]].sort_values("point_no").reset_index(drop=True)
+    a = t["P1GamesWon"].fillna(0).astype(int)
+    b = t["P2GamesWon"].fillna(0).astype(int)
+    ends = [i for i in range(len(t)) if set_is_decided(a[i], b[i])]
+    assert ends, "no set-ending row found in the first match"
+    i = ends[0]
+    row, nxt = t.loc[i], t.loc[i + 1]
+    print(f"  point {row['point_no']}: sets {int(row['P1SetsWon'])}-{int(row['P2SetsWon'])}, "
+          f"games {a[i]}-{b[i]}, SetWinner={int(row['SetWinner'])}")
+    print(f"  point {nxt['point_no']}: sets {int(nxt['P1SetsWon'])}-{int(nxt['P2SetsWon'])}, "
+          f"games {int(nxt['P1GamesWon'])}-{int(nxt['P2GamesWon'])}")
+    # the set is ALREADY in the set count on the row that shows 6-4, so those
+    # games are a leftover. Scoring them as a set in progress counts it twice.
+    assert int(row["SetWinner"]) in (1, 2), "the set-ending row should name a set winner"
+    assert (int(row["P1SetsWon"]) + int(row["P2SetsWon"])
+            == int(nxt["P1SetsWon"]) + int(nxt["P2SetsWon"])), \
+        "the set count changes AFTER the leftover row, so it is not a leftover"
+    assert int(nxt["P1GamesWon"]) == 0 and int(nxt["P2GamesWon"]) == 0
+    print("  so the screen zeroes those games; counting them would score the set twice")
+else:
+    print(f"  skipped: {tape} not present")
 
 print("\nALL SEEDING TESTS PASSED")

@@ -441,3 +441,60 @@ Do not ship the recalibration: on the only late-round evidence available it
 still loses to plain arm C on both calibration and log-loss, now by a wider
 relative margin. Settle it properly after the 2026-09-13 final.
 
+## The tape was being read wrong, and every number above was affected (2026-09-07, final)
+
+The 6-6 fix should have improved the arms and instead made them slightly worse.
+That contradiction was the useful part. Chasing it meant walking actual rows of
+the point tape across a set boundary, which is where the real defect was.
+
+**Match 1101, points 67 to 71.** The tape records state AFTER the point, and on
+the point that ENDS a set it does two things at once: it increments the set
+count and it leaves the games showing the set just finished.
+
+| point | sets | games | SetWinner |
+|---|---|---|---|
+| 69 | 0-0 | 5-4 | 0 |
+| **70** | **1-0** | **6-4** | **1** |
+| 71 | 1-0 | 0-0 | 0 |
+
+So on point 70 the set is already counted in the set score, and `6-4` is a
+leftover, not a set in progress. **1,410 points - 1.58% of the tape - are on
+such a row.** Both previous readings of them were wrong, in opposite
+directions: the original code scored `6-4` as a set the leader was about to
+LOSE, and the terminal-state fix scored it as a set they win on top of the one
+already counted. The screen now zeroes those games, which is what the tape is
+actually saying.
+
+This is the third re-measurement on this page, and it invalidates the two
+above it. These are the numbers that stand.
+
+| all rounds, 231 matches, 42,657 points | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0306 | 0.52953 | 0.721 |
+| arm C, seeded | 0.0491 | 0.48286 | 0.785 |
+| arm D, seeded + recalibrated | 0.0272 | 0.47351 | 0.785 |
+
+| late rounds, temperature fitted on rounds 1-3 | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C, seeded** | **0.1285** | **0.22333** | 0.907 |
+| arm D, seeded + recalibrated | 0.1703 | 0.26865 | 0.907 |
+
+**Arm D now clears the W4 bar it previously failed** - ECE 0.0272 against 0.03,
+log-loss 0.47351 against 0.55 - so on the headline metric it is a GO.
+
+**It fails its own anchor anyway, and the anchor wins.** D3 requires the two
+tours' temperatures to agree within 0.15; they are 1.209 for the men and 1.458
+for the women, a spread of **0.248**. A single temperature is the whole premise
+of arm D, and the two halves of the data disagree about what it is. That is the
+method saying it is not one correction, which is a fact about the method rather
+than a threshold to relax. It points the same way as the late-round evidence,
+which independently still prefers plain arm C on both calibration and log-loss.
+
+**Ship arm C. Do not ship arm D.** Two independent signals now say so where
+before there was one, and the headline metric that favours D is exactly the
+metric a temperature is fitted to move.
+
+Arm C's own anchors all pass on the corrected tape: C1 100% agreement on 231
+matches, C2 0.00062, C3 100%.
+

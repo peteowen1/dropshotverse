@@ -128,4 +128,16 @@ Consequences to hold onto:
   machine precision. Nothing published was affected - the live path does not
   reach this module on `dev`. Evidence and re-measured arms:
   `docs/plans/validation-charter.md`.
+- **D-17 (2026-09-07)** — The point tape's set-ending row carries the new set
+  count AND the finished set's game score at once (match 1101 point 70: sets
+  1-0, games 6-4). 1,410 points, 1.58% of the tape, sat on such a row and were
+  being scored as a set in progress. Fixed in the screen; every in-match number
+  measured before this is void. Arm C: log-loss 0.53106 -> 0.48286.
+- **D-18 (2026-09-07)** — Ship arm C (seed the in-match recursion from the
+  model's pre-match number), not arm D (temperature on top). Arm D clears the
+  headline bar on the corrected tape but fails its own anchor D3: the men's and
+  women's temperatures are 1.209 and 1.458, a spread of 0.248 against a 0.15
+  bar, so a single temperature is not what the data contains. Late rounds
+  independently still prefer C. Evidence:
+  `docs/plans/validation-charter.md`.
 

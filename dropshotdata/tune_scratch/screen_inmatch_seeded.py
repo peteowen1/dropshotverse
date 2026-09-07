@@ -58,6 +58,7 @@ import xgb_bt_rating as xbr                                          # noqa: E40
 from simulate_tournament import STAGE_ORDER                          # noqa: E402
 from simulate_tournament_xgb import build_round_pred_matrices        # noqa: E402
 from inmatch_seeding import SERVE_BASE, solve_serves, wp             # noqa: E402
+from ticket09_live_modes import set_is_decided                       # noqa: E402
 
 PTS = _common.DD / "usopen_2026_points.parquet"
 OUT = _common.SCRATCH / "screen_inmatch_seeded.parquet"
@@ -173,6 +174,21 @@ def main() -> None:
         for r in g.itertuples():
             s1, s2 = int(r.P1SetsWon or 0), int(r.P2SetsWon or 0)
             gm1, gm2 = int(r.P1GamesWon or 0), int(r.P2GamesWon or 0)
+            # The tape records the state AFTER the point, and on the point that
+            # ENDS a set it does two things at once: it increments the set count
+            # and it leaves the games showing the set just finished. Match 1101
+            # point 70 reads sets 1-0 with games 6-4, and point 71 reads sets
+            # 1-0 with games 0-0.
+            #
+            # So on those rows the set is already counted in s1/s2 and the games
+            # are a leftover, not a set in progress. Passing them through scores
+            # the same set twice. Leaving them and letting the recursion treat
+            # 6-4 as "about to lose this set" - which is what it used to do -
+            # scores it backwards. Neither is the state the tape is describing.
+            #
+            # 1,410 points, 1.58% of the tape, are on such a row.
+            if set_is_decided(gm1, gm2):
+                gm1 = gm2 = 0
             srv = (r.PointServer == "1")
             rows.append((mid, r.point_no, y1,
                          wp(base, base, s1, s2, gm1, gm2, srv, bo),   # arm A

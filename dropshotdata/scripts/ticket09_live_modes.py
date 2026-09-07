@@ -66,6 +66,22 @@ def games_from_tape(pts):
     return out
 
 
+def set_is_decided(a: int, b: int) -> bool:
+    """Is a standard set already won at this game score?
+
+    6-4 and 6-0 (six games, two clear), 7-5, and 7-6 off the tiebreak. 6-5 is
+    not: the set continues. Shared with usopen_live_draw so the two cannot
+    drift apart about what a finished set looks like.
+
+    Standard sets only. A format whose deciding set is settled by a
+    super-tiebreak at some other game score would need its own rule; the 2026
+    US Open uses a 6-6 tiebreak in every set including the decider, which is
+    the only event this code runs on.
+    """
+    hi, lo = max(a, b), min(a, b)
+    return (hi == 7 and lo <= 6) or (hi == 6 and hi - lo >= 2)
+
+
 def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
                      p1_serves_next: bool) -> float:
     """P(player1 wins the SET) from an arbitrary in-progress game score."""
@@ -74,9 +90,20 @@ def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
     for _ in range(20):
         nxt = {}
         for (a, b), pr in states.items():
-            if (a >= 6 or b >= 6) and abs(a - b) >= 2 and max(a, b) <= 7:
-                continue
-            if a == 7 or b == 7:
+            if set_is_decided(a, b):
+                # This fires only for a score handed IN as the set in progress:
+                # the transitions below score a finished set directly and never
+                # put one back in `states`. It used to `continue`, which drops
+                # the mass instead of awarding it, so the function returned 0.0
+                # for every already-won set - 6-4, 7-5, 7-6, all of them.
+                #
+                # Reached whenever the feed's `totalSetsWon` lags its
+                # `scores.sets` by one poll, and the shape is the worst kind:
+                # at 5-4 the server sat at 0.946, and WINNING that set 6-4 took
+                # them to 0.649. usopen_live_draw now refuses that state
+                # outright; this makes the function correct for it regardless
+                # of who calls it.
+                final += pr if a > b else 0.0
                 continue
             if a == 6 and b == 6:
                 # A set at 6-6 IS the tiebreak: no thirteenth game is played,
