@@ -247,6 +247,17 @@ Still open from those reviews, in the order they are worth doing:
    coded to 0.0, correct for a 128 draw with no byes and wrong for Beijing's
    96-into-128 with 32 byes (D-28). Sizing script:
    `tune_scratch/screen_w3_frozen_layoff.py`.
+   **FIXED and open as [PR #34](https://github.com/peteowen1/dropshotverse/pull/34),
+   deliberately NOT merged.** All three share one cause - the simulator had no
+   notion of how many matches a player had already played - so they are one
+   change. CI green, 8 anchors. **Merge on 2026-09-14, after the final and
+   after `DropshotverseRescoreAfterFinal` has run**, so the late-round re-score
+   scores the model that produced the published numbers rather than a changed
+   one. Review caught two things worth knowing: the LOCKED pre-tournament
+   forecast would have been silently rewritten (now opts out via
+   `round_aware=False`), and the bye mapping was wrong for exactly Beijing's
+   current state, where 0 seeds means the leftover byes are drawn at random
+   every simulation.
 
 ## Known and NOT chased
 
