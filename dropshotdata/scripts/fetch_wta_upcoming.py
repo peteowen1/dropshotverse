@@ -89,17 +89,79 @@ def get(path: str, cache_key: str | None = None) -> dict | list:
     return body
 
 
+PAGE_SIZE = 100
+MAX_PAGES = 20          # 2,000 tournaments; the tour plays nothing like that
+
+
 def calendar(date_from: str, date_to: str) -> pd.DataFrame:
-    j = get(f"/tournaments/?from={date_from}&to={date_to}&page=0&pageSize=100",
-            cache_key=f"cal_{date_from}_{date_to}")
+    """Every tournament in the window, following the endpoint's paging.
+
+    This used to request `page=0&pageSize=100` and stop, which is one page. A
+    WTA season plus the ITF events the endpoint returns runs well past 100, so
+    a full-year window came back ending in early March and everything after it
+    was invisible. Beijing 2026 starts on 30 September, so the event-forecast
+    workflow failed with "no cached calendar row for group 1020" - after
+    successfully fetching that same event's entry list, which does not go
+    through here. Caught by a dry run on 2026-09-07, sixteen days before the
+    forecast was due to be published.
+
+    Paging stops on the first short or empty page, and the endpoint's own count
+    is checked against what was actually collected, so stopping early on a
+    short page in the middle of a sequence is caught rather than reported as a
+    normal success. Each page is cached separately.
+
+    That count is `pageInfo.numEntries`. The first version of this read
+    `totalElements`, which the endpoint does not send - it returns exactly two
+    top-level keys, `pageInfo` and `content` - so the guard was `None`, the
+    comparison never ran, and the docstring claimed a protection that did not
+    exist. A check that cannot fail is worse than no check, because it stops
+    anyone looking.
+    """
     rows = []
-    for t in j.get("content", []):
-        g = t.get("tournamentGroup") or {}
-        rows.append(dict(
-            group_id=g.get("id"), name=t.get("title"), start=t.get("startDate"),
-            end=t.get("endDate"), level=t.get("level"), surface=t.get("surface"),
-            draw=t.get("singlesDrawSize"), status=t.get("status"),
-            year=t.get("year"), indoor=t.get("inOutdoor")))
+    total = None
+    for page in range(MAX_PAGES):
+        j = get(f"/tournaments/?from={date_from}&to={date_to}"
+                f"&page={page}&pageSize={PAGE_SIZE}",
+                cache_key=f"cal_{date_from}_{date_to}_p{page}")
+        content = j.get("content", [])
+        if total is None:
+            total = (j.get("pageInfo") or {}).get("numEntries")
+        for t in content:
+            g = t.get("tournamentGroup") or {}
+            rows.append(dict(
+                group_id=g.get("id"), name=t.get("title"), start=t.get("startDate"),
+                end=t.get("endDate"), level=t.get("level"), surface=t.get("surface"),
+                draw=t.get("singlesDrawSize"), status=t.get("status"),
+                year=t.get("year"), indoor=t.get("inOutdoor")))
+        if len(content) < PAGE_SIZE:
+            break
+    else:
+        log(f"  WARNING: stopped at the {MAX_PAGES}-page guard with a full last "
+            f"page; the window may still be truncated")
+
+    if total is None:
+        raise SystemExit(
+            f"calendar {date_from} to {date_to}: the response carries no "
+            f"pageInfo.numEntries, so how much there was to collect cannot be "
+            f"known. The endpoint's shape has changed; fix this rather than "
+            f"trusting {len(rows)} rows to be all of them.")
+    if len(rows) < total:
+        raise SystemExit(
+            f"calendar {date_from} to {date_to}: the endpoint reports "
+            f"{total} tournaments and only {len(rows)} were collected. "
+            f"Refusing to return a truncated calendar - a missing row here "
+            f"reads downstream as 'that event does not exist'.")
+
+    # A pre-2026-09-07 run cached the whole window under one key, holding only
+    # the first page. simulate_wta_event globs this directory, so leaving that
+    # file behind lets the original bug come back through a different reader.
+    stale = CACHE / f"cal_{date_from}_{date_to}.json"
+    if stale.exists():
+        stale.unlink()
+        log(f"  removed the pre-paging cache {stale.name}, which held one page")
+
+    log(f"  {len(rows)} tournaments over {page + 1} page(s), "
+        f"endpoint reports {total}")
     return pd.DataFrame(rows)
 
 

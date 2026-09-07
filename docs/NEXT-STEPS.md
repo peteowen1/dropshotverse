@@ -83,9 +83,23 @@
   York); the point capture still depends on the laptop.
 - **~2026-09-23** — dispatch `event-forecast.yml` with group `1020` for the
   China Open (Beijing, starts 2026-09-30) once the field shows 96 entrants
-  and 32 seeds. On 09-07 it was 76 of 96 and 0 seeded; the pipeline is built
-  and smoke-tested, and refuses to publish a partial field without
-  `allow_partial`.
+  and 32 seeds. On 09-07 it was 76 of 96 and 0 seeded, and the pipeline
+  correctly refuses a partial field without `allow_partial`.
+  **A dry run on 09-07 found it could not have run at all**: the calendar
+  fetch took one page of 100, so a full-year window ended on 2 March and
+  Beijing (30 September) did not exist as far as the simulator was concerned.
+  Fixed — it pages now, 523 tournaments over 6 pages, and refuses a calendar
+  shorter than the endpoint's own `totalElements`. Re-verified end to end on
+  `dev`: Beijing resolves, 76/76 entrants at 100%, and it stops at the field
+  guard as intended. **Dispatch with `--ref` matching where the fix lives**;
+  `gh workflow run` defaults to the default branch, which cost one confusing
+  failure here.
+- **2026-09-14 08:00** — scheduled task `DropshotverseRescoreAfterFinal` runs
+  `rescore_after_final.cmd` once: rebuild the point table, re-run both in-match
+  arms, print the late-round comparison beside the numbers on record. Log at
+  `dropshotdata/raw/usopen/rescore.log`. Run early it reports that the later
+  rounds are missing and stops. This is what settles C versus D on more than
+  7 matches.
 - **After the final** — `event_status = complete` lets the site render a
   result; the freshness alarm downgrades stale-while-complete to a note.
 
