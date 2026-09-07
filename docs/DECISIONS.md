@@ -273,4 +273,29 @@ Consequences to hold onto:
   count. The K values in `K_BY_TOUR_MODE` were also chosen BEFORE the drift fix
   and are stale - ATP games held now reads 0.78, over-shrunk - so re-sweep
   before using them.
+- **D-40 (2026-09-07)** — The K sweep was invalid and its answer was backwards.
+  It scored each K by aggregating a player's pre-match ratings over 2022-23 and
+  correlating with their performance across that same window, so a fast
+  adapting rating absorbed the outcomes it was then judged on. Correlation rose
+  monotonically with K and never turned over (+0.645 at k=0.15 to +0.837 at
+  k=4.0). On the 2026 tape, frozen before the event, the order reverses: k=0.15
+  scores +0.444 and k=4.0 scores +0.342. Using PRE-match ratings was not enough
+  - any window an online rating updated through is partly in-sample for it.
+- **D-41 (2026-09-07)** — The shrink is free, confirmed out of sample. Splitting
+  the tape's players in half by a hash of their uid, deriving the factor on one
+  half and applying it to the other, correlation is identical to three decimals
+  in every case (hier +0.483/+0.458, elo +0.253/+0.370). So calibration can
+  always be recovered without spending a model parameter on it.
+- **D-42 (2026-09-07)** — But the shrink FACTOR cannot be estimated from one
+  tournament, and this undercuts every dispersion number quoted tonight. hier's
+  measured ratio is **1.38 on one random half of the tape and 2.40 on the
+  other** - same population, split by hash. The "true spread" is a difference of
+  two noisy quantities and 37 players cannot pin it. So 1.96 for hier, 0.95 for
+  elo-point and 0.78 for elo-game are point estimates with error bars wide
+  enough to contain each other. The five-year US Open backfill takes ATP from 74
+  players to roughly 370 and is what makes these decidable.
+- **D-43 (2026-09-07)** — Standing so far, on the only honest test: **hier has
+  the best ordering** (+0.478 on the tape against +0.444 for the best elo
+  variant), and its weakness is calibration, which is free to fix. The
+  serve/return Elo may not be worth shipping at all. Decide after the backfill.
 

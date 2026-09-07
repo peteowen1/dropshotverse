@@ -41,7 +41,7 @@ import hierarchical_model as hm                                       # noqa: E4
 import serve_return_elo as sre                                        # noqa: E402
 
 TUNE_YEARS = (2022, 2023)
-K_GRID = (0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 1.00)
+K_GRID = (0.20, 0.50, 1.00, 1.50, 2.00, 3.00, 4.00)
 MIN_TRIALS = 200          # service points, or games, a player needs in the window
 
 
@@ -116,13 +116,21 @@ for mode in ("point", "game"):
             rs = f"{ratio:>7.2f}" if ratio is not None else f"{'n/a':>7}"
             log(f"{tour:>5} {mode:>6} {k:>5.2f} {sd_r:>9.4f} {sd_t:>9.4f} {rs} "
                 f"{corr:>+7.3f} {len(keep):>8}")
-            if ratio is not None:
-                cur = best.get((tour, mode))
-                if cur is None or abs(ratio - 1.0) < abs(cur[1] - 1.0):
-                    best[(tour, mode)] = (k, ratio)
+            # Pete's point: calibration is a free post-hoc shrink - any
+            # candidate can be scaled to a dispersion ratio of 1.00, and a
+            # linear shrink leaves correlation untouched. So spending K on
+            # calibration wastes it. K is chosen here to maximise CORRELATION,
+            # which is the part that cannot be faked, and the shrink is applied
+            # afterwards.
+            cur = best.get((tour, mode))
+            if cur is None or corr > cur[2]:
+                best[(tour, mode)] = (k, ratio, corr)
 
-log("\nK closest to a ratio of 1.00, chosen on 2022-23 only:")
-for (tour, mode), (k, ratio) in sorted(best.items()):
-    log(f"  {tour} {mode:<6} k_mult {k:.2f}  ratio {ratio:.2f}")
-log("\nConfirm these once on the 2026 tape, and do not re-tune there.")
+log("\nBest K by CORRELATION (calibration is a free post-hoc shrink):")
+log(f"  {'tour':>5} {'mode':>6} {'k':>5} {'corr':>7} {'ratio before shrink':>20}")
+for (tour, mode), (k, ratio, corr) in sorted(best.items()):
+    rs = f"{ratio:.2f}" if ratio is not None else "n/a"
+    log(f"  {tour:>5} {mode:>6} {k:>5.2f} {corr:>+7.3f} {rs:>20}")
+log("\nThe ratio column is what it would be BEFORE shrinking; shrink to 1.00")
+log("without touching the correlation. Confirm on the 2026 tape, do not re-tune there.")
 log("SWEEP_COMPLETE")

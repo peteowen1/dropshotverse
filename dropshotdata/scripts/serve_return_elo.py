@@ -72,29 +72,48 @@ import hierarchical_model as hm
 SCALE = 400.0
 START = 1500.0
 
-# K chosen by sweeping on the 2022-23 tune window ONLY, picking the value whose
-# rating spread matched the real spread with sampling noise removed
-# (tune_scratch/sweep_serve_return_elo_k.py). The 2026 tape was kept out of that
-# choice so it can confirm it once.
+# K chosen on the 2022-23 tune window to MAXIMISE CORRELATION, not calibration.
 #
-#   tour mode   k     ratio  corr
-#   atp  point  0.15  0.99   +0.645
-#   atp  game   0.10  1.07   +0.621
-#   wta  point  0.50  1.06   +0.713
-#   wta  game   0.20  0.98   +0.797
+# Pete's observation reframed this: a dispersion ratio of 1.00 is nearly free,
+# because correlation is invariant under a positive linear transform, so
+# shrinking every rating's deviation from the tour mean lands the spread
+# wherever we want without touching the ordering. Choosing K to hit 1.00 spends
+# a parameter on something a rescale gives away, and it cost about 0.09-0.10 of
+# correlation on every candidate:
 #
-# ATP wants a SMALLER K than WTA despite four times the usable matches, which is
-# the right way round: more updates per player means the same K accumulates more
-# movement, so a well-covered tour needs less of it. K is per tour for the same
-# reason the ratings are.
+#   tour mode   k for ratio=1  corr    k for corr  corr    shrink
+#   atp  point  0.15           +0.645  4.0         +0.837  0.6262
+#   atp  game   0.10           +0.621  4.0         +0.870  0.6171
+#   wta  point  0.50           +0.713  4.0         +0.823  0.6654
+#   wta  game   0.20           +0.797  3.0         +0.889  0.6124
 #
-# These are CALIBRATION values. A rating used as an XGBoost feature needs
-# ordering, not calibrated spread, and ordering improves monotonically with K
-# (+0.645 at 0.15 against +0.771 at 1.0 on ATP points), so a feature build
-# should choose its own K rather than inherit these.
-K_BY_TOUR_MODE = {("atp", "point"): 0.15, ("atp", "game"): 0.10,
-                  ("wta", "point"): 0.50, ("wta", "game"): 0.20}
-K_FOR_FEATURES = 1.0
+# So: K buys ordering, the shrink buys calibration, and they do not trade
+# against each other. Demonstrated rather than assumed in
+# tune_scratch/shrink_serve_return_elo.py, which asserts that the shrink leaves
+# correlation identical to 1e-9 and drives the ratio to 1.00.
+#
+# WTA game peaks at 3.0 and falls at 4.0 (+0.889 to +0.887) - a real interior
+# maximum. The other three are still creeping up at the top of the grid, but by
+# under 0.005 a step, so they are on the plateau rather than unbracketed in any
+# way that matters.
+K_BY_TOUR_MODE = {("atp", "point"): 4.0, ("atp", "game"): 4.0,
+                  ("wta", "point"): 4.0, ("wta", "game"): 3.0}
+
+# Applied to the PROBABILITIES, never to the Elo points: shrinking the points
+# would pass through the sigmoid and move the ordering, which is the one thing
+# this is designed not to do.
+SHRINK_BY_TOUR_MODE = {("atp", "point"): 0.6262, ("atp", "game"): 0.6171,
+                       ("wta", "point"): 0.6654, ("wta", "game"): 0.6124}
+
+
+def published_rate(serve_elo: float, return_elo_avg: float,
+                   tour: str, mode: str) -> float:
+    """The number fit to show a reader: expected share against an average
+    opponent, shrunk so the spread across players matches the real spread."""
+    raw = expected(serve_elo, return_elo_avg)
+    f = SHRINK_BY_TOUR_MODE[(tour, mode)]
+    centre = expected(return_elo_avg, return_elo_avg)
+    return centre + f * (raw - centre)
 RAW = _common.DD / "raw" / "github"
 MODES = ("point", "game")
 

@@ -35,7 +35,7 @@ import bridge_tennismylife as bridge                                  # noqa: E4
 import hierarchical_model as hm                                       # noqa: E402
 import simulate_tournament_updating as stu                            # noqa: E402
 import usopen_live_draw as dm                                         # noqa: E402
-from serve_return_elo import expected                                 # noqa: E402
+from serve_return_elo import expected, published_rate                 # noqa: E402
 from serve_return_ratings import rate_field                           # noqa: E402
 
 DATE0 = pd.Timestamp("2026-08-30")
@@ -127,7 +127,8 @@ for tour, ev in (("atp", "1"), ("wta", "2")):
         for uid, n in pn.items():
             if n < MIN_PTS or uid not in e.index:
                 continue
-            rated = expected(float(e.loc[uid, "serve_elo"]), r_avg)
+            # the shrunk number, which is what would actually be shown
+            rated = published_rate(float(e.loc[uid, "serve_elo"]), r_avg, tour, mode)
             obs = (pw[uid] / n) if mode == "point" else (gh.get(uid, 0) / max(gn.get(uid, 0), 1))
             trials = n if mode == "point" else max(gn.get(uid, 0), 1)
             rows.append(dict(rated=rated, obs=obs, n=trials))
