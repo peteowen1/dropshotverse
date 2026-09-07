@@ -143,7 +143,7 @@ def capture_match(mid: str, tag: str = "") -> dict[str, bool]:
 def capture_reference() -> None:
     """Tournament-level feeds: the draw, the player list, the feed catalogue itself."""
     refs = {
-        "config_web":   "/en_US/json/gen/config_web.json",
+        "config_web":   f"/{LOC}/json/gen/config_web.json",
         "draws":        f"/{LOC}/scores/feeds/{YEAR}/draws/draws.json",
         "players":      f"/{LOC}/scores/feeds/{YEAR}/players/players.json",
         "competitors":  f"/{LOC}/scores/feeds/{YEAR}/players/competitors.json",
