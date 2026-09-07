@@ -170,3 +170,11 @@ Consequences to hold onto:
   that a tournament ended. A second job fails the build if either producer
   passes `--live-score`, since the working tree is production and turning it on
   by accident would publish within 30 minutes.
+- **D-23 (2026-09-07)** — `fetch_wta_upcoming.calendar` requested one page of
+  100 and stopped, so a full-year window returned 100 of 523 tournaments,
+  ending on 2 March. Every event after early March was invisible, including
+  Beijing. The entry-list fetch does not go through `calendar()`, which is why
+  nothing looked wrong. Found by dry-running the forecast 16 days early rather
+  than on the day. It now pages and refuses a calendar shorter than the
+  endpoint's reported `totalElements`.
+
