@@ -214,4 +214,32 @@ Consequences to hold onto:
   with 32 byes, so in the round after the byes a seed meets someone who has
   played a match and the true difference is -1. Untested, and it reaches the
   WTA event forecaster rather than the US Open path.
+- **D-29 (2026-09-07)** — Serve and return ratings exist and have never been
+  published. The hierarchical model carries a per-player serve skill (`m_a`)
+  and return skill (`m_b`) with uncertainties; `ratings.parquet` ships only
+  elo_overall, bt_rating and age. `scripts/serve_return_ratings.py` converts
+  them with the model's own arithmetic - `sigmoid(e_server - f_returner)`
+  against a tour-average opponent - so no new modelling is invented.
+- **D-30 (2026-09-07)** — **Publish the ORDER, not the percentages.** Validated
+  out of sample on the 2026 US Open tape from skills frozen before it started:
+  the ratings order players correctly (corr +0.478 ATP, +0.591 WTA on serve
+  points actually won) but are badly OVER-DISPERSED. Against the observed
+  spread with binomial sampling noise removed, rated spread is **1.96x** too
+  wide on ATP and **4.76x** on WTA. Hold percentage is worse because `p_game`
+  amplifies: Shevchenko was rated to hold 37.4% and held 72.0%; Shelton was
+  rated 95.6% and held 88.3%. So ranks or percentiles are publishable now;
+  percentages and hold/break are not, until a shrink is fitted and validated on
+  a genuinely future event - Beijing, 2026-09-30.
+- **D-31 (2026-09-07)** — The first version of that validation tested BIAS on
+  hold percentage and PASSED at +0.022 while individual players were out by 35
+  points. Over-dispersion is too harsh at one end and too generous at the
+  other, so the mean error cancels exactly. The anchor now measures dispersion
+  with sampling noise removed from the observed side, and fails. Same shape as
+  D-24: a check that cannot fail is worse than no check.
+- **D-32 (2026-09-07)** — The two tours cannot share an axis. They are fit
+  separately, so WTA serve skills read HIGHER than ATP ones while women win
+  fewer serve points (57.0% against 60.9% on the same tape). Every published
+  number must be relative to its own tour. Related: serve and return correlate
+  at +0.342 (ATP) but +0.571 (WTA), so on the women's side the two numbers
+  substantially restate overall quality rather than separating two skills.
 
