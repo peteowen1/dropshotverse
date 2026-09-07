@@ -209,7 +209,11 @@ Still open from those reviews, in the order they are worth doing:
       unseeded projection are indistinguishable to the site);
    3. one live run with the flag on while a match is actually in progress -
       nothing was under way on 2026-09-07, so that path has been tested on
-      synthetic states only. `tune_scratch/screen_inmatch_seeded.py`,
+      synthetic states only.
+
+   Review of the branch also found and fixed a real defect in the recursion
+   underneath all of this (6-6 sets, error up to 0.42, see D-16). Every arm on
+   the charter was re-measured; the conclusion did not change. `tune_scratch/screen_inmatch_seeded.py`,
    `screen_inmatch_recalibrated.py`;
    [plans/validation-charter.md](plans/validation-charter.md).
 6. **W3 remains** (the live simulator freezes layoff and fatigue at the draw

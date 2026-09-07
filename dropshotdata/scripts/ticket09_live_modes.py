@@ -78,6 +78,24 @@ def p_set_from_state(p1: float, p2: float, games1: int, games2: int,
                 continue
             if a == 7 or b == 7:
                 continue
+            if a == 6 and b == 6:
+                # A set at 6-6 IS the tiebreak: no thirteenth game is played,
+                # so the set-winner is p_tiebreak and nothing else.
+                #
+                # This used to fall through to the game step below, which
+                # played one more game and THEN applied the tiebreak on top,
+                # giving pa*tb + (1-pa)*(1-tb) instead of tb. The error reached
+                # 0.42, and it showed up as the same 6-6 position being worth
+                # 0.687 or 0.443 depending only on who was marked as serving -
+                # when a tiebreak's outcome here does not depend on that at all.
+                #
+                # It survived because the anchor anyone would reach for hides
+                # it: with two equal players pa = 0.5 and tb = 0.5, so the
+                # wrong expression returns exactly 0.5, which is also the right
+                # answer. Asymmetric pairings are where it bites, which is
+                # every pairing that matters.
+                final += pr * p_tiebreak(p1, p2)
+                continue
             idx = (a + b) - (games1 + games2)
             a_serves = (idx % 2 == 0) == p1_serves_next
             pa = p_game(p1) if a_serves else 1 - p_game(p2)
@@ -116,12 +134,19 @@ def p_match_from_state(p1: float, p2: float, sets1: int, sets2: int,
         return 1.0
     if sets2 == need:
         return 0.0
-    # Verified against p_match at the (0,0,0,0) boundary: matches to within
-    # ~0.4% rather than exactly. The residual is a real, understood convention
-    # difference, not a bug - p_match always symmetrises who serves set 1
-    # (it never knows); here the actual current-set server is genuinely known,
-    # which is strictly more informative and the correct choice for replaying
-    # a real in-progress match.
+    # Verified against p_match at the (0,0,0,0) boundary. Symmetrised over
+    # serve order it now matches to machine precision.
+    #
+    # It used to sit ~0.4% off, and that residual was written up here as "a
+    # real, understood convention difference, not a bug". It was a bug: the
+    # 6-6 handling in p_set_from_state played a thirteenth game and then
+    # applied the tiebreak on top of it. Explaining a discrepancy away is how
+    # it survived, so the boundary agreement is now asserted in
+    # tune_scratch/test_inmatch_seeding.py rather than described in a comment.
+    #
+    # The remaining asymmetry is genuine and is the reason both orders are
+    # averaged above: p_match never knows who serves first, while a real
+    # in-progress match does.
     q_current = p_set_from_state(p1, p2, games1, games2, p1_serves_next)
     q_fresh = 0.5 * (p_set_from_state(p1, p2, 0, 0, True)
                      + p_set_from_state(p1, p2, 0, 0, False))

@@ -252,18 +252,49 @@ def live_state(m: dict) -> dict | None:
     t1, t2 = m.get("team1") or {}, m.get("team2") or {}
     if _player(t1) is None or _player(t2) is None:
         return None
+    mid = m.get("match_id")
     sets1, sets2 = int(t1.get("totalSetsWon") or 0), int(t2.get("totalSetsWon") or 0)
     raw_sets = ((m.get("scores") or {}).get("sets")) or []
-    games = [[int((side or {}).get("score") or 0) for side in (st or [])[:2]]
-             for st in raw_sets if st]
-    # a set is in progress only when more sets have been STARTED than decided
-    games1, games2 = (games[-1] + [0, 0])[:2] if len(games) > sets1 + sets2 else (0, 0)
+    games = [[int(side["score"]) for side in st]
+             for st in raw_sets if isinstance(st, list) and len(st) == 2
+             and all(isinstance(side, dict) and side.get("score") is not None for side in st)]
+
+    # `scores.sets` must be the whole history: one entry per set decided, plus
+    # at most one for a set in progress. Anything else and the game score
+    # cannot be located, so this reports nothing rather than a number it
+    # guessed. Defaulting a missing field to 0 here would publish "just started
+    # the set" for a match that is 4-2 down it, which reads as an ordinary
+    # projection and is wrong in the direction of the score it failed to see.
+    if len(games) != len(raw_sets) or len(games) not in (sets1 + sets2, sets1 + sets2 + 1):
+        print(f"[{mid}] WARNING: sets won {sets1}-{sets2} but scores.sets carries "
+              f"{len(raw_sets)} entries of which {len(games)} are well formed; "
+              f"cannot locate the game score, leaving this match pre-match")
+        return None
+    games1, games2 = games[-1] if len(games) > sets1 + sets2 else (0, 0)
     if sets1 + sets2 + games1 + games2 == 0:
         return None
+
+    # Exactly one player serves. Missing or duplicated is a malformed payload,
+    # not a default: `bool(t1["serve"])` would silently hand the serve to
+    # player 2 whenever the field went missing on both.
+    s1, s2 = bool(t1.get("serve")), bool(t2.get("serve"))
+    if s1 == s2:
+        print(f"[{mid}] WARNING: serve is {s1}/{s2} on the two sides, so who is "
+              f"serving cannot be read; leaving this match pre-match")
+        return None
+
+    # Who served the match's first game. Service alternates every game and
+    # carries across sets, so the player serving now also served first exactly
+    # when an even number of games has been completed - EXCEPT inside a
+    # tiebreak, where `serve` names a POINT server that rotates every one or
+    # two points, so the parity flips from point to point and the answer is
+    # wrong roughly half the time it is asked. None means "not known", and the
+    # solver symmetrises over both orders rather than guessing.
     played = sum(sum(g) for g in games)
-    p1_serves = bool(t1.get("serve"))
+    in_tiebreak = games1 == 6 and games2 == 6
     return {"sets1": sets1, "sets2": sets2, "games1": games1, "games2": games2,
-            "p1_serves": p1_serves, "p1_served_first": p1_serves == (played % 2 == 0)}
+            "p1_serves": s1, "in_tiebreak": in_tiebreak,
+            "p1_served_first": None if in_tiebreak else (s1 == (played % 2 == 0))}
 
 
 def load_live_draw(tour: str, name2uid: dict[str, str], *,

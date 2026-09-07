@@ -383,3 +383,61 @@ the JSON. Either widen that column or accept that the published copy cannot
 say which model produced it - and that is a decision to make deliberately,
 not to discover during an incident.
 
+## A review found a bug in the recursion itself (2026-09-07, last)
+
+Reviewing the branch above turned up a defect in `p_set_from_state`, which is
+the set-level recursion every in-match arm on this page is built on. It is
+pre-existing, it is not small, and it has never published anything wrong.
+
+**What it did.** A set at 6-6 IS the tiebreak: no thirteenth game is played, so
+the set-winner is `p_tiebreak` and nothing else. The code instead played one
+more game and applied the tiebreak on top of it, computing
+`pa*tb + (1-pa)*(1-tb)`. The error reached **0.42**.
+
+**Why it survived.** With two equal players `pa` and `tb` are both 0.5, and the
+wrong expression returns exactly 0.5 - which is also the right answer. The
+anchor anyone reaches for first cannot see this. The visible tell was that the
+same 6-6 position was worth 0.687 or 0.443 depending only on who was marked as
+serving, when a tiebreak's outcome in this model does not depend on that at
+all.
+
+**It was written up in the code as not a bug.** `p_match_from_state` carried a
+comment saying it agreed with `hm.p_match` at the opening boundary "to within
+~0.4% rather than exactly", and that the residual was "a real, understood
+convention difference, not a bug". Symmetrised over serve order the two now
+agree **to machine precision**. The 0.4% was the defect, and explaining it away
+is how it lasted. That check is now an assertion in
+`tune_scratch/test_inmatch_seeding.py` instead of a sentence in a comment.
+
+**Nothing published was affected.** The scheduled refresh runs
+`simulate_usopen_live.py` then `upload_blog_data.py`, and on `dev` neither
+reaches `ticket09_live_modes`. The three things that do are all research
+scripts. This branch is what would have wired the recursion into the live path,
+so the review caught it in the last window where it was still free.
+
+**Every number on this page is re-measured below.** Fixing it makes the arms
+slightly WORSE, which is the expected shape: the arms were being flattered by
+the bug damping their confidence at 6-6, exactly the way a correction tuned
+against a defect turns into a defect once the defect is fixed.
+
+| all rounds, 231 matches, 42,657 points | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0306 | 0.57014 | 0.720 |
+| arm C, seeded | 0.0501 | 0.52330 | 0.784 |
+| arm D, seeded + recalibrated | 0.0338 | 0.48717 | 0.784 |
+
+| late rounds, temperature fitted on rounds 1-3 | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C, seeded** | **0.1271** | **0.22265** | 0.908 |
+| arm D, seeded + recalibrated | 0.1786 | 0.28145 | 0.908 |
+
+Arm D's anchors all pass on the corrected points (D1 T = 1.395 / 1.513, D2
+accuracy moved 0.0000, D3 spread 0.118), and arm C's do too (C1 100% on 231
+matches, C2 0.00062, C3 100%).
+
+**The recommendation is unchanged and slightly stronger.** Ship the seeding.
+Do not ship the recalibration: on the only late-round evidence available it
+still loses to plain arm C on both calibration and log-loss, now by a wider
+relative margin. Settle it properly after the 2026-09-13 final.
+

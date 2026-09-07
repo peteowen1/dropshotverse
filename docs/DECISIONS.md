@@ -120,3 +120,12 @@ Consequences to hold onto:
   `2026_wta.csv` the whole time. The real limitation is no WTA *before* 1990.
 - Two more (the RESUME log is stale from round 11; the archive does not end at
   Roland Garros) live in [HOME.md](HOME.md), where a cold session reads them.
+- **D-16 (2026-09-07)** — `p_set_from_state` decided a 6-6 set by playing a
+  thirteenth game and then applying the tiebreak on top, an error up to 0.42.
+  Fixed. It was invisible to the equal-players anchor (both halves give 0.5)
+  and had been documented in the code as a convention difference rather than a
+  bug; the recursion now agrees with `hm.p_match` at the opening boundary to
+  machine precision. Nothing published was affected - the live path does not
+  reach this module on `dev`. Evidence and re-measured arms:
+  `docs/plans/validation-charter.md`.
+

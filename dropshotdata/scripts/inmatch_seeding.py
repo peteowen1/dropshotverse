@@ -36,6 +36,11 @@ from ticket09_live_modes import p_match_from_state
 # information, and that comes from the model.
 SERVE_BASE = {"atp": 0.609679, "wta": 0.570197}
 
+# How far the solved opening state may sit from the model's pre-match number
+# before the solve is treated as failed rather than approximate. This is the
+# charter's anchor C2 bar, enforced per match instead of reported in aggregate.
+TOLERANCE = 0.005
+
 _wp_cache: dict[tuple, float] = {}
 
 
@@ -57,8 +62,21 @@ def wp(p1: float, p2: float, s1: int, s2: int, g1: int, g2: int,
     return v
 
 
+def _opening(base: float, d: float, best_of: int,
+             p1_serves_first: bool | None) -> float:
+    """The opening-state probability for a serve split, over a known or
+    unknown first server. None means unknown - during a tiebreak the feed's
+    serve field names a point server, so who served game one cannot be
+    recovered - and is answered by symmetrising, which is exactly the
+    assumption the pre-match model itself makes."""
+    if p1_serves_first is None:
+        return 0.5 * (wp(base + d, base - d, 0, 0, 0, 0, True, best_of)
+                      + wp(base + d, base - d, 0, 0, 0, 0, False, best_of))
+    return wp(base + d, base - d, 0, 0, 0, 0, p1_serves_first, best_of)
+
+
 def solve_serves(p_target: float, base: float, best_of: int,
-                 p1_serves_first: bool) -> tuple[float, float]:
+                 p1_serves_first: bool | None) -> tuple[float, float]:
     """(p1, p2) with p1 + p2 == 2*base whose opening-state probability ~= p_target.
 
     Monotone increasing in the difference d, and d must be allowed to go
@@ -80,11 +98,23 @@ def solve_serves(p_target: float, base: float, best_of: int,
     lo, hi = -bound, bound
     for _ in range(40):
         d = (lo + hi) / 2
-        if wp(base + d, base - d, 0, 0, 0, 0, p1_serves_first, best_of) < p_target:
+        if _opening(base, d, best_of, p1_serves_first) < p_target:
             lo = d
         else:
             hi = d
     d = (lo + hi) / 2
+    # The bisection returns the closest achievable answer whether or not the
+    # target was reachable, so saturating at the bound is indistinguishable
+    # from solving unless the residual is checked. Measured across the whole
+    # clamped range it peaks at 0.00049 and d never exceeds 0.37 of the bound,
+    # so this does not fire today - it fires if SERVE_BASE or the recursion
+    # changes underneath it, which is the point.
+    residual = abs(_opening(base, d, best_of, p1_serves_first) - p_target)
+    if residual > TOLERANCE:
+        raise ValueError(
+            f"solve_serves could not reach {p_target:.6f} from base {base:.6f} "
+            f"(best of {best_of}): closest was off by {residual:.6f}, at "
+            f"{abs(d) / bound:.1%} of the serve-split bound")
     return base + d, base - d
 
 

@@ -139,9 +139,16 @@ def build_live_probabilities(draw: dict, tour: str, best_of: int,
     for mid, st in draw.get("live", {}).items():
         u1, u2 = st["uid1"], st["uid2"]
         if u1 not in idx or u2 not in idx:
-            log(f"  [{tour}] {mid}: under way but a player is outside the field, "
-                f"left at its pre-match probability")
-            continue
+            # Not "a player outside the field" - that cannot happen. `idx` and
+            # these uids come from the SAME crosswalk over the same feed, so a
+            # miss here means one player's name resolved differently in round 1
+            # than it does now, which is the F2 defect returning. Falling back
+            # would leave one match on the board unconditioned while its
+            # neighbours are, and bury the reason in a log line.
+            raise RuntimeError(
+                f"{mid}: {u1} vs {u2} is under way but at least one of them is "
+                f"not in this tour's field; the name crosswalk has resolved the "
+                f"same player two ways, refusing to publish a partly seeded board")
         stage = STAGE_ORDER[draw_mod.parse_match_id(mid)[0] - 1]
         p_pre = float(round_matrices[stage][idx[u1], idx[u2]])
         p_now = seeded_probability(p_pre, st, tour, best_of)
