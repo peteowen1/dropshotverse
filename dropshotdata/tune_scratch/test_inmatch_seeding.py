@@ -161,11 +161,24 @@ for tour, bo in (("atp", 5), ("wta", 3)):
 print("  solved by symmetrising, which is what the pre-match model assumes too")
 
 hdr("11. an unreachable solve raises rather than saturating")
+# A reachable target must not raise.
 try:
-    solve_serves(0.5, 0.5, 5, True)          # base 0.5 -> bound 0.4995, fine
+    solve_serves(0.5, 0.5, 5, True)
     print(f"  a reachable target solves (tolerance {TOLERANCE})")
 except ValueError as e:
     raise AssertionError(f"a reachable target should not raise: {e}")
+# And an unreachable one must. The bound is min(base, 1-base)*0.999, so a base
+# pinned near 1 leaves almost no room to move the difference and the solver
+# cannot get anywhere near a target on the far side. Without this case the
+# residual check could be deleted outright and this test would still pass -
+# which is what it did before.
+raised = False
+try:
+    solve_serves(0.01, 0.999, 5, True)
+except ValueError as e:
+    raised = True
+    print(f"  an unreachable target raises: {str(e)[:72]}...")
+assert raised, "solve_serves saturated at its bound instead of raising"
 
 hdr("12. an already decided set score is scored, not dropped")
 for a, b, want in ((6, 4, True), (6, 0, True), (7, 5, True), (7, 6, True),

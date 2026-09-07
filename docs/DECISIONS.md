@@ -140,4 +140,15 @@ Consequences to hold onto:
   bar, so a single temperature is not what the data contains. Late rounds
   independently still prefer C. Evidence:
   `docs/plans/validation-charter.md`.
+- **D-19 (2026-09-07)** — The point tape's state columns are post-point while
+  `PointServer` is pre-point; the screen was pairing them. Now scored from the
+  state as each point began. Two consequences: the serve was wrong on every
+  game-ending point, and anchor C3 was vacuous (a post-point final state is the
+  finished match, so it returned 1.0 and reported 100% for any model). C3 now
+  reads 99.1%. Headline numbers barely moved; all conclusions stand.
+- **D-20 (2026-09-07)** — Open, not blocking: the in-match recursion works at
+  GAME granularity, so the median per-point change in win probability is
+  exactly 0.0000 - the number cannot move on 30-0 or on a break point saved,
+  only when a game or set completes. Wrong grain for a live product. Next thing
+  to fix after the seeding ships.
 

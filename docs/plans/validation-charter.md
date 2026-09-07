@@ -498,3 +498,63 @@ metric a temperature is fitted to move.
 Arm C's own anchors all pass on the corrected tape: C1 100% agreement on 231
 matches, C2 0.00062, C3 100%.
 
+## Which side of the point are we standing on? (2026-09-07, Pete)
+
+Pete asked whether the win probability is being modelled before the point or
+after it. It was neither, consistently.
+
+Every STATE column on the tape is recorded AFTER the point - at point 1 the
+score already reads 15-0, and on the last point of match 1101 `P1SetsWon` is 3,
+so the match is over. `PointServer`, by contrast, is the server OF that point,
+which is a before-the-point fact. The screen paired the two.
+
+**Two things were wrong because of it.**
+
+1. Serve passes when a point ends a game, so on every game-ending point the
+   recursion was told the wrong player serves next.
+2. **Anchor C3 could not fail.** "The eventual winner is above 0.5 on the final
+   point" was being asked of the final point's POST-state, which is the
+   finished match, so the recursion returned exactly 1.0 and the anchor
+   reported 100% for every arm. It would have reported 100% for any model at
+   all. In the pre-point frame it reads **99.1%** - a real check with real
+   headroom, and the two matches it misses are genuine.
+
+The screen now scores each point from the state as that point BEGAN (the
+previous point's post-state, and 0-0 for the first), paired with that point's
+own server. This also makes the first point's probability the pre-match number
+by construction, which is anchor C2 - now 0.00062.
+
+| all rounds, pre-point frame, 231 matches, 42,657 points | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| what the site publishes today | 0.1063 | 0.59066 | 0.747 |
+| arm A, fixed skill | 0.0306 | 0.53214 | 0.719 |
+| arm C, seeded | 0.0503 | 0.48467 | 0.784 |
+| arm D, seeded + recalibrated | 0.0270 | 0.47536 | 0.784 |
+
+| late rounds | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| **arm C, seeded** | **0.1287** | **0.22269** | 0.910 |
+| arm D | 0.1736 | 0.26831 | 0.910 |
+
+The numbers barely moved and **every conclusion stands**: arm D still fails
+anchor D3 (temperatures 1.209 and 1.452, spread 0.243 against a 0.15 bar), late
+rounds still prefer arm C, and arm C still beats what the site publishes by a
+wide margin. What changed is that the measurement is now answering a coherent
+question.
+
+**The post-point number is kept alongside the pre-point one**, so the value of
+winning a given point is now visible. Across 42,657 points, arm C moves by:
+
+| mean abs | median | p99 | max |
+|---:|---:|---:|---:|
+| 0.0065 | **0.0000** | 0.1176 | 0.6911 |
+
+**That median of exactly zero is a finding, not a rounding artefact.** The
+recursion works at GAME granularity: it takes sets and games and who serves
+next, and never sees the point score within a game. So the published number
+cannot move on 30-0, or on a break point saved - it moves only when a game or a
+set completes. For a live product that is the wrong grain, and it is the next
+thing worth fixing after this ships. It is not a defect in what is being
+shipped here, which is strictly better than the pre-match number it replaces,
+but it does bound how good this can get.
+
