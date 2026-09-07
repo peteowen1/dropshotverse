@@ -25,18 +25,30 @@ def hdr(t):
     print("\n=== " + t + " ===")
 
 
-# The synthetic-state tests below mutate one real completed match. That match
-# is a CHECKED-IN FIXTURE rather than a live fetch, so this suite is
-# deterministic and runs with no network - which is what lets CI run it on
-# every pull request. The live feed is still exercised, but only where the
-# answer is allowed to depend on the day.
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "usopen_feed_completed_match.json"
-done = [json.loads(FIXTURE.read_text(encoding="utf-8"))]
+# CHECKED-IN FIXTURES: both complete draws as the feed served them. The suite
+# is therefore deterministic and needs no network, which is what lets CI run it
+# on every pull request.
+#
+# Both draws in full, rather than the one match the synthetic tests actually
+# mutate, because the check below used to run over every decided match in a
+# live fetch and a single fixture would have quietly cut it from 116 matches to
+# 1. Offline it now covers 232 across the two tours - more than the live fetch
+# ever did, since that only pulled the men's draw.
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+draws = {c: json.loads((FIXTURES / f"usopen_feed_{c}.json").read_text(encoding="utf-8"))
+         for c in ("MS", "WS")}
+done = [m for m in draws["MS"]["matches"] if m.get("winner") in ("1", "2")]
 
-hdr("1. a decided match is never reported as live")
-assert d.live_state(done[0]) is None, "a decided match was called live"
-print(f"  fixture {FIXTURE.name}: match {done[0]['match_id']}, "
-      f"{done[0]['roundName']}, correctly returns None")
+hdr("1. no decided match anywhere in either draw is reported as live")
+n_dec = 0
+for code, data in draws.items():
+    dec = [m for m in data["matches"] if m.get("winner") in ("1", "2")]
+    bad = [m["match_id"] for m in dec if d.live_state(m) is not None]
+    assert not bad, f"{code}: decided matches called live: {bad[:5]}"
+    n_dec += len(dec)
+    print(f"  {code}: {len(data['matches'])} matches, {len(dec)} decided, none called live")
+assert n_dec == 232, f"fixture drifted: {n_dec} decided matches, expected 232"
+print(f"  {n_dec} decided matches checked with no network")
 
 hdr("1b. the live feed itself, when it is reachable")
 try:
