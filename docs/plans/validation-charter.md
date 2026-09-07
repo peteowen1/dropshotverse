@@ -175,3 +175,56 @@ w=0.52 the model is carrying about half the information in the blend, which
 means its features hold real signal the market does not price. A model that
 was merely a noisy copy of the market would have driven w to 1.
 
+## Third result: W4, seeding the in-match model with pre-match skill (2026-09-07)
+
+`tune_scratch/screen_inmatch_seeded.py`. Ticket 37 scored two arms on the 2026
+US Open point tape and left the obvious third open because the tape carries
+"P1"/"P2" rather than uids. That crosswalk now exists, so arm C chooses each
+pair's serve probabilities so the recursion's opening-state number equals the
+shipped model's pre-match probability, holding the pair's serve sum at the
+tour average so it can only differ from arm A on the skill DIFFERENCE.
+
+219 matches, 40,260 points (287 matches skipped: no pre-match number, or a
+retirement with no clean result).
+
+| arm | ECE | log-loss | accuracy |
+|---|---:|---:|---:|
+| A fixed skill (ticket 37) | **0.0342** | 0.57166 | 0.720 |
+| C model-seeded | 0.0507 | **0.53188** | **0.779** |
+| the critique's W4 bar | < 0.03 | < 0.55 | |
+
+**Verdict: NO-GO on the pre-registered bar**, which required both. Log-loss
+passes comfortably (0.532 against 0.55) and accuracy rises 5.9 points, but ECE
+gets worse, 0.051 against a 0.03 bar and against arm A's own 0.034.
+
+**The failure is calibration, not discrimination**, and those are different
+problems. Seeding with pre-match skill makes the in-match number much sharper
+and much more often right; it is also overconfident, which is what ECE
+measures. That is a coherent and expected result: the pre-match model's own
+confidence is being propagated into every point of the match without ever
+being re-fitted for this use.
+
+**What NOT to do with that.** The obvious move is to recalibrate arm C and
+re-run, and the bar would probably then pass. That would be moving the
+goalposts after seeing the number. If it is worth doing, it is worth doing as
+a new candidate with its own out-of-sample discipline: fit the temperature on
+earlier events and score the US Open once, exactly as the charter does for
+pre-match candidates. Recorded as NO-GO, with the recalibration named as the
+next experiment rather than folded into this one.
+
+**Two anchors earned their keep.**
+
+- C2 (arm C at 0-0 must restate the pre-match number) failed the first run at
+  **0.496**, because the bisection searched only positive skill differences,
+  so every match where the model made P1 the underdog was silently published
+  as a coin flip. The aggregate log-loss still looked good at 0.526. Without
+  that anchor this would have been reported as a win.
+- It then failed again at 0.027, which turned out to be the serve-order
+  effect: the pre-match model does not know who serves first and the recursion
+  does. Solving against the actual opening state closed it to 0.0058, which is
+  the solve's own resolution on the most extreme pairings rather than a
+  systematic error, and is reported as a near-miss rather than rounded away.
+- C1 (the tape's P1 is the feed's team1) passed 219 of 219. It was worth
+  checking: an inverted mapping would have made every number confidently
+  backwards.
+
