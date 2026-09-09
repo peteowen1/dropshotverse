@@ -20,6 +20,8 @@ and reused across all n_sims simulated brackets.
 """
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import xgboost as xgb
@@ -74,9 +76,19 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     pairs_j = np.array([idx[u] for u in pairs_j_uid])
 
     matrices: dict[str, np.ndarray] = {}
-    for rnd in rounds:
+    # W3 (D-26/D-27): weeks_since_last was computed once from date0, so every
+    # round was fed the PRE-tournament layoff gap. From the second round on
+    # both players have just played, so the true difference is ~0. Behind a
+    # flag until it is measured and Pete decides when to flip it (it moves
+    # published odds, most at the start of a draw). The debutant case (52.0
+    # default, D-27) is left as-is in round one and zeroed with everyone else
+    # from round two.
+    w3_fix = os.environ.get("DSV_W3_LAYOFF_FIX", "0") == "1"
+    for k_rnd, rnd in enumerate(rounds):
         Xdf = base.copy()
         Xdf["round"] = rnd
+        if w3_fix and k_rnd > 0:
+            Xdf["weeks_since_last_diff"] = 0.0
         X = prep_X_d(Xdf, cat_levels)
         dmat = xgb.DMatrix(X, enable_categorical=True)
         p = np.clip(np.mean([m.predict(dmat) for m in models], axis=0), 1e-9, 1 - 1e-9)

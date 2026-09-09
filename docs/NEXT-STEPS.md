@@ -134,8 +134,14 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    the 0.00073 gap is from a burnt holdout, and the 2026 forward test puts the
    honest gap at 0.0247 with 38% accuracy when dissenting.
 3. ~~**Republish the model-inputs Release and commit the 2026-09-09 cutover
-   (D-40 to D-43).**~~ — Release republished 22:50 AEST 2026-09-09; commit
-   and PR follow in the same session.
+   (D-40 to D-43).**~~ — DONE: Release republished, PR #36 merged 23:02 AEST.
+4. **Flip `DSV_W3_LAYOFF_FIX` before Beijing (D-46), after the US Open final
+   on 2026-09-13.** One-line default change in
+   `simulate_tournament_xgb.build_round_pred_matrices`, sized at 0.03 mean
+   pairwise shift and a 22-point title swing on a long-layoff favourite.
+   Decide the debutant case (D-27, 52.0 default) in the same change. `dev` is
+   ahead of `main` by this flag (off) and the session's research scripts;
+   PR when it flips.
 
 ## Open queue
 

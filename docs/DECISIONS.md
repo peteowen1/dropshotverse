@@ -291,4 +291,21 @@ Consequences to hold onto:
   point-model prob 13%, age 10%, overall Elo 3%. The corrected surface column
   has taken over overall Elo's role, as D-42 predicted.
   `tune_scratch/importance_new_bag.py`.
+- **D-44 (2026-09-09)** — Why Fils and Jodar sit level with Zverev in BT when
+  Elo has him 50-70 points clear: `age_diff`, worth -0.2 logits to Zverev
+  against every 20-year-old (Fils +0.15, Jodar +0.22, Zverev -0.06, Djokovic
+  -0.34 mean over the field). Ablated: dropping age costs +0.0006 log-loss on
+  2022-23 (paired t +1.3, n=9,711). **Age stays.** BT is a forecast of the next
+  match, not a ranking of who has been best; if the site wants the latter it is
+  a different column. `tune_scratch/probe_zverev_fils.py`, `cmp_noage.log`.
+- **D-45 (2026-09-09)** — Both surface columns (corrected rating + legacy
+  residual, corr 0.48) tested: -0.0003 vs production (t -1.1), a quarter of
+  what D-42's swap cost, inside noise. **Not shipped.** `cmp_resid.log`.
+- **D-46 (2026-09-09)** — W3 sized on the real pre-tournament ATP field with
+  the fix behind `DSV_W3_LAYOFF_FIX` (zero `weeks_since_last_diff` from round
+  two on): pairwise odds move 0.03 mean / 0.25 max per round; Alcaraz's title
+  odds 38.4% -> 60.4% because his 20-week gap was charged seven times. D-26's
+  0.023 mean understated it because it was measured mid-event. **Flip before
+  Beijing, not during the final.** Debutant 52.0 default (D-27) still
+  unresolved, 2 players in the field. `tune_scratch/size_w3_layoff_fix.py`.
 
