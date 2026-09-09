@@ -184,6 +184,19 @@ WTA_LOWER_WEIGHT = float(os.environ.get("DSV_WTA_LOWER_WEIGHT", "1.0"))
 # Default cross-validated in ticket 17 (coordinate search, selected on the
 # 2022-23 window only, verified on the untouched 2024-25 holdout): 0.010 -> 0.005.
 RW_VAR_PER_WEEK = float(os.environ.get("DSV_RW_VAR_PER_WEEK", "0.005"))
+# 2026-09-09: the surface offsets' OWN process noise, as a fraction of mu's.
+# Found by walking Shelton's August 2026 through the replay: v_a and kappa_var
+# sat at the same size (~0.02) because inflate() gave both the same weekly
+# increment, so apply_side_update's Kalman split sent HALF of every match to
+# the surface offset. kappa was a second copy of form, not a deviation from
+# baseline (both Shelton and Zverev carried +0.3..+0.6 on all three surfaces),
+# and nine hard-court wins in twelve days moved Shelton's Hard serve+return
+# by 0.7 point-logits -> 94.5% vs Zverev when Elo said 62%. A surface
+# tendency is a trait; form is not. Smaller noise here lets kappa_var shrink
+# below v_a so form lands on mu. 1.0 reproduces the old behaviour exactly;
+# 0.0 (the default since 2026-09-09) won every cut of the 2022-23 sweep
+# (log-loss 0.745 -> 0.698, ECE 0.140 -> 0.120; tune_scratch/sweep_surf_rw_v25.log).
+SURF_RW_SCALE = float(os.environ.get("DSV_SURF_RW_SCALE", "0.0"))
 LAYOFF_WEEKS = 26.0      # gap after which variance inflation accelerates
 LAYOFF_C = float(os.environ.get("DSV_LAYOFF_C", "0.06"))
 # Discovered empirically 2026-08-27: the raw phi(gap) formula is UNBOUNDED and
@@ -1011,11 +1024,12 @@ def inflate(state: PlayerState, date: pd.Timestamp) -> None:
     # accumulated - variance re-inflates (capped at that surface's own prior,
     # never MAX_VAR: a surface offset should never become MORE uncertain than
     # the population baseline for that surface) and the mean decays toward 0.
+    inc_s = inc * SURF_RW_SCALE
     for surf in list(state.kappa_var):
-        state.kappa_var[surf] = min(SURFACE_PRIOR_VAR[surf], state.kappa_var[surf] + inc)
+        state.kappa_var[surf] = min(SURFACE_PRIOR_VAR[surf], state.kappa_var[surf] + inc_s)
         state.kappa[surf] = state.kappa.get(surf, 0.0) * decay
     for surf in list(state.lam_var):
-        state.lam_var[surf] = min(SURFACE_PRIOR_VAR[surf], state.lam_var[surf] + inc)
+        state.lam_var[surf] = min(SURFACE_PRIOR_VAR[surf], state.lam_var[surf] + inc_s)
         state.lam[surf] = state.lam.get(surf, 0.0) * decay
     state.last_seen = date
 

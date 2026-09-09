@@ -77,6 +77,10 @@ SCRATCH = DD / "tune_scratch"
 # matches, so reusing the old path would silently load a model trained on
 # the wrong (smaller) feature set once XGB_NUMERIC_D below is added.
 MODEL_CACHE_DIR = SCRATCH / "xgb_bagged_model_cache_v2_setgame"
+# 2026-09-09: overridable so a candidate Elo column (the surface-expectation
+# fix) can be trained and scored without touching the parquet the live
+# US Open sim reads from the working tree every 30 minutes.
+ELO_RAW_PATH = Path(os.environ.get("DSV_ELO_RAW_PATH", str(SCRATCH / "elo_raw_ratings_full.parquet")))
 
 # Ticket 29 CI result (2026-08-29): match+set+game beat match-only with a
 # resolved CI on WTA (-0.00170, CI [-0.00321,-0.00006]); ALL and ATP were
@@ -217,7 +221,7 @@ def build_h2h_dict(field_uids_all: set[str]) -> dict[tuple[str, str], list]:
     """
     h2h: dict[tuple[str, str], list] = {}
     for tour in ("atp", "wta"):
-        elo = pd.read_parquet(SCRATCH / "elo_raw_ratings_full.parquet")
+        elo = pd.read_parquet(ELO_RAW_PATH)
         elo = elo[elo["tour"] == tour]
         elo = elo[elo["winner_uid"].isin(field_uids_all) & elo["loser_uid"].isin(field_uids_all)]
         for row in elo.itertuples():
@@ -278,7 +282,7 @@ def _latest_rating_lookup(path: str, tour: str, date0, field_uids: list[str],
 
 def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
                        hier_snapshot: dict, playstyle_full: pd.DataFrame, age_table: pd.DataFrame) -> pd.DataFrame:
-    elo = pd.read_parquet(SCRATCH / "elo_raw_ratings_full.parquet")
+    elo = pd.read_parquet(ELO_RAW_PATH)
     elo_t = elo[(elo["tour"] == tour) & (elo["level_file"] == "tour") & (elo["date"] < date0)]
 
     long_w = elo_t[["date", "winner_uid", "ro_winner"]].rename(columns={"winner_uid": "uid", "ro_winner": "ro"})

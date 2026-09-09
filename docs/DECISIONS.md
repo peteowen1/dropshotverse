@@ -247,4 +247,48 @@ Consequences to hold onto:
   so it falls back to the draw feeds: MS and LS give 254 decided singles
   matches. `enumerate_via` in SLAMS records which host does what, because it is
   a fact about each site rather than a preference.
+- **D-40 (2026-09-09)** — Pete asked why Zverev had the 3rd-highest BT on the
+  site yet was title favourite. BT is the row mean of the published pairwise
+  matrix and matched it (2.23 vs 2.17), so the column was right; the model
+  underneath was not. Walking ONE row (Shelton 92% vs Khachanov, Zverev 85%)
+  found two broken inputs. (1) The point model's surface offset was half a
+  form rating: `inflate()` gave kappa and mu the same weekly noise, so the
+  Kalman split sent 50% of every match to the surface term, and nine August
+  wins moved Shelton's hard-court serve+return 0.7 point-logits (94.5% vs
+  Zverev; Elo said 62%). (2) `rs` was a residual against overall Elo, not a
+  surface rating (Alcaraz 1609 on hard, Musetti 1160; corr with `ro` 0.26).
+  Probes: `tune_scratch/probe_zverev_shelton.py`, `probe_hier_trace.py`.
+- **D-41 (2026-09-09)** — Fix (1) shipped: `DSV_SURF_RW_SCALE`, default 0.0
+  (surface offsets get no process noise; a surface tendency is a trait).
+  Swept 1.0/0.3/0.1/0.0 on 2022-23 under the frozen v25 params: point-model
+  log-loss 0.745 -> 0.698, ECE 0.140 -> 0.120, monotone. Through XGBoost the
+  aggregate is unchanged (paired t -0.3, n=9,711) but the 43 rows it moves
+  >10 pts go 0.650 -> 0.600. Anchors after: Shelton 75% vs Zverev (was 94.5%),
+  Alcaraz 71% vs Shelton (was 42%), Djokovic 78% vs Khachanov (was 52%).
+  Answers queue item 7's "would a fixed hier make a better feature": in the
+  tail, yes; in aggregate, no. `tune_scratch/sweep_surf_rw_v25.log`,
+  `compare_input_fixes.py`.
+- **D-42 (2026-09-09)** — Fix (2) shipped ON PETE'S CALL against the tune
+  window: `rs` now updates against its own expectation
+  (`DSV_SURFACE_OWN_EXPECTATION`, default 1; corr with `ro` 0.91). Retrained
+  XGBoost scores +0.0012 log-loss WORSE on 2022-23 (paired t +1.7), because
+  the old column was signal as a surface RESIDUAL even though it was noise as
+  a rating, and the corrected one is near-collinear with overall Elo. Closes
+  queue item 6. If it is ever revisited, the candidate is both columns
+  (rating and residual), not a choice between them. Legacy parquet kept as
+  `elo_raw_ratings_full.LEGACY_SURFACE_RESIDUAL.parquet`, legacy bag as
+  `xgb_bagged_model_cache_v2_setgame.LEGACY_2026-09-09`.
+- **D-43 (2026-09-09)** — Cut over mid-tournament at 22:27 AEST, between two
+  runs of the 30-minute task, in one pass: parquet, bag, default, and the
+  snapshot-cache key now carries the knob (`_s0`) so a stale replay cannot be
+  served. Live sim rerun by hand: anchors pass; Zverev title 38.2% -> 44.6%,
+  Shelton 38.2% -> 34.4%; Zverev's BT rank 9th -> 3rd. Before/after:
+  `tune_scratch/compare_bt_before_after.py`. The model-inputs Release
+  (`model-inputs-2026-09`) was republished at 22:50 AEST with the fixed
+  parquet and the retrained bag, so the Actions backup and the daily ratings
+  refresh run the same vintage as the laptop. Feature importance of the new
+  bag on 2022-23 (mean |SHAP| share): game Elo 21%, surface Elo 19%,
+  point-model prob 13%, age 10%, overall Elo 3%. The corrected surface column
+  has taken over overall Elo's role, as D-42 predicted.
+  `tune_scratch/importance_new_bag.py`.
 

@@ -133,6 +133,9 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
 2. **Do not publish a "we match the market" claim** (D-4, a recommendation):
    the 0.00073 gap is from a burnt holdout, and the 2026 forward test puts the
    honest gap at 0.0247 with 38% accuracy when dissenting.
+3. ~~**Republish the model-inputs Release and commit the 2026-09-09 cutover
+   (D-40 to D-43).**~~ — Release republished 22:50 AEST 2026-09-09; commit
+   and PR follow in the same session.
 
 ## Open queue
 
@@ -163,15 +166,16 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    workflow runs on `ubuntu-latest` with no junction. Still hard-coded: ~20
    research scripts in `scripts/` and most of `tune_scratch/`. Convert them
    when touched, not as a project.
-6. **The surface rating is not a self-correcting rating.** `elo_baseline.py:409`
-   updates it with the blended `p_w`, which at `blend=0.0` is entirely overall
-   Elo, so it accumulates residuals bucketed by surface with no feedback loop
-   (std 498 vs 180). `elo_surface_diff` **is** an XGBoost feature. Whether it
-   should use `p_s` is untested.
-7. **[#1](https://github.com/peteowen1/dropshotverse/issues/1) — hier tail
-   bug, downgraded (D-12).** The shipped model does not inherit it and needs
-   the feature (+0.0092 without). Only worth picking up as "would a fixed hier
-   make a better feature": an upside experiment.
+6. ~~**The surface rating is not a self-correcting rating.**~~ — **TESTED AND
+   SHIPPED 2026-09-09 (D-42)**: `p_s` is now the default. On the 2022-23 tune
+   window the retrained XGBoost is +0.0012 log-loss WORSE (paired t +1.7): the
+   old column was a surface residual and that was signal. Pete chose the
+   correct rating anyway. Revisit only as "both columns", never as a swap back.
+7. ~~**[#1](https://github.com/peteowen1/dropshotverse/issues/1) — hier tail
+   bug, downgraded (D-12).**~~ — **ANSWERED 2026-09-09 (D-41)**: the surface
+   offset was absorbing half of every match's form; fixed with
+   `DSV_SURF_RW_SCALE=0.0`. Standalone point model 0.745 -> 0.698; through
+   XGBoost, aggregate unchanged, tail rows better. Issue #1 can close on this.
 8. **[#2](https://github.com/peteowen1/dropshotverse/issues/2)** — the WTA
    public live-scores API. Its in-play fields have never been observed
    populating.
