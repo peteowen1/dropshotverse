@@ -22,7 +22,9 @@ sys.path.insert(0, str(T.parent / "scripts"))
 arm, scale = sys.argv[1], sys.argv[2]
 import numpy as np, pandas as pd, xgboost as xgb
 import train_best_model as tbm
-from xgb_bt_rating import merge_granularity_elo, prep_X_d, SCRATCH
+from xgb_bt_rating import merge_granularity_elo, SCRATCH
+import xgb_bt_rating as _xbr
+prep_X_d = lambda df, cl: _xbr.prep_X_d(df, cl)
 log = tbm.log
 TRAIN = list(range(1995, 2022)); EVAL = [2022, 2023]
 def ll(y, p): p = np.clip(p, 1e-9, 1 - 1e-9); return float(-np.mean(y * np.log(p) + (1 - y) * np.log(1 - p)))
@@ -38,6 +40,28 @@ def build(years, tag):
     return feat
 train = build(TRAIN, f"cmp_{arm}_train")
 ev = build(EVAL, f"cmp_{arm}_eval")
+# --- 2026-09-09 late arms ------------------------------------------------
+# DSV_ADD_SURFACE_RESID=<legacy parquet>: add the OLD surface column (the
+# residual against overall Elo, D-42) as a second feature beside the corrected
+# rating, oriented the same way build_elo_features orients side A (y==1 means
+# side A is the winner).
+import xgb_bt_rating as xbr
+resid_path = os.environ.get("DSV_ADD_SURFACE_RESID")
+if resid_path:
+    leg = pd.read_parquet(resid_path)[["date", "tour", "winner_uid", "loser_uid", "rs_winner", "rs_loser"]]             .drop_duplicates(["date", "tour", "winner_uid", "loser_uid"])
+    for nm in ("train", "ev"):
+        f = globals()[nm].merge(leg, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
+        assert f.rs_winner.notna().all(), f"{nm}: legacy rs missing on {f.rs_winner.isna().sum()} rows"
+        f["elo_surface_resid_diff"] = np.where(f.y.values == 1, f.rs_winner - f.rs_loser, f.rs_loser - f.rs_winner)
+        globals()[nm] = f.drop(columns=["rs_winner", "rs_loser"])
+    train, ev = globals()["train"], globals()["ev"]
+    xbr.XGB_NUMERIC_D = xbr.XGB_NUMERIC_D + ["elo_surface_resid_diff"]
+    log(f"added elo_surface_resid_diff; corr with elo_surface_diff on train = {train[['elo_surface_diff','elo_surface_resid_diff']].corr().iloc[0,1]:.3f}")
+# DSV_DROP_FEATURES=a,b: ablate features (age_diff for the Fils-vs-Zverev question).
+drop = [c for c in os.environ.get("DSV_DROP_FEATURES", "").split(",") if c]
+if drop:
+    xbr.XGB_NUMERIC_D = [c for c in xbr.XGB_NUMERIC_D if c not in drop]
+    log(f"dropped {drop}; {len(xbr.XGB_NUMERIC_D)} numeric features remain")
 log(f"train rows {len(train):,}, eval rows {len(ev):,}; elo_surface_diff coverage train "
     f"{train['elo_surface_diff'].notna().mean():.3f} eval {ev['elo_surface_diff'].notna().mean():.3f}")
 cat_levels = {c: sorted(set(train[c].dropna().unique()) | set(ev[c].dropna().unique())) for c in tbm.XGB_CATEGORICAL}

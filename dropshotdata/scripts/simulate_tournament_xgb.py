@@ -20,7 +20,11 @@ and reused across all n_sims simulated brackets.
 """
 from __future__ import annotations
 
+import os
+
 import numpy as np
+
+import train_best_model as tbm
 import pandas as pd
 import xgboost as xgb
 
@@ -74,9 +78,23 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     pairs_j = np.array([idx[u] for u in pairs_j_uid])
 
     matrices: dict[str, np.ndarray] = {}
-    for rnd in rounds:
+    # W3 (D-26/D-27): weeks_since_last was computed once from date0, so every
+    # round was fed the PRE-tournament layoff gap. From the second round on
+    # both players have just played, so the true difference is ~0. Behind a
+    # flag, ON since 2026-09-09 (D-46: sized at 0.03 mean pairwise shift,
+    # Alcaraz 38% -> 60% pre-tournament title; published once he was out).
+    # Set DSV_W3_LAYOFF_FIX=0 to reproduce the old behaviour. The debutant
+    # case (D-27) is handled in build_player_table: field median, not 52.
+    w3_fix = os.environ.get("DSV_W3_LAYOFF_FIX", "1") == "1"
+    for k_rnd, rnd in enumerate(rounds):
         Xdf = base.copy()
         Xdf["round"] = rnd
+        if w3_fix and k_rnd > 0:
+            Xdf["weeks_since_last_diff"] = 0.0
+            # D-49: both players add one match every ~2 days inside the event,
+            # so only the pre-event difference survives, decayed.
+            if tbm.RUST_TAU > 0 and "recent_load_diff" in Xdf:
+                Xdf["recent_load_diff"] = Xdf["recent_load_diff"] * np.exp(-2.0 * k_rnd / tbm.RUST_TAU)
         X = prep_X_d(Xdf, cat_levels)
         dmat = xgb.DMatrix(X, enable_categorical=True)
         p = np.clip(np.mean([m.predict(dmat) for m in models], axis=0), 1e-9, 1 - 1e-9)

@@ -291,4 +291,53 @@ Consequences to hold onto:
   point-model prob 13%, age 10%, overall Elo 3%. The corrected surface column
   has taken over overall Elo's role, as D-42 predicted.
   `tune_scratch/importance_new_bag.py`.
+- **D-44 (2026-09-09)** — Why Fils and Jodar sit level with Zverev in BT when
+  Elo has him 50-70 points clear: `age_diff`, worth -0.2 logits to Zverev
+  against every 20-year-old (Fils +0.15, Jodar +0.22, Zverev -0.06, Djokovic
+  -0.34 mean over the field). Ablated: dropping age costs +0.0006 log-loss on
+  2022-23 (paired t +1.3, n=9,711). **Age stays.** BT is a forecast of the next
+  match, not a ranking of who has been best; if the site wants the latter it is
+  a different column. `tune_scratch/probe_zverev_fils.py`, `cmp_noage.log`.
+- **D-45 (2026-09-09)** — Both surface columns (corrected rating + legacy
+  residual, corr 0.48) tested: -0.0003 vs production (t -1.1), a quarter of
+  what D-42's swap cost, inside noise. **Not shipped.** `cmp_resid.log`.
+- **D-46 (2026-09-09)** — W3 sized on the real pre-tournament ATP field with
+  the fix behind `DSV_W3_LAYOFF_FIX` (zero `weeks_since_last_diff` from round
+  two on): pairwise odds move 0.03 mean / 0.25 max per round; Alcaraz's title
+  odds 38.4% -> 60.4% because his 20-week gap was charged seven times. D-26's
+  0.023 mean understated it because it was measured mid-event. **Flip before
+  Beijing, not during the final.** Debutant 52.0 default (D-27) still
+  unresolved, 2 players in the field. `tune_scratch/size_w3_layoff_fix.py`.
+- **D-47 (2026-09-10)** — W3 flipped ON at 00:05 AEST, Pete's call: Alcaraz
+  was out and the page is unannounced. Debutants now carry
+  `weeks_since_last = NaN` into the model instead of 52.0, and the training
+  table keeps debut rows (1,649 in 1995-2023; debutants win 20%) so XGBoost
+  learns the missing-value direction rather than taking an unlearned default.
+  On its own the debut change was a no-op: the rows were re-dropped by the
+  playstyle merge. That led to D-48.
+- **D-48 (2026-09-10)** — **29% of tour matches were never in the training
+  table.** `hierarchical_model.py`'s eval export was gated on `has_points`
+  because it was written to SCORE the point model, and `train_best_model.py`
+  reads the same export to build XGBoost's features. Plus 6% more dropped for
+  missing serve/return form. Pete had not been told; nobody had thought of it
+  as a filter. With `DSV_KEEP_ALL=1` (now default) every tour row is exported
+  and missing values stay NaN: 153,387 training rows instead of 102,351, and
+  on the common 2022-23 rows the retrained model is -0.0013 log-loss (paired
+  t -3.1, n=9,711), the largest real gain of the two sessions. The eval set
+  is now the full 10,891 tour rows, not the 9,711 with stats.
+- **D-49 (2026-09-10)** — Pete's rust feature: `recent_load_diff`, the
+  difference in each player's sum over prior matches of exp(-days_ago/21),
+  every level of event, decayed inside a draw by exp(-2k/21) at round k so
+  only the pre-event gap survives. Alcaraz minus Zverev at this US Open:
+  2.7, 2.5, 2.3, 2.1 over rounds one to four. Flat in aggregate (+0.4 t vs
+  keep-all) and -0.003 on the 638 rows where one player had not played in
+  two weeks (t -1.7). Shipped with D-48 as the same retrain, on the mechanism
+  and the slice, not the aggregate. `tune_scratch/rust_feature_example.py`.
+- **D-50 (2026-09-10)** — Second cutover at 00:05 AEST: bag retrained on
+  164,278 rows with keep-all, debuts, rust, the surface fix and scale 0.0,
+  swapped in under the canonical name (previous bag kept as
+  `.LEGACY_2026-09-09b`). The 00:04 task run started inside the swap window
+  and failed on the feature mismatch, published nothing, and was replaced by
+  a hand run. Live odds for the six players left moved under a point, since
+  all of them have played within two weeks.
 

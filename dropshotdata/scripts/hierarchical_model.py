@@ -61,6 +61,12 @@ DEBUG_UID = os.environ.get("DSV_DEBUG_UID", "")   # e.g. "atp:206173" - traces o
                                                    # reproduces the failure this
                                                    # ticket is chasing)
 SURFACES = ("Hard", "Clay", "Grass", "Carpet", "Unknown")
+# 2026-09-09 (D-48): the eval export was gated on has_points because it was
+# written to SCORE the point model, but train_best_model.py reads the same
+# export to build XGBoost's training table, so the gate silently dropped 29%
+# of tour matches (those without serve stats) from training. The pre-match
+# state exists for every match; with DSV_KEEP_ALL=1 every tour row is exported.
+EXPORT_ALL_TOUR = os.environ.get("DSV_KEEP_ALL", "1") == "1"
 
 # Bug fix (verified 2026-08-28, not tied to any ticket number): the archive's
 # tourney_date is a TOURNAMENT-level date (its start date), not a per-match
@@ -1066,7 +1072,7 @@ def run(df: pd.DataFrame) -> pd.DataFrame:
         lm_l, vlm_l = sl.get_lam(s)
 
         is_eval = (date.year in EVAL_YEARS)
-        if is_eval and row.has_points and row.level_file == "tour":
+        if is_eval and row.level_file == "tour" and (row.has_points or EXPORT_ALL_TOUR):
             e_w = sv.m_a + k_w                       # winner effective serve
             f_l = sl.m_b + lm_l                      # loser effective return
             e_l = sl.m_a + k_l
