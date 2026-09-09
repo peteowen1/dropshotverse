@@ -90,6 +90,8 @@ V25_HIER_PARAMS = {"DSV_RW_VAR_PER_WEEK": "0.005", "DSV_SURFACE_VAR_SCALE": "1.0
                     "DSV_PHI_MAX": "4.0", "DSV_LAYOFF_C": "0.06", "DSV_REGIME_B_N": "0.25",
                     "DSV_TIER_WEIGHT": "1.0", "DSV_CLIP_REINFLATE_K": "0.5",
                     "DSV_SURF_RW_SCALE": "0.0", "DSV_KEEP_ALL": "1"}
+# NOTE: DSV_KEEP_ALL is pinned here for the hier subprocess, so an ablation of
+# D-48 needs this dict edited, not just the env var (review note 2026-09-10).
 
 # D-48 / D-49 (2026-09-09): keep every tour row (missing -> NaN) and Pete's
 # rust feature, a decayed count of recent matches. Both env-gated until scored.
@@ -388,7 +390,14 @@ def merge_playstyle(feat: pd.DataFrame, playstyle: pd.DataFrame) -> pd.DataFrame
 
 # --------------------------------------------------------------- steps 4-5
 def prep_X(df: pd.DataFrame, cat_levels: dict) -> pd.DataFrame:
-    X = df[XGB_NUMERIC].copy()
+    # Review finding 2026-09-10: xgb_features_v10_holdout.parquet is a static
+    # 2024-25 artefact (burnt holdout, D-10) built before recent_load_diff
+    # existed. A feature the table lacks is filled with NaN, which the model
+    # handles, and SAID, so a stale table cannot fail silently or crash main().
+    missing = [c for c in XGB_NUMERIC if c not in df.columns]
+    if missing:
+        log(f"  WARN prep_X: {missing} absent from this table, filled with NaN (stale feature file?)")
+    X = df.reindex(columns=XGB_NUMERIC).copy()
     for c in XGB_CATEGORICAL:
         X[c] = pd.Categorical(df[c], categories=cat_levels[c])
     return X
