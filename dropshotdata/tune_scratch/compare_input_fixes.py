@@ -10,6 +10,9 @@ v25 hyperparameters, 5-seed bag. Score on 2022-23 tour-level rows.
   both     surface-expectation    <scale>
 
 Usage: python compare_input_fixes.py <arm> <scale>
+NOTE (post-review): V25_HIER_PARAMS in train_best_model.py now pins
+DSV_SURF_RW_SCALE=0.0 for the hier regen, so the "old" and "elo" arms can no
+longer be reproduced from env alone; edit that dict for an ablation.
 Env is set by the runner so each arm is a fresh process (the ELO path and
 SURF_RW_SCALE are read at import time by the scripts under test)."""
 import os, sys, time

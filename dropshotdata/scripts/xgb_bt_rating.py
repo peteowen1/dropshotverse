@@ -58,6 +58,7 @@ os.environ.setdefault("DSV_LAYOFF_C", "0.06")
 os.environ.setdefault("DSV_REGIME_B_N", "0.25")
 os.environ.setdefault("DSV_TIER_WEIGHT", "1.0")
 os.environ.setdefault("DSV_CLIP_REINFLATE_K", "0.5")
+os.environ.setdefault("DSV_SURF_RW_SCALE", "0.0")
 
 import pickle
 

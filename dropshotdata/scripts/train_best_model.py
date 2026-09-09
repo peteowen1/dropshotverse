@@ -87,7 +87,8 @@ N_BAGS = 5
 V25_HIER_PARAMS = {"DSV_RW_VAR_PER_WEEK": "0.005", "DSV_SURFACE_VAR_SCALE": "1.0",
                     "DSV_OU_THETA_PER_WEEK": "0.00001", "DSV_MAX_SHIFT": "0.125",
                     "DSV_PHI_MAX": "4.0", "DSV_LAYOFF_C": "0.06", "DSV_REGIME_B_N": "0.25",
-                    "DSV_TIER_WEIGHT": "1.0", "DSV_CLIP_REINFLATE_K": "0.5"}
+                    "DSV_TIER_WEIGHT": "1.0", "DSV_CLIP_REINFLATE_K": "0.5",
+                    "DSV_SURF_RW_SCALE": "0.0"}
 
 XGB_NUMERIC = ["elo_overall_diff", "elo_surface_diff", "elo_logit_pwinner", "hier_dmean_diff",
                "hier_dvar_diff", "hier_dvar_sum", "weeks_since_last_diff", "n_prior_diff",
