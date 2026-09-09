@@ -76,6 +76,10 @@ import _common
 DD = _common.DD
 SCRATCH = DD / "tune_scratch"
 TRAIN_YEARS = list(range(1995, 2024))
+# 2026-09-09: overridable so a candidate Elo column (the surface-expectation
+# fix) can be trained and scored without touching the parquet the live
+# US Open sim reads from the working tree every 30 minutes.
+ELO_RAW_PATH = Path(os.environ.get("DSV_ELO_RAW_PATH", str(SCRATCH / "elo_raw_ratings_full.parquet")))
 N_BAGS = 5
 
 # Frozen v25 hierarchical-model hyperparameters (validated in prior sessions'
@@ -83,7 +87,8 @@ N_BAGS = 5
 V25_HIER_PARAMS = {"DSV_RW_VAR_PER_WEEK": "0.005", "DSV_SURFACE_VAR_SCALE": "1.0",
                     "DSV_OU_THETA_PER_WEEK": "0.00001", "DSV_MAX_SHIFT": "0.125",
                     "DSV_PHI_MAX": "4.0", "DSV_LAYOFF_C": "0.06", "DSV_REGIME_B_N": "0.25",
-                    "DSV_TIER_WEIGHT": "1.0", "DSV_CLIP_REINFLATE_K": "0.5"}
+                    "DSV_TIER_WEIGHT": "1.0", "DSV_CLIP_REINFLATE_K": "0.5",
+                    "DSV_SURF_RW_SCALE": "0.0"}
 
 XGB_NUMERIC = ["elo_overall_diff", "elo_surface_diff", "elo_logit_pwinner", "hier_dmean_diff",
                "hier_dvar_diff", "hier_dvar_sum", "weeks_since_last_diff", "n_prior_diff",
@@ -143,7 +148,7 @@ def build_elo_features(years: list[int]) -> pd.DataFrame:
                  "prior_matches_event_w", "prior_matches_event_l", "surface", "round",
                  "tourney_level", "best_of"]]
 
-    elo_raw = pd.read_parquet(SCRATCH / "elo_raw_ratings_full.parquet")
+    elo_raw = pd.read_parquet(ELO_RAW_PATH)
     elo_raw = elo_raw[elo_raw["level_file"] == "tour"][
         ["date", "tour", "winner_uid", "loser_uid", "winner_name", "loser_name",
          "ro_winner", "ro_loser", "rs_winner", "rs_loser", "p_winner_recomputed"]]
@@ -151,7 +156,7 @@ def build_elo_features(years: list[int]) -> pd.DataFrame:
         ["date", "winner_uid", "loser_uid", "weeks_since_last_w", "weeks_since_last_l",
          "n_prior_w", "n_prior_l"]]
 
-    full_elo_raw = pd.read_parquet(SCRATCH / "elo_raw_ratings_full.parquet")
+    full_elo_raw = pd.read_parquet(ELO_RAW_PATH)
     wins: dict[tuple, int] = {}
     h2h_w = np.zeros(len(full_elo_raw), dtype=np.int32)
     h2h_l = np.zeros(len(full_elo_raw), dtype=np.int32)

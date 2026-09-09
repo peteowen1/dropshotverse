@@ -26,7 +26,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import os
+
 import _common
+SURFACE_OWN_EXPECTATION = os.environ.get("DSV_SURFACE_OWN_EXPECTATION", "1") != "0"
 ARCHIVE = _common.RAW / "github"
 EVAL_YEARS = (2024, 2025)
 
@@ -170,9 +173,21 @@ def run_elo_raw(df: pd.DataFrame, blend: float, decay: float):
         last_all[w] = day
         last_all[l] = day
 
+        # The surface rating updates against ITS OWN expectation, not the
+        # blended one. Found 2026-09-09 by walking one row: with blend=0.0
+        # the old update used overall Elo's p_w, so once overall Elo already
+        # expected the result the surface rating barely moved - Alcaraz won
+        # 20 straight hard-court matches (Jan-Mar 2026) and rs went 1580 to
+        # 1634; Musetti sat at 1160 on hard. rs was a cumulative residual
+        # against overall Elo, not a surface rating (corr with ro across the
+        # US Open field: 0.26), and elo_surface_diff fed the shipped model.
+        # DSV_SURFACE_OWN_EXPECTATION=0 reproduces the old (residual) column
+        # exactly, for ablation and for regenerating the parquet the shipped
+        # model was trained on.
+        p_s = (1.0 / (1.0 + 10 ** (-(rs_w - rs_l) / 400.0))) if SURFACE_OWN_EXPECTATION else p_w
         ksw, ksl = k_factor(n_surf.get((w, s), 0)), k_factor(n_surf.get((l, s), 0))
-        surf[(w, s)] = rs_w + ksw * (1 - p_w)
-        surf[(l, s)] = rs_l - ksl * (1 - p_w)
+        surf[(w, s)] = rs_w + ksw * (1 - p_s)
+        surf[(l, s)] = rs_l - ksl * (1 - p_s)
         n_surf[(w, s)] = n_surf.get((w, s), 0) + 1
         n_surf[(l, s)] = n_surf.get((l, s), 0) + 1
         last_surf[(w, s)] = day

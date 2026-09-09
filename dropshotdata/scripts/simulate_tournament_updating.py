@@ -41,6 +41,7 @@ os.environ.setdefault("DSV_LAYOFF_C", "0.06")
 os.environ.setdefault("DSV_REGIME_B_N", "0.25")
 os.environ.setdefault("DSV_TIER_WEIGHT", "1.0")
 os.environ.setdefault("DSV_CLIP_REINFLATE_K", "0.5")
+os.environ.setdefault("DSV_SURF_RW_SCALE", "0.0")
 
 import numpy as np
 import pandas as pd
@@ -240,7 +241,11 @@ def build_snapshots(tournaments_meta: dict, df: "pd.DataFrame | None" = None,
             # finding, 2026-09-06).
             field_fp = hashlib.sha256("|".join(sorted(map(str, meta["field_uids"]))).encode()).hexdigest()[:12]
             safe = key.replace(":", "_").replace("/", "_")
-            path = cache_dir / f"{safe}_{pd.Timestamp(meta['date0']).date()}_{fp}_f{field_fp}.pkl"
+            # The replay is also a function of the point model's own knobs:
+            # 2026-09-09 the surface process-noise default changed and a key
+            # without it would have served the old states to the live sim.
+            knobs = f"s{hm.SURF_RW_SCALE:g}"
+            path = cache_dir / f"{safe}_{pd.Timestamp(meta['date0']).date()}_{fp}_f{field_fp}_{knobs}.pkl"
             cache_paths[key] = path
             if path.exists():
                 with open(path, "rb") as fh:
