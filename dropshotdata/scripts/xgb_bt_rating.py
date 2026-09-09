@@ -44,6 +44,7 @@ leak here):
 """
 from __future__ import annotations
 
+import math
 import os
 import sys
 from pathlib import Path
@@ -59,6 +60,7 @@ os.environ.setdefault("DSV_REGIME_B_N", "0.25")
 os.environ.setdefault("DSV_TIER_WEIGHT", "1.0")
 os.environ.setdefault("DSV_CLIP_REINFLATE_K", "0.5")
 os.environ.setdefault("DSV_SURF_RW_SCALE", "0.0")
+os.environ.setdefault("DSV_KEEP_ALL", "1")
 
 import pickle
 
@@ -320,21 +322,42 @@ def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
     if no_history:
         print(f"[build_player_table] {tour}: {len(no_history)} of {len(field_uids)} field uids have no "
               f"Elo history before {date0} and default to 1500: {no_history[:20]}")
+    # D-49 rust feature at date0: recursive load over every prior match in
+    # the archive (all levels), decayed to date0. NaN-free: no history = 0.
+    rust0: dict[str, float] = {}
+    if tbm.RUST_TAU > 0:
+        prior = elo[elo["date"] < date0]
+        rt = tbm.recent_load_table(prior, tbm.RUST_TAU)
+        last_rows = pd.concat([rt[["date", "winner_uid", "recent_load_w"]].set_axis(["date", "uid", "before"], axis=1),
+                               rt[["date", "loser_uid", "recent_load_l"]].set_axis(["date", "uid", "before"], axis=1)])
+        last_rows = last_rows[last_rows["uid"].isin(field_uids)].sort_values("date").drop_duplicates("uid", keep="last")
+        for r in last_rows.itertuples(index=False):
+            rust0[r.uid] = (r.before + 1.0) * math.exp(-(date0 - r.date).days / tbm.RUST_TAU)
     for uid in field_uids:
         ro = float(latest_ro.loc[uid, "ro"]) if uid in latest_ro.index else 1500.0
         rs = float(latest_rs.loc[uid, "rs"]) if uid in latest_rs.index else 1500.0
         set_elo = float(latest_set_elo.loc[uid, "rating"]) if uid in latest_set_elo.index else 1500.0
         game_elo = float(latest_game_elo.loc[uid, "rating"]) if uid in latest_game_elo.index else 1500.0
         last_date = latest_ro.loc[uid, "date"] if uid in latest_ro.index else None
-        weeks_since_last = (date0 - last_date).days / 7.0 if last_date is not None else 52.0
+        # A player with no Elo history is a debutant, not someone a year
+        # injured (D-27). NaN, and it reaches the model as NaN (D-47).
+        weeks_since_last = (date0 - last_date).days / 7.0 if last_date is not None else np.nan
         state = hier_snapshot.get(uid, hm.PlayerState())
         age = latest_age_at(age_table, uid, date0)
         serve_form = float(latest_form.loc[uid, "serve_form"]) if uid in latest_form.index else np.nan
         return_form = float(latest_form.loc[uid, "return_form"]) if uid in latest_form.index else np.nan
         rows.append({"uid": uid, "ro": ro, "rs": rs, "set_elo": set_elo, "game_elo": game_elo,
                     "weeks_since_last": weeks_since_last, "n_matches": state.n_matches, "age": age,
+                    "recent_load": rust0.get(uid, 0.0),
                     "serve_form": serve_form, "return_form": return_form, "state": state})
-    return pd.DataFrame(rows).set_index("uid")
+    ptab = pd.DataFrame(rows).set_index("uid")
+    n_debut = int(ptab["weeks_since_last"].isna().sum())
+    if n_debut:
+        # Left as NaN on purpose: the model is trained with debut rows kept
+        # (DSV_KEEP_DEBUTS, D-47), so a missing layoff is a state it has
+        # learned, not a hole to fill.
+        print(f"[build_player_table] {tour}: {n_debut} debutant(s) carry weeks_since_last = NaN")
+    return ptab
 
 
 def build_pairwise_features_base(field_uids: list[str], ptab: pd.DataFrame, tour: str, surface: str, best_of: int,
@@ -402,6 +425,7 @@ def build_pairwise_features_base(field_uids: list[str], ptab: pd.DataFrame, tour
                 "hier_dvar_diff": hier_dvar_diff, "hier_dvar_sum": hier_dvar_sum,
                 "weeks_since_last_diff": pi["weeks_since_last"] - pj["weeks_since_last"],
                 "n_prior_diff": pi["n_matches"] - pj["n_matches"], "h2h_diff": h2h_i - h2h_j,
+                "recent_load_diff": pi["recent_load"] - pj["recent_load"],
                 "best_of": best_of, "age_diff": pi["age"] - pj["age"], "fatigue_diff": 0.0,
                 "hier_logit_pwinner": hier_logit, "serve_form_diff_targeted": serve_diff,
                 "return_form_diff_targeted": return_diff,

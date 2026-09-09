@@ -4,7 +4,7 @@ Env: DSV_ELO_RAW_PATH=<SURFACEFIX parquet>, DSV_SURF_RW_SCALE=0.0."""
 import os, sys, time; from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import xgb_bt_rating as xbr
-assert os.environ.get("DSV_SURF_RW_SCALE") == "0.0" and "SURFACEFIX" in os.environ.get("DSV_ELO_RAW_PATH", ""), "env not set"
-xbr.MODEL_CACHE_DIR = xbr.SCRATCH / "xgb_bagged_model_cache_v3_inputfix"
+import train_best_model as tbm; assert tbm.KEEP_ALL and tbm.RUST_TAU == 21.0, "defaults not flipped"
+xbr.MODEL_CACHE_DIR = xbr.SCRATCH / "xgb_bagged_model_cache_v4_keepall_rust"
 t0 = time.time(); models, cat_levels, _ = xbr.train_bagged_model(use_cache=False)
 print(f"trained {len(models)} seeds into {xbr.MODEL_CACHE_DIR} in {time.time()-t0:.0f}s")

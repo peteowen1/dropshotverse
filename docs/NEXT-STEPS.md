@@ -135,13 +135,16 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    honest gap at 0.0247 with 38% accuracy when dissenting.
 3. ~~**Republish the model-inputs Release and commit the 2026-09-09 cutover
    (D-40 to D-43).**~~ — DONE: Release republished, PR #36 merged 23:02 AEST.
-4. **Flip `DSV_W3_LAYOFF_FIX` before Beijing (D-46), after the US Open final
-   on 2026-09-13.** One-line default change in
-   `simulate_tournament_xgb.build_round_pred_matrices`, sized at 0.03 mean
-   pairwise shift and a 22-point title swing on a long-layoff favourite.
-   Decide the debutant case (D-27, 52.0 default) in the same change. `dev` is
-   ahead of `main` by this flag (off) and the session's research scripts;
-   PR when it flips.
+4. ~~**Flip `DSV_W3_LAYOFF_FIX` before Beijing (D-46).**~~ — **DONE 2026-09-10
+   00:05 (D-47)**, with the debutant case (NaN, learned) and the second
+   retrain (D-48 keep-all, D-49 rust, D-50). Republish the model-inputs
+   Release and PR are in the same session.
+5. **Watch the first scheduled runs on the new bag**: laptop task 00:34 AEST
+   2026-09-10 (the 00:04 run failed inside the swap window, by design) and
+   `ratings-refresh.yml` at 06:00 UTC, which must fetch the republished
+   Release or the ratings page's BT column reverts overnight.
+6. **Rust refinements, only if the comeback slice keeps rewarding it**: weight
+   a match by sets or games played, and by whether it was won. D-49.
 
 ## Open queue
 

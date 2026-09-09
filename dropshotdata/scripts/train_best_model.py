@@ -62,6 +62,7 @@ table).
 """
 from __future__ import annotations
 
+import math
 import os
 import subprocess
 import sys
@@ -88,13 +89,39 @@ V25_HIER_PARAMS = {"DSV_RW_VAR_PER_WEEK": "0.005", "DSV_SURFACE_VAR_SCALE": "1.0
                     "DSV_OU_THETA_PER_WEEK": "0.00001", "DSV_MAX_SHIFT": "0.125",
                     "DSV_PHI_MAX": "4.0", "DSV_LAYOFF_C": "0.06", "DSV_REGIME_B_N": "0.25",
                     "DSV_TIER_WEIGHT": "1.0", "DSV_CLIP_REINFLATE_K": "0.5",
-                    "DSV_SURF_RW_SCALE": "0.0"}
+                    "DSV_SURF_RW_SCALE": "0.0", "DSV_KEEP_ALL": "1"}
 
+# D-48 / D-49 (2026-09-09): keep every tour row (missing -> NaN) and Pete's
+# rust feature, a decayed count of recent matches. Both env-gated until scored.
+KEEP_ALL = os.environ.get("DSV_KEEP_ALL", "1") == "1"
+RUST_TAU = float(os.environ.get("DSV_RUST_TAU", "21"))   # days; 0 = feature off. 21 shipped 2026-09-10 (D-49)
 XGB_NUMERIC = ["elo_overall_diff", "elo_surface_diff", "elo_logit_pwinner", "hier_dmean_diff",
                "hier_dvar_diff", "hier_dvar_sum", "weeks_since_last_diff", "n_prior_diff",
                "h2h_diff", "best_of", "age_diff", "fatigue_diff", "hier_logit_pwinner",
                "serve_form_diff_targeted", "return_form_diff_targeted"]
+if RUST_TAU > 0:
+    XGB_NUMERIC = XGB_NUMERIC + ["recent_load_diff"]
 XGB_CATEGORICAL = ["surface", "round", "tourney_level", "tour"]
+
+
+def recent_load_table(elo_full: pd.DataFrame, tau: float) -> pd.DataFrame:
+    """Pete's rust feature (D-49): before each match, each player's
+    sum over prior matches of exp(-days_ago / tau), every level of event.
+    Recursive per player so it is one pass over the archive in stored order
+    (date, round rank). Returns one row per match with the two pre-match
+    values."""
+    last: dict[str, int] = {}
+    load: dict[str, float] = {}
+    days = (elo_full["date"] - pd.Timestamp("1970-01-01")).dt.days.values
+    out_w = np.empty(len(elo_full)); out_l = np.empty(len(elo_full))
+    for i, (w, l, d) in enumerate(zip(elo_full["winner_uid"].values, elo_full["loser_uid"].values, days)):
+        bw = load.get(w, 0.0) * math.exp(-(d - last.get(w, d)) / tau)
+        bl = load.get(l, 0.0) * math.exp(-(d - last.get(l, d)) / tau)
+        out_w[i] = bw; out_l[i] = bl
+        load[w], last[w] = bw + 1.0, d
+        load[l], last[l] = bl + 1.0, d
+    return pd.DataFrame({"date": elo_full["date"].values, "winner_uid": elo_full["winner_uid"].values,
+                         "loser_uid": elo_full["loser_uid"].values, "recent_load_w": out_w, "recent_load_l": out_l})
 XGB_BASE_PARAMS = {"objective": "binary:logistic", "eval_metric": "logloss", "max_depth": 3,
                     "eta": 0.02, "subsample": 0.7, "colsample_bytree": 0.9,
                     "min_child_weight": 5.0, "gamma": 1.0, "reg_alpha": 0.1, "reg_lambda": 1.0,
@@ -171,11 +198,27 @@ def build_elo_features(years: list[int]) -> pd.DataFrame:
     m = elo_raw.merge(small, on=["date", "tour", "winner_uid", "loser_uid"], how="inner")
     m = m.merge(layoff, on=["date", "winner_uid", "loser_uid"], how="left")
     m = m.merge(h2h, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
+    if RUST_TAU > 0:
+        rust = recent_load_table(full_elo_raw, RUST_TAU).drop_duplicates(subset=["date", "winner_uid", "loser_uid"])
+        m = m.merge(rust, on=["date", "winner_uid", "loser_uid"], how="left")
+        assert m["recent_load_w"].notna().all(), "recent_load merge missed rows"
     m = m.drop_duplicates(subset=["date", "winner_uid", "loser_uid"], keep="first")
 
-    req = ["weeks_since_last_w", "weeks_since_last_l", "n_prior_w", "n_prior_l",
-           "h2h_prior_wins_winner", "h2h_prior_wins_loser", "winner_age", "loser_age"]
+    # 2026-09-09 (D-47): a missing weeks_since_last means a DEBUT, the only
+    # state where n_prior is 0. Dropping those rows (1,663 of 164,836 tour
+    # rows 1995-2023; debutants win 20% of them) meant XGBoost never saw a
+    # debut, so a NaN at inference took an unlearned default direction and
+    # the live path papered over it with a 52-week default (D-27). With
+    # DSV_KEEP_DEBUTS=1 the rows stay and weeks_since_last_diff is NaN, which
+    # XGBoost handles by learning a per-split direction.
+    keep_debuts = os.environ.get("DSV_KEEP_DEBUTS", "1") == "1"
+    req = ["n_prior_w", "n_prior_l", "h2h_prior_wins_winner", "h2h_prior_wins_loser", "winner_age", "loser_age"]
+    if not keep_debuts:
+        req = ["weeks_since_last_w", "weeks_since_last_l"] + req
+    n_before = len(m)
     m = m[~m[req].isna().any(axis=1)].reset_index(drop=True)
+    n_debut = int((m["weeks_since_last_w"].isna() | m["weeks_since_last_l"].isna()).sum())
+    log(f"  rows kept {len(m):,} of {n_before:,}; debut rows in table: {n_debut:,} (keep_debuts={keep_debuts})")
 
     import hashlib
 
@@ -207,6 +250,7 @@ def build_elo_features(years: list[int]) -> pd.DataFrame:
         "elo_overall_diff": a_ro - b_ro, "elo_surface_diff": a_rs - b_rs,
         "elo_logit_pwinner": np.log(p_sideA / (1.0 - p_sideA)),
         "weeks_since_last_diff": a_weeks - b_weeks, "n_prior_diff": a_nprior - b_nprior,
+        **({"recent_load_diff": np.subtract(*pick("recent_load_w", "recent_load_l"))} if RUST_TAU > 0 else {}),
         "h2h_diff": a_h2h - b_h2h, "age_diff": a_age - b_age, "fatigue_diff": a_fat - b_fat,
         "surface": m["surface"].astype(str), "round": m["round"].astype(str),
         "best_of": m["best_of"].astype("Int64"), "tourney_level": m["tourney_level"].astype(str),
@@ -244,7 +288,12 @@ def merge_hier(feat: pd.DataFrame, hier_preds_path: Path) -> pd.DataFrame:
          "p_winner_hier"]].drop_duplicates(subset=["date", "tour", "winner_uid", "loser_uid"])
     j = feat.merge(hier, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
     miss = j[["d1_mean", "d1_var", "d2_mean", "d2_var", "p_winner_hier"]].isna().any(axis=1)
-    log(f"  {len(j):,} -> {int((~miss).sum()):,} after hier merge ({miss.mean():.4%} missing, dropped)")
+    if KEEP_ALL:
+        # D-48: with DSV_KEEP_ALL the export covers every tour row, so this
+        # should be ~0; anything left is a genuine key mismatch and IS dropped.
+        log(f"  {len(j):,} rows after hier merge, {int(miss.sum()):,} unmatched dropped (keep_all)")
+    else:
+        log(f"  {len(j):,} -> {int((~miss).sum()):,} after hier merge ({miss.mean():.4%} missing, dropped)")
     j = j[~miss].reset_index(drop=True)
 
     y = j["y"].values.astype(int)
@@ -315,8 +364,13 @@ def merge_playstyle(feat: pd.DataFrame, playstyle: pd.DataFrame) -> pd.DataFrame
     j = feat.merge(playstyle, on=["date", "tour", "winner_uid", "loser_uid"], how="left")
     j = j.drop_duplicates(subset=["date", "tour", "winner_uid", "loser_uid"], keep="first")
     miss = j[["serve_form_w", "serve_form_l", "return_form_w", "return_form_l"]].isna().any(axis=1)
-    log(f"  {len(j):,} -> {int((~miss).sum()):,} after playstyle merge ({miss.mean():.4%} missing, dropped)")
-    j = j[~miss].reset_index(drop=True)
+    if KEEP_ALL:
+        # D-48: a player with no prior serve stats has no form yet; that is a
+        # state (NaN) for XGBoost to learn, not a reason to drop the match.
+        log(f"  {len(j):,} rows after playstyle merge, {int(miss.sum()):,} with missing form kept as NaN (keep_all)")
+    else:
+        log(f"  {len(j):,} -> {int((~miss).sum()):,} after playstyle merge ({miss.mean():.4%} missing, dropped)")
+        j = j[~miss].reset_index(drop=True)
 
     y = j["y"].values.astype(int)
     sw, sl = j["serve_form_w"].values.astype(float), j["serve_form_l"].values.astype(float)
