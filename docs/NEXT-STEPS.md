@@ -8,6 +8,17 @@
 > **2022-23 backfill FIXED (D-55).** All 5 years (2022-2026) are now usable -
 > the shrink-factor re-estimate (queue item 3) is unblocked.
 >
+> **NEW DIRECTION (2026-09-15 evening): forecast every upcoming ATP/WTA
+> event, published on ITG, emulating the US Open sim page** (pre-match
+> bracket forecasts only, NOT the live in-match work - that's Slam-only
+> infrastructure and out of scope). Real work started tonight: Beijing WTA
+> dispatched (provisional, field still incomplete), a NaN-uid crash found
+> and fixed live in production. Full scope and the ATP field-construction
+> approach (Wikipedia + a recency-filtered Elo proxy, validated against
+> Beijing's real seed list) are in
+> [plans/all-events-forecast.md](plans/all-events-forecast.md) - read that
+> before picking this up, it is a multi-session project, not a queue item.
+>
 > **Read first if you are cold:**
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
