@@ -88,8 +88,16 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    failures, 512/514 singles matches recovered. `usopen_2022_points.parquet`
    / `usopen_2023_points.parquet` written (gitignored; regenerate via
    `tune_scratch/build_point_table_legacy_years.py`).
-3. **Re-estimate the shrink factors on the full 5-year sample (2022-2026) -
-   unblocked.** Then settle hier versus serve/return Elo (see below).
+3. **Shrink factors / hier vs serve-return Elo: DEPARTED, Pete's call
+   2026-09-15 - not important right now.** Real progress made first: a
+   player-identity crosswalk for the 2022-25 tapes (D-55/D-56/D-57, now
+   100% clean on all 159 top-20 seeds across both tours and 4 years) and a
+   first real hier-vs-actual comparison (`tune_scratch/hier_vs_actual_serve_examples.py`,
+   712 matches) that flipped the direction of the question - hier reads
+   UNDER-dispersed (ratio 0.831) on this sample, not over-dispersed the way
+   D-40/41/42 assumed, though still inside the same wide, unstable range
+   those gave (0.78-2.40). Pick up fresh when this becomes a priority again;
+   don't restart the crosswalk work, it's done and committed.
 4. **NEW (D-56): `event = match_id[0]` mistags qualifying-round (5-digit)
    matches by tour.** Confirmed on real players - ATP men under `event="2"`
    ids (`21109`), WTA women under `event="1"` ids (`12113`). 4-digit
