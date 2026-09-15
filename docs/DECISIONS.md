@@ -458,7 +458,18 @@ Consequences to hold onto:
   The actual C/D scoring itself was never contaminated - it already only
   scores matches with a live-draw pre-match number, which qualifying/doubles
   never have. Only the drift-check constant was off. `docs/DECISIONS.md`
-  entries reference the corrected constant from here on.
+  entries reference the corrected constant from here on. **Audited every
+  reader of `usopen_2026_points.parquet`** (D-56's open question): only one
+  more had the same bug, `inmatch_wp_calibration.py` (ticket 09's original
+  arm A/B comparison, superseded by the later arm C/D work and not on the
+  active decision path, but still fixed the same way - it had no protective
+  gate at all, unlike `screen_inmatch_seeded.py`, since it scores every
+  match with a `MatchWinner` rather than only ones with a live-draw
+  pre-match number). `screen_inmatch_recalibrated.py` reads
+  `screen_inmatch_seeded.py`'s already-filtered output, so it was never at
+  risk. `build_point_table.py` itself still writes qualifying/doubles rows
+  into the tape undifferentiated - that is the root cause, not fixed, but
+  every current consumer now filters around it consistently.
 - **D-58 (2026-09-15)** — Pete asked whether the crosswalk works for the top 20;
   it didn't - `resolve_usopen_player_names.py`'s archive-wide match had real
   collisions on top players, not just journeymen: Casper Ruud vs his father

@@ -110,11 +110,17 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    main-draw-only. Re-ran the rescore: **C vs D is unchanged** (the seeding
    solve only uses `SERVE_BASE` as a symmetric centre), so D-51's
    conclusion stands. The C/D scoring itself was never contaminated - it
-   already skips matches with no live-draw pre-match number. Still open:
-   `build_point_table.py` itself doesn't distinguish main-draw from
-   qualifying/doubles when writing the point tape - only known consumers
-   (this drift check, `rescore_after_final.py`'s `round_coverage()`) have
-   been checked, not every reader of `usopen_2026_points.parquet`.
+   already skips matches with no live-draw pre-match number. ~~Still open:
+   audit every reader of `usopen_2026_points.parquet`.~~ **DONE.** One more
+   had it - `inmatch_wp_calibration.py` (ticket 09's original arm A/B work,
+   not on the active decision path, and with no protective gate at all) -
+   fixed the same way (254 main-draw matches, 434 excluded).
+   `screen_inmatch_recalibrated.py` was never at risk (reads
+   `screen_inmatch_seeded.py`'s already-filtered output). **Root cause still
+   open**: `build_point_table.py` itself doesn't distinguish main-draw from
+   qualifying/doubles when writing the tape - every CURRENT consumer now
+   filters around it, but a new script reading the raw parquet would repeat
+   this bug unless it knows to filter on `match_id` length itself.
 5. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
    round evidence (5,971 points vs the original 7 matches): arm D now beats
    arm C. Not urgent - `--live-score` is off and nothing published is
