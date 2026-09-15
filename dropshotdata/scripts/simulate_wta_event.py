@@ -477,7 +477,11 @@ def main() -> None:
         try:
             existing = json.loads(draw_out.read_text(encoding="utf-8")) if draw_out.exists() \
                 else json.loads(_fetch_text(PUBLIC_DRAW_URL))
-            others = [t for t in existing.get("tournaments", []) if t.get("tournament_id") != tournament_id]
+            # Fail closed on a malformed payload (mirrors the parquet merge
+            # below, which raises on a schema it does not recognise): a
+            # missing "tournaments" key must not silently become "zero other
+            # tournaments" and wipe every other published draw on write.
+            others = [t for t in existing["tournaments"] if t.get("tournament_id") != tournament_id]
             draw_payload = {"tournaments": others + [draw_entry]}
         except Exception as e:                                          # noqa: BLE001
             log(f"no existing draw file to merge ({type(e).__name__}); writing this event alone")
