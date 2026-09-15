@@ -193,8 +193,14 @@ repo's own convention should probably be filed as its own scoped issue
 
 ## Suggested order for whoever picks this up
 
-1. Parse the ATP calendar from Wikipedia (`2026 ATP Tour`) - cheap, no
-   ambiguity, unblocks everything ATP.
+1. ~~Parse the ATP calendar from Wikipedia (`2026 ATP Tour`).~~ **DONE
+   2026-09-15**: `dropshotdata/scripts/fetch_atp_calendar.py` writes
+   `dropshotdata/reference/atp_calendar_2026.csv`, 61 events, full season
+   (5 Jan - 9 Dec), with level and draw-size (S/Q/D) per event straight from
+   the calendar row - no separate entry-rules lookup needed for that part.
+   Located the calendar tables by SHAPE (has both a `Week` and a
+   `Tournament` column) rather than a fixed table index, so an unrelated
+   table Wikipedia inserts above the calendar can't silently break this.
 2. ~~Build and validate the recency-filtered Elo-based field constructor.~~
    **DONE, and it failed its own validation** (see above - Sinner and
    Alcaraz missing from the top 20 entirely, a real bridge coverage gap,
