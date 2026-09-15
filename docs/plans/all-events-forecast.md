@@ -42,10 +42,30 @@ server-rendered Sitecore). Tonight's research found a real path instead:
 
 - **Calendar**: Wikipedia's `2026 ATP Tour` season page lists all 65
   tournaments (4 Slams, ATP Finals, 9 ATP 1000, 16 ATP 500, 29 ATP 250) with
-  dates. This is a genuinely usable calendar source, unlike the tournament
-  API. Not yet parsed into anything - needs the same care
-  `fetch_wta_upcoming.py` gives the WTA calendar (cache, don't poll, page
-  fully, refuse a truncated fetch).
+  dates, AND each calendar row already carries the draw-size breakdown
+  directly - e.g. Beijing's row reads "ATP 500 Hard - $4,089,385 -
+  32S/16Q/16D" (32 singles main draw, 16 qualifying spots, 16 doubles
+  teams). That single field solves most of item 3 below (the entry-rules
+  reference) for free - draw size per event is right there, no separate
+  lookup needed. Confirmed against the actual China Open row. This is a
+  genuinely usable calendar source, unlike the tournament API. Not yet
+  parsed into anything - needs the same care `fetch_wta_upcoming.py` gives
+  the WTA calendar (cache, don't poll, page fully, refuse a truncated
+  fetch). The calendar itself is split across ~13 month-by-month tables on
+  the page (`pd.read_html` finds them at indices 2-13 with `lxml`
+  installed), not one master table.
+- **Rankings**: the SAME page also carries a live "ATP rankings (singles)
+  as of 14 September 2026" table (top 20, `pd.read_html` index 19 on the
+  2026-09-15 snapshot) - current to ONE DAY before this session, not the
+  archive's stale-to-June `atp_rankings_current.csv`. Cross-checked against
+  Beijing's real seed list and it lines up exactly: seeds 1/2/5/6/7/9/12/15
+  match ranks 1/2/5/6/7/9/12/15 in this table. It also explains who's
+  missing: Alcaraz (#3), Shelton (#4), Fritz (#10) and Fils (#11) all rank
+  above several confirmed Beijing seeds but are NOT in Beijing's seed list -
+  real, deliberate absences (skips/withdrawals), not a data problem. Only
+  goes to 20 on this page; a fuller list (to cover a bigger draw's full
+  direct-acceptance count) would need the ranks-specific Wikipedia page or
+  another source, not checked yet.
 - **Field per tournament**: harder, and Wikipedia alone is NOT enough.
   Checked the 2026 China Open (Beijing) article directly (raw HTML, not a
   summarised fetch) as the test case:
