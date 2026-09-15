@@ -42,6 +42,7 @@ import json
 import math
 import subprocess
 import sys
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -60,12 +61,28 @@ REF = _common.DD / "reference"
 CACHE = _common.RAW / "wta_api"
 OUT_DEFAULT = _common.BLOG / "upcoming_predictions.parquet"
 PUBLIC_URL = "https://pub-ee4bf5b599a047f9ac2b9facc1587008.r2.dev/tennis/upcoming_predictions.parquet"
+# Separate from the US Open's own tennis/draw.json and tennis/pairwise.parquet
+# on purpose - those are rebuilt hourly by a live workflow reading ESPN, and
+# this script must never be able to touch that file's Slam-only "tournaments"
+# list. SAME schema as both (slots: [{slot, section, player_id, name, seed,
+# nation, entry}] and long-format {tournament_id, tour, round, player_id_a,
+# player_id_b, p_a_beats_b}) so a blog page can read either family with the
+# same rendering code, once one exists for this one.
+OUT_DRAW_DEFAULT = _common.BLOG / "upcoming_draw.json"
+PUBLIC_DRAW_URL = "https://pub-ee4bf5b599a047f9ac2b9facc1587008.r2.dev/tennis/upcoming_draw.json"
+OUT_PAIRWISE_DEFAULT = _common.BLOG / "upcoming_pairwise.parquet"
+PUBLIC_PAIRWISE_URL = "https://pub-ee4bf5b599a047f9ac2b9facc1587008.r2.dev/tennis/upcoming_pairwise.parquet"
 BYE = "BYE"
 TBD = "TBD"
 
 
 def log(m: str = "") -> None:
     print(m, flush=True)
+
+
+def _fetch_text(url: str) -> str:
+    with urllib.request.urlopen(url, timeout=15) as r:                 # noqa: S310
+        return r.read().decode("utf-8")
 
 
 # ------------------------------------------------------------------ inputs
@@ -234,6 +251,57 @@ def simulate_bracket(bracket: list[str], idx: dict[str, int], matrices: dict[str
     return reached
 
 
+def build_estimated_draw(bracket: list[str], names: dict[str, str], seed_map: dict[str, int],
+                         n_slots: int) -> list[dict]:
+    """One representative bracket (from a FIXED seed, so it is stable across
+    re-runs of this same field rather than a different draw every publish) in
+    the exact tennis/draw.json slot shape, so a page can eventually read
+    either family with the same rendering code.
+
+    This is NOT the real draw - the real one does not exist yet before the
+    seeding ceremony. player_id/name are BYE or TBD (this file's own
+    sentinels) where the bracket has no real entrant, matching how
+    simulate_bracket already treats those slots rather than inventing a
+    second convention for the same two states.
+
+    `section` follows the same "eighth of a 128-slot draw" convention the US
+    Open pages use, computed from slot position so it needs no separate
+    seeding-tier bookkeeping."""
+    n_per_section = max(1, n_slots // 8)
+    rows = []
+    for slot, u in enumerate(bracket):
+        section = slot // n_per_section + 1
+        if u in (BYE, TBD):
+            rows.append({"slot": slot, "section": section, "player_id": u,
+                        "name": u, "seed": None, "nation": None, "entry": None})
+        else:
+            rows.append({"slot": slot, "section": section, "player_id": u,
+                        "name": names.get(u, u), "seed": seed_map.get(u),
+                        "nation": None, "entry": None})
+    return rows
+
+
+def flatten_pairwise(matrices: dict[str, np.ndarray], field_uids: list[str],
+                     tour: str) -> pd.DataFrame:
+    """matrices[round] is an n x n antisymmetrised win-probability matrix over
+    field_uids, diagonal NaN. Long format, same shape as tennis/pairwise.parquet
+    (tour, round, player_id_a, player_id_b, p_a_beats_b), so it is a drop-in
+    for any reader of that file, not just this one's future page."""
+    n = len(field_uids)
+    ia, ib = np.meshgrid(np.arange(n), np.arange(n), indexing="ij")
+    mask = ia != ib
+    rows = []
+    for rnd, M in matrices.items():
+        rows.append(pd.DataFrame({
+            "tour": tour, "round": rnd,
+            "player_id_a": np.array(field_uids)[ia[mask]],
+            "player_id_b": np.array(field_uids)[ib[mask]],
+            "p_a_beats_b": M[mask],
+        }))
+    return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame(
+        columns=["tour", "round", "player_id_a", "player_id_b", "p_a_beats_b"])
+
+
 # ------------------------------------------------------------------ main
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -246,6 +314,8 @@ def main() -> None:
     ap.add_argument("--allow-partial", action="store_true",
                     help="write even if the field is incomplete or unseeded (tagged provisional)")
     ap.add_argument("--out", default=str(OUT_DEFAULT))
+    ap.add_argument("--out-draw", default=str(OUT_DRAW_DEFAULT))
+    ap.add_argument("--out-pairwise", default=str(OUT_PAIRWISE_DEFAULT))
     ap.add_argument("--no-merge", action="store_true", help="do not merge other events from the published table")
     args = ap.parse_args()
 
@@ -387,6 +457,54 @@ def main() -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     new.to_parquet(out, index=False)
     log(f"wrote {out} ({len(new):,} rows, {new['tournament_id'].nunique()} event(s))")
+
+    # Estimated draw: ONE representative bracket, from a seed fixed to this
+    # event (not args.sims' rng, which the caller may vary) so republishing
+    # the same field twice gives the same draw rather than a new random one
+    # each time.
+    draw_rng = np.random.default_rng(int(f"{args.year}{args.group}9") % (2**32))
+    draw_bracket = random_bracket_with_byes(field_uids, seed_map, n_slots, n_byes, draw_rng)
+    draw_entry = {
+        "tournament_id": tournament_id, "name": title, "year": args.year, "tour": tour,
+        "generated_at": updated_at,
+        "source": f"estimated - {source} field, seeding-consistent random bracket "
+                  f"(not the real draw, which does not exist yet)",
+        "slots": build_estimated_draw(draw_bracket, names, seed_map, n_slots),
+    }
+    draw_out = Path(args.out_draw)
+    draw_payload = {"tournaments": [draw_entry]}
+    if not args.no_merge:
+        try:
+            existing = json.loads(draw_out.read_text(encoding="utf-8")) if draw_out.exists() \
+                else json.loads(_fetch_text(PUBLIC_DRAW_URL))
+            # Fail closed on a malformed payload (mirrors the parquet merge
+            # below, which raises on a schema it does not recognise): a
+            # missing "tournaments" key must not silently become "zero other
+            # tournaments" and wipe every other published draw on write.
+            others = [t for t in existing["tournaments"] if t.get("tournament_id") != tournament_id]
+            draw_payload = {"tournaments": others + [draw_entry]}
+        except Exception as e:                                          # noqa: BLE001
+            log(f"no existing draw file to merge ({type(e).__name__}); writing this event alone")
+    draw_out.parent.mkdir(parents=True, exist_ok=True)
+    draw_out.write_text(json.dumps(draw_payload, indent=1), encoding="utf-8")
+    log(f"wrote {draw_out} ({len(draw_payload['tournaments'])} event(s))")
+
+    pairwise_new = flatten_pairwise(matrices, field_uids, tour)
+    pairwise_new.insert(0, "tournament_id", tournament_id)
+    pw_out = Path(args.out_pairwise)
+    pw_prev = None
+    if not args.no_merge:
+        try:
+            pw_prev = pd.read_parquet(pw_out) if pw_out.exists() else pd.read_parquet(PUBLIC_PAIRWISE_URL)
+        except Exception as e:                                          # noqa: BLE001
+            log(f"no existing pairwise table to merge ({type(e).__name__}); writing this event alone")
+    if pw_prev is not None and len(pw_prev):
+        pw_prev = pw_prev[pw_prev["tournament_id"] != tournament_id]
+        pairwise_new = pd.concat([pw_prev, pairwise_new], ignore_index=True)
+    pw_out.parent.mkdir(parents=True, exist_ok=True)
+    pairwise_new.to_parquet(pw_out, index=False)
+    log(f"wrote {pw_out} ({len(pairwise_new):,} rows, "
+        f"{pairwise_new['tournament_id'].nunique()} event(s))")
 
 
 if __name__ == "__main__":

@@ -107,6 +107,21 @@ construction to fill in what neither the API nor Wikipedia has yet.
     8-seed list - most likely a withdrawal or a deliberate skip, not a data
     error). **This is an irreducible gap, not a bug to fix** - a constructed
     field will sometimes include a player who isn't actually there.
+  - **Ran the validation the plan called for (step 2 below) and it FAILED,
+    which is exactly what a validation step is for.** A 10-week recency
+    filter on our own Elo, as of Beijing's 2026-09-30 start, drops Sinner
+    and Alcaraz from the top 20 entirely - their last recorded match in
+    OUR archive is 2026-07-12 and 2026-04-13 respectively, both outside the
+    window, despite both obviously being active top-ranked players. This is
+    NOT the retirement problem from the paragraph above; it's a real,
+    separate coverage gap in the tennismylife bridge for exactly the
+    players who matter most. **Conclusion: our own archive/Elo cannot be
+    the primary ranking source for field construction - it has demonstrated
+    gaps for the very players a constructed field most needs to get right.**
+    Wikipedia's live "ATP rankings as of [date]" table (found the same
+    night, see below) does not have this problem and should be the primary
+    source; Elo is at most a tie-breaker for players below wherever that
+    table stops (currently seen: top 20 only).
   - The fix is combining sources, not trusting one: known Wikipedia seeds
     and withdrawals are ground truth and override the constructed list;
     Elo (recency-filtered) fills the remaining draw slots as a best-effort
@@ -180,10 +195,16 @@ repo's own convention should probably be filed as its own scoped issue
 
 1. Parse the ATP calendar from Wikipedia (`2026 ATP Tour`) - cheap, no
    ambiguity, unblocks everything ATP.
-2. Build and validate the recency-filtered Elo-based field constructor on
-   Beijing ATP specifically, where Wikipedia's real 8 seeds are a ready-made
-   answer key (get the top-8-by-construction to plausibly match, within
-   reason, before trusting it past seed 8).
+2. ~~Build and validate the recency-filtered Elo-based field constructor.~~
+   **DONE, and it failed its own validation** (see above - Sinner and
+   Alcaraz missing from the top 20 entirely, a real bridge coverage gap,
+   not a tuning problem). **Revised: use Wikipedia's live rankings table as
+   the primary source instead of our archive/Elo.** It's already parsed
+   into a usable shape as of this session (top 20; confirm whether a fuller
+   list exists elsewhere before assuming 20 is the ceiling). Elo remains
+   useful for a tie-breaker below wherever that table stops, and for
+   ordering title/round PROBABILITY once the field is known - just not for
+   deciding who is IN the field.
 3. Write the entry-rules reference doc (item 3) - short, and needed before
    item 2's "top N" has a real N per tournament level.
 4. `simulate_atp_event.py` (or generalize `simulate_wta_event.py`) once 1-3
