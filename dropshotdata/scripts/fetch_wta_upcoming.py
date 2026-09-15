@@ -258,6 +258,18 @@ def main() -> int:
     if f.empty:
         log("  no singles entrants returned - the field may not be published yet")
         return 1
+    # Beijing 2026, live: 76 entryType "M" (main draw) + 42 "Q" (registered
+    # for the SEPARATE qualifying tournament, not a main-draw slot at all -
+    # none carry a seed, confirmed). The main-draw count (76) held steady
+    # across two fetches while the Q count appeared fresh; the qualifying
+    # field grows independently and must not inflate the 96-slot count this
+    # simulates - it produced a downstream "118 entrants for 96 slots"
+    # refusal that looked like a bug but was actually this filter missing.
+    n_before = len(f)
+    f = f[f["entry_type"] != "Q"].reset_index(drop=True)
+    if len(f) != n_before:
+        log(f"  excluded {n_before - len(f)} qualifying-tournament entrants "
+            f"(entryType Q) - not a main-draw slot")
     log(f"  {len(f)} singles entrants, {(f['seed'] != '').sum()} seeded")
 
     log("\n  resolving to archive ids...")
