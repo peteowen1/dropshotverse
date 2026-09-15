@@ -40,8 +40,13 @@ URL = "https://en.wikipedia.org/wiki/{year}_ATP_Tour"
 UA = ("dropshotverse/0.1 (non-commercial research; "
       "github.com/peteowen1/dropshotverse)")
 
-LEVEL_RE = re.compile(r"(United Cup|ATP Finals|Next Gen ATP Finals|Laver Cup|"
-                      r"Davis Cup|ATP 1000|ATP 500|ATP 250)")
+LEVEL_RE = re.compile(r"(Grand Slam|United Cup|ATP Finals|Next Gen ATP Finals|"
+                      r"Laver Cup|Davis Cup|ATP 1000|ATP 500|ATP 250)")
+# The page's own infobox states the total tournament count for the season
+# (65 for 2026). A parse landing anywhere else means a category went
+# missing the way Grand Slam did the first time this script ran - caught
+# then only because someone happened to grep the output for "wimbledon".
+TOTAL_RE = re.compile(r'"tournaments"\s*:\s*"(\d+)"')
 DRAW_RE = re.compile(r"(\d+)S/(\d+)Q(?:/(\d+)D)?")
 
 
@@ -119,6 +124,18 @@ def main() -> None:
     if df.empty:
         raise SystemExit("parsed 0 events - the page structure has likely changed; "
                          "do not write an empty calendar over a real one")
+
+    # Coverage, not just presence (stats-discipline): the page's own infobox
+    # states the season's total tournament count. A parse missing an entire
+    # LEVEL_RE category still writes a non-empty, plausible-looking file - it
+    # is not "0 events", it is 4 fewer, which is exactly how Grand Slam went
+    # missing the first time this script ran and nobody noticed until someone
+    # happened to grep the output for "wimbledon".
+    m = TOTAL_RE.search(html)
+    if m and len(df) != int(m.group(1)):
+        raise SystemExit(f"parsed {len(df)} events but the page's own infobox states "
+                         f"{m.group(1)} - a whole category is likely missing from "
+                         f"LEVEL_RE; refusing to write a silently incomplete calendar")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT, index=False)
