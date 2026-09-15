@@ -384,4 +384,24 @@ Consequences to hold onto:
   permanent one-match deficit for the rest of the draw, not something that
   "catches up" (differs from my first draft of the test, which assumed the
   latter). Not committed; PR #34 still open, recommended to close.
+- **D-54 (2026-09-15)** — Queue item 2 (verify per-year backfill coverage)
+  found the 2022-23 US Open backfill is NOT usable by `build_point_table.py`'s
+  current logic. Checked the raw feed directly rather than the parsed table:
+  `history.*.json` for 2022 and 2023 genuinely has no `P1SetsWon`/`P2SetsWon`
+  keys at all (confirmed on 1101 both years) - the tape schema itself changed,
+  it is not a capture bug. `build_point_table.py`'s A1 replay check compares
+  counted `SetWinner` rows against the running `P1SetsWon`/`P2SetsWon` total,
+  which is always "0" (missing key -> filled empty -> 0) for these years, so
+  almost every match fails A1: only 47/946 (2022) and 61/963 (2023) match
+  directories even parse, versus 568/899 (2024) and 632/944 (2025). Of the
+  handful that DO pass, it is only because they happen to have zero
+  `SetWinner` rows too - coincidence, not validation. 2024 and 2025 have the
+  field and pass cleanly (492 singles matches each, 100% column coverage).
+  **Net: only 2024-2026 (3 years) are usable as they stand, not the 5 the
+  shrink-factor work (D-42) wants.** Fixing 2022-23 would mean deriving sets
+  won from a different field (`SetTrack`, unexplored) or from `GameWinner`
+  transitions - the latter is the exact approach this file's own docstring
+  says already failed once (99/597 matches wrong) for an unrelated reason.
+  **Not attempted without Pete's steer** - this changes the validated A1
+  anchor, which has bitten this repo before. `tune_scratch/check_backfill_year_coverage.py`.
 

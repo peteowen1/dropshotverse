@@ -3,44 +3,28 @@
 > Living queue. Sessions update this when they finish work (rule in `C:\dev\CLAUDE.md`).
 > Decision log: [DECISIONS.md](DECISIONS.md) · Vault map: [HOME.md](HOME.md) ·
 > Rolled-off narrative: [backlog/](backlog/)
-> Last updated: **2026-09-07 evening.**
+> Last updated: **2026-09-15.**
 >
-> **FIRST ACTION IN THIS REPO - check the backfill finished.**
-> A four-year US Open point-tape backfill was left running detached on
-> 2026-09-07 (~6.5 hours, ~1.3 GB). It is orphaned from the session that
-> started it, so it survives a terminal close, but **nothing alarms if it
-> died** and nobody is watching it. Expect **~944 match folders per year**:
->
-> ```powershell
-> foreach ($y in 2022,2023,2024,2025) {
->   $p = "C:\dev\dropshotverse\dropshotdata\raw\usopen\$y\matches"
->   "{0}: {1}" -f $y, $(if (Test-Path $p) { (Get-ChildItem $p -Directory).Count } else { "MISSING" })
-> }
-> ```
->
-> Short or missing? It is **resumable** - `backfill_done.json` is saved every 25
-> matches and the re-run skips what is already captured:
->
-> ```
-> python dropshotdata/scripts/capture_usopen.py backfill --year <year>
-> ```
->
-> Run that from a WORKTREE, not the working tree: `capture_usopen.py` is what
-> the 5-minute scheduled task executes, so until 2026-09-16 an edit there is in
-> production within five minutes.
->
-> Once all four years are complete, the next real task is queued item 2 below -
-> verify per-year field coverage BEFORE anything uses the 2022-24 tapes. Feeds
-> change shape across years and that caught the 2026-09-07 session twice.
+> **FIRST ACTION IN THIS REPO — Pete's call needed on the 2022-23 backfill (D-54).**
+> The four-year backfill finished (all present), but 2022 and 2023 are not
+> usable as captured: the raw feed has no `P1SetsWon`/`P2SetsWon` field for
+> those years, so almost nothing parses (47/946 and 61/963 match dirs). 2024
+> and 2025 are clean. See queue item 2 below for the fix options.
 >
 > **Read first if you are cold:**
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
 >   [issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md).
-> - The live US Open projection publishes from the laptop task; GitHub
->   Actions is the armed backup, dispatched by the ITG Worker only when R2
->   goes stale (D-13, D-14). Nothing is waiting on Pete for it.
-> - `main` is real: PRs #8-#12 merged 2026-09-06, each reviewed.
+> - The US Open is OVER (final 2026-09-13). The laptop capture/live-sim tasks
+>   are DISABLED (2026-09-15) - the event no longer needs them. The Cloudflare
+>   Worker's GitHub Actions backup self-expires 2026-09-16T02:00Z.
+> - C vs D is OPEN again, not settled (D-51 reverses D-18) - see queue item 2
+>   under "Queued, ranked" above it in this file. Nothing published is
+>   affected either way; `--live-score` stays off.
+> - PR #34 is CLOSED, not merged (D-52) - superseded by code already on `dev`.
+>   Its surviving fatigue/bye piece was re-implemented fresh (D-53).
+> - `main` tracks `dev` via PR through #37; local `main` needs a `git fetch`
+>   if it looks stale (it is not behind on GitHub, just unfetched locally).
 
 ## Session handover — 2026-09-07
 
@@ -97,12 +81,20 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    PR #34 had. 8 anchors pass in `tune_scratch/test_w3_fatigue_bye.py`. Not
    yet committed. **PR #34 should still be closed without merging** - awaiting
    that action.
-2. **Verify per-year field coverage** on the backfilled 2022-24 tapes before
-   anything uses them (all four years present: 2022 946, 2023 963, 2024 899,
-   2025 944 match folders). Feeds change shape across years and that has
-   caught this session twice.
-3. **Re-estimate the shrink factors** on the full five-year sample, then settle
-   hier versus serve/return Elo (see below). Blocked on 2.
+2. ~~**Verify per-year field coverage** on the backfilled 2022-24 tapes.~~
+   **DONE 2026-09-15 (D-54) — 2022 and 2023 are NOT usable as they stand.**
+   The raw feed has no `P1SetsWon`/`P2SetsWon` field at all for those two
+   years (confirmed directly on the JSON, not inferred from the parsed
+   table), so `build_point_table.py`'s A1 replay check fails almost every
+   match: only 47/946 (2022) and 61/963 (2023) directories parse, against
+   568/899 (2024) and 632/944 (2025), both clean. **Awaiting Pete**: fix
+   2022-23 (derive sets won from `SetTrack` or from `GameWinner`
+   transitions - the latter already failed once for a different reason, see
+   `build_point_table.py`'s own docstring) or accept a 3-year sample.
+   `tune_scratch/check_backfill_year_coverage.py`.
+3. **Re-estimate the shrink factors** on the sample that's actually usable -
+   **3 years (2024-2026), not the 5 D-42 wanted**, unless Pete says to fix
+   2022-23 first. Blocked on Pete's call on item 2.
 4. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
    round evidence (5,971 points vs the original 7 matches): arm D now beats
    arm C. Not urgent - `--live-score` is off and nothing published is
