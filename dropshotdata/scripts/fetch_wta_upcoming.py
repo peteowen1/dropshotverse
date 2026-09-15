@@ -270,6 +270,17 @@ def main() -> int:
     if len(f) != n_before:
         log(f"  excluded {n_before - len(f)} qualifying-tournament entrants "
             f"(entryType Q) - not a main-draw slot")
+    if f.empty:
+        # The only earlier emptiness check ran before this filter, so a fetch
+        # that returns ONLY qualifying entrants (plausible: a qualifying list
+        # can publish before the main-draw acceptance list) would otherwise
+        # reach `cov = float(resolved.mean())` on an empty Series -> NaN, and
+        # `NaN < min_coverage` is False in Python, silently skipping the
+        # coverage refusal below and writing an empty entrants file as if it
+        # had succeeded.
+        log("  no main-draw (non-qualifying) entrants remain after the filter "
+            "- the main-draw acceptance list may not be published yet")
+        return 1
     log(f"  {len(f)} singles entrants, {(f['seed'] != '').sum()} seeded")
 
     log("\n  resolving to archive ids...")
