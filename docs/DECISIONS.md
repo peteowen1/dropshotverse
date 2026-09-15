@@ -440,4 +440,20 @@ Consequences to hold onto:
   this one** - it is a production-path data-quality gap (could mean
   qualifying-round points are misattributed to the wrong tour wherever
   `event.isin(["1","2"])` is trusted) and deserves separate investigation.
+- **D-57 (2026-09-15)** — Pete asked whether the crosswalk works for the top 20;
+  it didn't - `resolve_usopen_player_names.py`'s archive-wide match had real
+  collisions on top players, not just journeymen: Casper Ruud vs his father
+  Christian Ruud (ATP, 1980s-90s), Tommy Paul vs an unrelated Todd Paul, Ben
+  Shelton vs his father Bryan Shelton (also a former pro) - a name-only match
+  across 50+ years of archive can't tell them apart. Fixed in
+  `resolve_usopen_player_names_v2.py` by restricting candidates to players who
+  actually appear in THAT year's US Open (from the archive's own match rows) -
+  the retired namesakes were never in the 2022-2025 draws, so the ambiguity
+  disappears. Also normalized hyphens to spaces (tape "F. Auger-Aliassime" vs
+  archive "Felix Auger Aliassime"). Result: collisions 27+56 -> 0 across both
+  tours; overall main-draw resolution ~85% -> 92-99%; **all 159 top-20 seeds
+  across both tours, all 4 years, resolve cleanly (159/159)**. Remaining
+  misses are all outside the top 20 (Etcheverry, Galan, O'Connell,
+  Ramos-Vinolas, Schmiedlova, Ruse - hyphen/apostrophe/compound-name variants
+  not yet worth chasing further).
 
