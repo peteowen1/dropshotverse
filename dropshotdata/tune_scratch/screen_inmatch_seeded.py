@@ -89,7 +89,15 @@ def ece(p, y, bins: int = 10) -> float:
 def main() -> None:
     d = pd.read_parquet(PTS)
     d["best_of"] = np.where(d["event"] == "1", 5, 3)
-    tour_avg = d.groupby("event").apply(
+    # D-58: tour_avg for the SERVE_BASE drift check must be MAIN DRAW ONLY.
+    # 5-character match ids are qualifying/doubles/juniors (rescore_after_final.py's
+    # round_coverage() already knows this) and measurably contaminate the average -
+    # confirmed on real players, e.g. men's names under a "2" (women's) 5-char id.
+    # On the 2026 tape this moved the ATP figure 0.6109 -> 0.6276, a real 0.017 shift,
+    # not noise. The scoring below is unaffected (matches without a live-draw
+    # pre-match number are already skipped), only this drift check was contaminated.
+    main_draw = d[d["match_id"].astype(str).str.len() == 4]
+    tour_avg = main_draw.groupby("event").apply(
         lambda g: float((g["PointServer"] == g["PointWinner"]).mean()), include_groups=False)
     # The shipped path cannot recompute this - the runner has no point tape -
     # so it carries the same rates as a constant. Assert they still agree, or

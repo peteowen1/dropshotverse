@@ -83,7 +83,17 @@ def wp(p1: float, p2: float, s1: int, s2: int, g1: int, g2: int,
 
 def main() -> None:
     d = pd.read_parquet(PTS)
-    log(f"points: {len(d):,} across {d['match_id'].nunique():,} matches")
+    # D-56/D-57: 5-character match ids are qualifying/doubles/juniors, and
+    # `event = match_id[0]` is not reliable for them - confirmed men's names
+    # under a "2" (women's) 5-char id and vice versa. Unlike
+    # screen_inmatch_seeded.py, this script has no other gate (it scores every
+    # match with a MatchWinner, not just ones with a live-draw pre-match
+    # number), so without this filter a mistagged match gets the WRONG
+    # best_of and pollutes tour_avg for both arms.
+    n_all = d["match_id"].nunique()
+    d = d[d["match_id"].astype(str).str.len() == 4].copy()
+    log(f"points: {len(d):,} across {d['match_id'].nunique():,} main-draw matches "
+        f"({n_all - d['match_id'].nunique():,} qualifying/doubles/junior matches excluded)")
 
     # best_of by event: 1 = men's singles (5), 2 = women's singles (3)
     d["best_of"] = np.where(d["event"] == "1", 5, 3)

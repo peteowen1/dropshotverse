@@ -72,7 +72,13 @@ def load_field(entrants_path: str, tour: str) -> dict:
         entrants = json.load(f)
     field_uids, seed_map, names = [], {}, {}
     for e in entrants:
-        uid = e["uid"] or f"{tour}:NEW_{e['name'].replace(' ', '_')}"   # synthetic uid for the 1 truly-new player
+        # Same truthy-NaN footgun fixed 2026-09-15 in fetch_wta_upcoming.py/
+        # simulate_wta_event.py: `x or fallback` lets a pandas float NaN
+        # through (NaN is truthy). Not live here today - these entrants files
+        # come from Wikipedia draw parsing with real JSON null, never pandas
+        # NaN - but hardened defensively since the pattern already bit once.
+        raw_uid = e["uid"]
+        uid = raw_uid if isinstance(raw_uid, str) and raw_uid else f"{tour}:NEW_{e['name'].replace(' ', '_')}"
         field_uids.append(uid)
         names[uid] = e["name"]
         if e["seed"].isdigit():

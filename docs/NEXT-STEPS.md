@@ -3,44 +3,36 @@
 > Living queue. Sessions update this when they finish work (rule in `C:\dev\CLAUDE.md`).
 > Decision log: [DECISIONS.md](DECISIONS.md) · Vault map: [HOME.md](HOME.md) ·
 > Rolled-off narrative: [backlog/](backlog/)
-> Last updated: **2026-09-07 evening.**
+> Last updated: **2026-09-15.**
 >
-> **FIRST ACTION IN THIS REPO - check the backfill finished.**
-> A four-year US Open point-tape backfill was left running detached on
-> 2026-09-07 (~6.5 hours, ~1.3 GB). It is orphaned from the session that
-> started it, so it survives a terminal close, but **nothing alarms if it
-> died** and nobody is watching it. Expect **~944 match folders per year**:
+> **2022-23 backfill FIXED (D-55).** All 5 years (2022-2026) are now usable -
+> the shrink-factor re-estimate (queue item 3) is unblocked.
 >
-> ```powershell
-> foreach ($y in 2022,2023,2024,2025) {
->   $p = "C:\dev\dropshotverse\dropshotdata\raw\usopen\$y\matches"
->   "{0}: {1}" -f $y, $(if (Test-Path $p) { (Get-ChildItem $p -Directory).Count } else { "MISSING" })
-> }
-> ```
->
-> Short or missing? It is **resumable** - `backfill_done.json` is saved every 25
-> matches and the re-run skips what is already captured:
->
-> ```
-> python dropshotdata/scripts/capture_usopen.py backfill --year <year>
-> ```
->
-> Run that from a WORKTREE, not the working tree: `capture_usopen.py` is what
-> the 5-minute scheduled task executes, so until 2026-09-16 an edit there is in
-> production within five minutes.
->
-> Once all four years are complete, the next real task is queued item 2 below -
-> verify per-year field coverage BEFORE anything uses the 2022-24 tapes. Feeds
-> change shape across years and that caught the 2026-09-07 session twice.
+> **NEW DIRECTION (2026-09-15 evening): forecast every upcoming ATP/WTA
+> event, published on ITG, emulating the US Open sim page** (pre-match
+> bracket forecasts only, NOT the live in-match work - that's Slam-only
+> infrastructure and out of scope). Real work started tonight: Beijing WTA
+> dispatched (provisional, field still incomplete), a NaN-uid crash found
+> and fixed live in production. Full scope and the ATP field-construction
+> approach (Wikipedia + a recency-filtered Elo proxy, validated against
+> Beijing's real seed list) are in
+> [plans/all-events-forecast.md](plans/all-events-forecast.md) - read that
+> before picking this up, it is a multi-session project, not a queue item.
 >
 > **Read first if you are cold:**
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
 >   2026 forward test, no exploitable edge. Do not reopen it without new data —
 >   [issues/36](../.scratch/dropshot-tennis-engine/issues/36-forward-test-2026.md).
-> - The live US Open projection publishes from the laptop task; GitHub
->   Actions is the armed backup, dispatched by the ITG Worker only when R2
->   goes stale (D-13, D-14). Nothing is waiting on Pete for it.
-> - `main` is real: PRs #8-#12 merged 2026-09-06, each reviewed.
+> - The US Open is OVER (final 2026-09-13). The laptop capture/live-sim tasks
+>   are DISABLED (2026-09-15) - the event no longer needs them. The Cloudflare
+>   Worker's GitHub Actions backup self-expires 2026-09-16T02:00Z.
+> - C vs D is OPEN again, not settled (D-51 reverses D-18) - see queue item 2
+>   under "Queued, ranked" above it in this file. Nothing published is
+>   affected either way; `--live-score` stays off.
+> - PR #34 is CLOSED, not merged (D-52) - superseded by code already on `dev`.
+>   Its surviving fatigue/bye piece was re-implemented fresh (D-53).
+> - `main` tracks `dev` via PR through #37; local `main` needs a `git fetch`
+>   if it looks stale (it is not behind on GitHub, just unfetched locally).
 
 ## Session handover — 2026-09-07
 
@@ -80,15 +72,76 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
 
 **Queued, ranked:**
 
-1. **Merge [PR #34](https://github.com/peteowen1/dropshotverse/pull/34) after
-   the 09-14 re-score.** Round-aware layoff and fatigue, reviewed, CI green,
-   deliberately held: merging puts it in production within 30 minutes, and the
-   re-score should score the model that produced the published numbers.
-2. **Verify per-year field coverage** on the backfilled 2022-24 tapes before
-   anything uses them. Feeds change shape across years and that has caught this
-   session twice.
-3. **Re-estimate the shrink factors** on the full five-year sample, then settle
-   hier versus serve/return Elo (see below). Blocked on 2.
+1. **PR #34 is STALE, not mergeable — do not merge as-is (D-52).** Base is
+   `dev` (not `main`), and `dev` has diverged since 2026-09-07: it now shows
+   `CONFLICTING`. Worse, the D-46/D-47 `DSV_W3_LAYOFF_FIX` env-var mechanism
+   (shipped 2026-09-10, superseding this branch) already solves the layoff
+   half of what PR #34 does, by a different, incompatible mechanism - PR #34's
+   `round_aware`/`first_round`/`IN_EVENT_WEEKS` symbols don't exist in current
+   `dev` at all. What PR #34 still has that `dev` does NOT: the D-28
+   fatigue/bye fix (`fatigue_diff` is still hardcoded to 0.0 in
+   `xgb_bt_rating.py:429`, wrong for Beijing's 96-into-128 draw with byes).
+   ~~**Next action: re-implement just the fatigue/bye piece against current
+   `dev`.**~~ **DONE 2026-09-15 (D-53)**: `first_round` param on
+   `build_round_pred_matrices`, default `None` (every existing caller
+   untouched by construction, no `round_aware` flag needed this time), wired
+   through `simulate_wta_event.py` behind the same `n_seeds >= n_byes` guard
+   PR #34 had. 8 anchors pass in `tune_scratch/test_w3_fatigue_bye.py`. Not
+   yet committed. **PR #34 should still be closed without merging** - awaiting
+   that action.
+2. ~~**Verify per-year field coverage** on the backfilled 2022-24 tapes.~~
+   **DONE (D-54): found 2022-23 unusable as captured** (no `P1SetsWon`/
+   `P2SetsWon` field). ~~Pete's call: build the fix.~~ **DONE 2026-09-15
+   (D-55).** Not the approach that failed once before (SetWinner is a
+   tape-provided field here, not derived from GameWinner replay) - checked
+   it against `P1GamesWon`/`P2GamesWon` instead of the missing running total.
+   733/946 (2022) and 754/963 (2023) directories now pass with zero anchor
+   failures, 512/514 singles matches recovered. `usopen_2022_points.parquet`
+   / `usopen_2023_points.parquet` written (gitignored; regenerate via
+   `tune_scratch/build_point_table_legacy_years.py`).
+3. **Shrink factors / hier vs serve-return Elo: DEPARTED, Pete's call
+   2026-09-15 - not important right now.** Real progress made first: a
+   player-identity crosswalk for the 2022-25 tapes (D-55/D-56/D-59, now
+   100% clean on all 159 top-20 seeds across both tours and 4 years) and a
+   first real hier-vs-actual comparison (`tune_scratch/hier_vs_actual_serve_examples.py`,
+   712 matches) that flipped the direction of the question - hier reads
+   UNDER-dispersed (ratio 0.831) on this sample, not over-dispersed the way
+   D-40/41/42 assumed, though still inside the same wide, unstable range
+   those gave (0.78-2.40). Pick up fresh when this becomes a priority again;
+   don't restart the crosswalk work, it's done and committed.
+4. **`event = match_id[0]` mistags qualifying-round (5-digit) matches by
+   tour (D-56).** Confirmed on real players - ATP men under `event="2"` ids
+   (`21109`), WTA women under `event="1"` ids (`12113`). 4-digit main-draw
+   ids are fine. ~~Needs its own investigation: does anything downstream
+   trust `event.isin(["1","2"])` for a 5-digit id today.~~ **DONE (D-57):
+   yes, real damage found and fixed.** `SERVE_BASE`'s drift check
+   (`screen_inmatch_seeded.py`) computed tour_avg over all 688 matches
+   instead of the 254 main-draw ones - moved the ATP figure 0.611 -> 0.628,
+   a real 0.017 shift. Fixed both `SERVE_BASE` and the drift check to
+   main-draw-only. Re-ran the rescore: **C vs D is unchanged** (the seeding
+   solve only uses `SERVE_BASE` as a symmetric centre), so D-51's
+   conclusion stands. The C/D scoring itself was never contaminated - it
+   already skips matches with no live-draw pre-match number. ~~Still open:
+   audit every reader of `usopen_2026_points.parquet`.~~ **DONE.** One more
+   had it - `inmatch_wp_calibration.py` (ticket 09's original arm A/B work,
+   not on the active decision path, and with no protective gate at all) -
+   fixed the same way (254 main-draw matches, 434 excluded).
+   `screen_inmatch_recalibrated.py` was never at risk (reads
+   `screen_inmatch_seeded.py`'s already-filtered output. ~~Root cause still
+   open: `build_point_table.py` doesn't distinguish main-draw from
+   qualifying/doubles when writing the tape.~~ **DONE (D-58): fixed at the
+   source.** `build_point_table.py` and
+   `tune_scratch/build_point_table_legacy_years.py` now filter to
+   4-character match ids before writing; all 5 years regenerated (2022
+   46,678 pts/252 matches, 2023 44,939/253, 2024 44,783/253, 2025 45,037/248,
+   2026 47,431/254). Re-ran the full rescore end to end - numbers match the
+   pre-fix run exactly, confirming this was a true no-op for every current
+   consumer. **D-56 is fully closed**, nothing left queued on it.
+5. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
+   round evidence (5,971 points vs the original 7 matches): arm D now beats
+   arm C. Not urgent - `--live-score` is off and nothing published is
+   affected - but do not cite D-18 as settled until this is re-run on a full
+   season rather than one event's late rounds.
 
 **Undecided, and why — the serve/return rating.** Branch
 `feat/serve-return-ratings`, NOT merged, research-grade.
