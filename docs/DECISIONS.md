@@ -470,7 +470,20 @@ Consequences to hold onto:
   risk. `build_point_table.py` itself still writes qualifying/doubles rows
   into the tape undifferentiated - that is the root cause, not fixed, but
   every current consumer now filters around it consistently.
-- **D-58 (2026-09-15)** — Pete asked whether the crosswalk works for the top 20;
+- **D-58 (2026-09-15)** — Root cause fixed. `build_point_table.py` and
+  `tune_scratch/build_point_table_legacy_years.py` now filter to 4-character
+  (main-draw) match ids before writing, so `usopen_<year>_points.parquet`
+  ships pre-filtered and a future script doesn't need to know the D-56/D-57
+  gotcha to avoid it. Regenerated all 5 years: 2022 46,678 pts/252 matches,
+  2023 44,939/253, 2024 44,783/253, 2025 45,037/248, 2026 47,431/254 - each
+  within 0-2 of the expected 254 (127+127), the small shortfall being
+  ordinary retirement/no-real-points attrition already excluded upstream.
+  Re-ran the full rescore end to end: numbers match the pre-fix run exactly
+  (C late rounds ECE 0.1014/LL 0.55213, D 0.0950/0.54376) and
+  `inmatch_wp_calibration.py` now reports "0 qualifying/doubles/junior
+  matches excluded" - confirms this was a true no-op for every current
+  consumer, purely closing the gap for whoever reads the file next.
+- **D-59 (2026-09-15)** — Pete asked whether the crosswalk works for the top 20;
   it didn't - `resolve_usopen_player_names.py`'s archive-wide match had real
   collisions on top players, not just journeymen: Casper Ruud vs his father
   Christian Ruud (ATP, 1980s-90s), Tommy Paul vs an unrelated Todd Paul, Ben

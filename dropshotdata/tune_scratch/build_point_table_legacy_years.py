@@ -130,6 +130,12 @@ def main() -> None:
 
         d_singles = d[d["event"].isin(["1", "2"])].copy()
         log(f"  singles filter: {d_singles['match_id'].nunique():,} of {n_all:,} kept (events 1/2)")
+        # D-56/D-57: consistent with build_point_table.py - `event` only
+        # reliably means the right tour for 4-character (main-draw) ids.
+        n_singles = d_singles["match_id"].nunique()
+        d_singles = d_singles[d_singles["match_id"].astype(str).str.len() == 4].copy()
+        log(f"  main-draw filter: {d_singles['match_id'].nunique():,} of {n_singles:,} kept "
+            f"(4-character ids only)")
         d_singles["point_no"] = d_singles["PointNumber"].astype(int)
         d_singles = d_singles.sort_values(["match_id", "point_no"]).reset_index(drop=True)
 

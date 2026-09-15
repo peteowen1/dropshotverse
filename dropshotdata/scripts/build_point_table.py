@@ -172,6 +172,18 @@ def main() -> None:
     d = d[d["event"].isin(["1", "2"])].copy()
     log(f"  singles filter: {d['match_id'].nunique():,} of {n_all:,} parsed "
         f"matches kept (events 1/2); doubles excluded, see note in source")
+    # D-56/D-57: `event = match_id[0]` only reliably means "1=men's singles,
+    # 2=women's singles" for 4-CHARACTER (main-draw) ids. 5-character ids are
+    # qualifying/doubles/juniors and do NOT follow it - confirmed real men's
+    # names under a "2" (women's) 5-char id and vice versa, via the point
+    # tape's own Sentence field. Every current downstream reader has learned
+    # to filter this out itself (screen_inmatch_seeded.py, rescore_after_final.py,
+    # inmatch_wp_calibration.py); dropping it here instead means a NEW script
+    # reading this file doesn't have to know the gotcha to avoid it.
+    n_singles = d["match_id"].nunique()
+    d = d[d["match_id"].astype(str).str.len() == 4].copy()
+    log(f"  main-draw filter: {d['match_id'].nunique():,} of {n_singles:,} kept "
+        f"(4-character ids only); qualifying/doubles/juniors excluded")
     d["point_no"] = d["PointNumber"].astype(int)
     d = d.sort_values(["match_id", "point_no"]).reset_index(drop=True)
 

@@ -90,7 +90,7 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    `tune_scratch/build_point_table_legacy_years.py`).
 3. **Shrink factors / hier vs serve-return Elo: DEPARTED, Pete's call
    2026-09-15 - not important right now.** Real progress made first: a
-   player-identity crosswalk for the 2022-25 tapes (D-55/D-56/D-58, now
+   player-identity crosswalk for the 2022-25 tapes (D-55/D-56/D-59, now
    100% clean on all 159 top-20 seeds across both tours and 4 years) and a
    first real hier-vs-actual comparison (`tune_scratch/hier_vs_actual_serve_examples.py`,
    712 matches) that flipped the direction of the question - hier reads
@@ -116,11 +116,16 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    not on the active decision path, and with no protective gate at all) -
    fixed the same way (254 main-draw matches, 434 excluded).
    `screen_inmatch_recalibrated.py` was never at risk (reads
-   `screen_inmatch_seeded.py`'s already-filtered output). **Root cause still
-   open**: `build_point_table.py` itself doesn't distinguish main-draw from
-   qualifying/doubles when writing the tape - every CURRENT consumer now
-   filters around it, but a new script reading the raw parquet would repeat
-   this bug unless it knows to filter on `match_id` length itself.
+   `screen_inmatch_seeded.py`'s already-filtered output. ~~Root cause still
+   open: `build_point_table.py` doesn't distinguish main-draw from
+   qualifying/doubles when writing the tape.~~ **DONE (D-58): fixed at the
+   source.** `build_point_table.py` and
+   `tune_scratch/build_point_table_legacy_years.py` now filter to
+   4-character match ids before writing; all 5 years regenerated (2022
+   46,678 pts/252 matches, 2023 44,939/253, 2024 44,783/253, 2025 45,037/248,
+   2026 47,431/254). Re-ran the full rescore end to end - numbers match the
+   pre-fix run exactly, confirming this was a true no-op for every current
+   consumer. **D-56 is fully closed**, nothing left queued on it.
 5. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
    round evidence (5,971 points vs the original 7 matches): arm D now beats
    arm C. Not urgent - `--live-score` is off and nothing published is
