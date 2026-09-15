@@ -109,7 +109,7 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Upload upcoming_predictions.parquet to R2
+      - name: Upload upcoming forecast files to R2
         if: ${{ !inputs.dry_run }}
         shell: bash
         env:
@@ -120,8 +120,16 @@ jobs:
             echo "::error::Cloudflare secrets not set"; exit 1
           fi
           npm install -g wrangler
-          for attempt in 1 2 3; do
-            wrangler r2 object put inthegame-data/tennis/upcoming_predictions.parquet --file dropshotdata/blog/upcoming_predictions.parquet --cache-control "public, max-age=300" --remote && break
-            echo "::warning::upload attempt $attempt failed"; sleep $(( 2 ** attempt ))
-            [ $attempt -eq 3 ] && exit 1
+          # Three files now, not one: upcoming_draw.json and
+          # upcoming_pairwise.parquet (2026-09-15) are the estimated bracket
+          # and per-round pairwise matrix a blog page needs to render more
+          # than a stats table, same shape as the US Open's own draw.json/
+          # pairwise.parquet. Each upload retries independently so one
+          # transient failure does not block the other two files.
+          for f in upcoming_predictions.parquet upcoming_draw.json upcoming_pairwise.parquet; do
+            for attempt in 1 2 3; do
+              wrangler r2 object put "inthegame-data/tennis/$f" --file "dropshotdata/blog/$f" --cache-control "public, max-age=300" --remote && break
+              echo "::warning::upload attempt $attempt for $f failed"; sleep $(( 2 ** attempt ))
+              [ $attempt -eq 3 ] && exit 1
+            done
           done
