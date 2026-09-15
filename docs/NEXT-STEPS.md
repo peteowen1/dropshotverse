@@ -11,11 +11,22 @@
 > **NEW DIRECTION (2026-09-15 evening): forecast every upcoming ATP/WTA
 > event, published on ITG, emulating the US Open sim page** (pre-match
 > bracket forecasts only, NOT the live in-match work - that's Slam-only
-> infrastructure and out of scope). Real work started tonight: Beijing WTA
-> dispatched (provisional, field still incomplete), a NaN-uid crash found
-> and fixed live in production. Full scope and the ATP field-construction
-> approach (Wikipedia + a recency-filtered Elo proxy, validated against
-> Beijing's real seed list) are in
+> infrastructure and out of scope). **Live now**: Beijing WTA is published
+> and rendering at inthegame.blog/tennis/upcoming (provisional - field still
+> 76/96, 0 seeds). Two real production bugs found and fixed live during
+> dispatch (a NaN-uid crash, and qualifying-tournament entrants inflating
+> the main-draw count past its slot limit). A generic multi-event ITG page
+> shipped (`inthegame-blog` PR #694) - a new event needs no new page, just
+> another `tournament_id` in the data files this reads.
+>
+> **ATP is still blocked on a per-tournament field/entry list** - the
+> calendar (61 events, full season) and a validated deep ranking source
+> (150 ranks, `tennisexplorer.com`) are both solved, but nothing found
+> gives who actually entered a SPECIFIC tournament (Wikipedia only
+> sometimes has 8 seeds; the official site is Cloudflare-blocked; a
+> third-party "entry list" site failed a plausibility check). **Next real
+> step is the entry-rules reference** (plan item 3) - not started. Full
+> detail, every source tried and why it failed:
 > [plans/all-events-forecast.md](plans/all-events-forecast.md) - read that
 > before picking this up, it is a multi-session project, not a queue item.
 >
@@ -62,11 +73,16 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
   `rescore_after_final.cmd`, settling arm C against arm D on real late rounds.
   Log: `dropshotdata/raw/usopen/rescore.log`.
 - **2026-09-16 12:00** — the 5-minute capture and 30-minute live sim tasks stop.
-- **~2026-09-23** — dispatch `event-forecast.yml` group `1020` for Beijing once
-  the field shows 96 entrants and 32 seeds. **Dispatch with `--ref` matching
-  where the code lives**; `gh workflow run` defaults to the default branch,
-  which cost two confusing failures. Related and worth knowing generally: a
-  `schedule:` trigger only ever fires from the DEFAULT branch, so a cron
+- ~~**~2026-09-23** — dispatch `event-forecast.yml` group `1020` for Beijing
+  once the field shows 96 entrants and 32 seeds.~~ **SUPERSEDED 2026-09-15**:
+  Pete's call was to dispatch provisional NOW rather than wait - done, and
+  it's live and rendering on ITG (see the top banner). The field is still
+  76/96, 0 seeds at time of dispatch; re-dispatch nearer 09-30 once it
+  completes to move `source` from `provisional` to `locked`. **Dispatch with
+  `--ref` matching where the code lives**; `gh workflow run` defaults to the
+  default branch, which cost two confusing failures. Related and worth
+  knowing generally: a `schedule:` trigger only ever fires from the DEFAULT
+  branch, so a cron
   workflow sitting on `dev` does nothing at all - that is why the tennismylife
   archive had to reach `main` to work, not merely to be tidy.
 
@@ -86,9 +102,9 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    `build_round_pred_matrices`, default `None` (every existing caller
    untouched by construction, no `round_aware` flag needed this time), wired
    through `simulate_wta_event.py` behind the same `n_seeds >= n_byes` guard
-   PR #34 had. 8 anchors pass in `tune_scratch/test_w3_fatigue_bye.py`. Not
-   yet committed. **PR #34 should still be closed without merging** - awaiting
-   that action.
+   PR #34 had. 8 anchors pass in `tune_scratch/test_w3_fatigue_bye.py`.
+   Committed and merged to `main` (PR #38). **PR #34 closed without
+   merging** the same session.
 2. ~~**Verify per-year field coverage** on the backfilled 2022-24 tapes.~~
    **DONE (D-54): found 2022-23 unusable as captured** (no `P1SetsWon`/
    `P2SetsWon` field). ~~Pete's call: build the fix.~~ **DONE 2026-09-15
