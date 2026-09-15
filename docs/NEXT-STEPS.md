@@ -90,7 +90,15 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    `tune_scratch/build_point_table_legacy_years.py`).
 3. **Re-estimate the shrink factors on the full 5-year sample (2022-2026) -
    unblocked.** Then settle hier versus serve/return Elo (see below).
-4. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
+4. **NEW (D-56): `event = match_id[0]` mistags qualifying-round (5-digit)
+   matches by tour.** Confirmed on real players - ATP men under `event="2"`
+   ids (`21109`), WTA women under `event="1"` ids (`12113`). 4-digit
+   main-draw ids are fine. This is in the LIVE 2026 pipeline
+   (`build_point_table.py`), not just the backfill - its own A1 failure list
+   has a 5-digit id already. Needs its own investigation: does anything
+   downstream trust `event.isin(["1","2"])` for a 5-digit id today, and if
+   so are qualifying-round points silently going to the wrong tour's model.
+5. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
    round evidence (5,971 points vs the original 7 matches): arm D now beats
    arm C. Not urgent - `--live-score` is off and nothing published is
    affected - but do not cite D-18 as settled until this is re-run on a full

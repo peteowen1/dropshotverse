@@ -425,4 +425,19 @@ Consequences to hold onto:
   `tune_scratch/build_point_table_legacy_years.py`). **All 5 backfill years
   (2022-2026) are now usable; queue item 3 (shrink-factor re-estimate) is
   unblocked.**
+- **D-56 (2026-09-15)** — Found while building a player-identity crosswalk for
+  the shrink-factor comparison (D-55 follow-up), NOT specific to the backfill:
+  the shared `event = match_id[0]` convention (`build_point_table.py` and
+  every year built the same way) only reliably means "1=men's singles,
+  2=women's singles" for 4-DIGIT (main-draw) match ids. 5-digit ids
+  (qualifying rounds) do not follow it - confirmed concretely: ATP men (B.
+  Nakashima, A. Michelsen, N. Basavareddy) appear under `event="2"` ids like
+  `21109`, and WTA women (L. Noskova) appear under `event="1"` ids like
+  `12113`. This affects the LIVE 2026 pipeline too, not just the backfill -
+  the 2026 rescore log's own A1 failure list includes a 5-digit id (`12111`).
+  Worked around here by excluding 5-digit ids from the crosswalk rather than
+  fixing the convention. **Filed as its own NEXT-STEPS item, not folded into
+  this one** - it is a production-path data-quality gap (could mean
+  qualifying-round points are misattributed to the wrong tour wherever
+  `event.isin(["1","2"])` is trusted) and deserves separate investigation.
 
