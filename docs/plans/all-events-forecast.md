@@ -81,6 +81,34 @@ server-rendered Sitecore). Tonight's research found a real path instead:
     of which tour.
   - So Wikipedia alone gives: a reliable calendar, SOMETIMES a seed list,
     and a withdrawals list. It does not reliably give a full field.
+  - **Tested whether proximity to the event fixes this - it doesn't.**
+    Checked Chengdu (ATP 250, 6 days out as of this check): still only 8
+    seeds, no full field, same pattern as Beijing at 2 weeks out. A second
+    table on the same page (4 rows, presumably qualifying seeds) was the
+    same `[[|]]` blank-template pattern the WTA seeds table showed for
+    Beijing. Being close to the event does not reliably mean Wikipedia has
+    filled in the rest.
+  - **The official ATP site is genuinely blocked, not just undocumented.**
+    `atptour.com`'s tournament overview page itself returns 200 but is a
+    client-side-rendered shell with zero player data server-side (confirmed
+    by grepping the raw HTML for real player names - none present). It does
+    reference a real API gateway (`app.atptour.com/api/v2/gateway`), but
+    that endpoint returns Cloudflare's bot-challenge page (403, "Just a
+    moment..."), not data. Not attempted further - bypassing an anti-bot
+    challenge is out of scope, not just hard.
+  - **A third-party "entry list" site (found via search, not otherwise
+    named here) failed a basic plausibility check and should not be used.**
+    Its claimed Chengdu 2026 top seed did not match ANY of the 8 real,
+    Wikipedia-verified seeds at all, strongly suggesting it was serving a
+    stale (likely 2025) snapshot under a year-agnostic URL. Contradicting a
+    verified primary source is disqualifying - this was not chased further,
+    and no other unverified third-party site should be trusted without the
+    same cross-check against Wikipedia's confirmed seeds first.
+  - **Net: the per-tournament full-field problem is still open.** Nothing
+    tried tonight solves it. The field-construction approach in item 2
+    below (rank-based, from a reliable ranking source, cross-checked
+    against whatever partial seed/withdrawal data Wikipedia has) remains
+    the only viable path, not a full entry list from any source found so far.
 
 ### 2. A field-CONSTRUCTION method for the gap Wikipedia leaves
 
