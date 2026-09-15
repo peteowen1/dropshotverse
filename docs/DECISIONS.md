@@ -404,4 +404,25 @@ Consequences to hold onto:
   says already failed once (99/597 matches wrong) for an unrelated reason.
   **Not attempted without Pete's steer** - this changes the validated A1
   anchor, which has bitten this repo before. `tune_scratch/check_backfill_year_coverage.py`.
+- **D-55 (2026-09-15)** — Pete's call on D-54: build the fix. It is NOT the
+  approach that already failed once (that derived SetWinner itself from
+  GameWinner replay). SetWinner is already a tape-provided field, 100%
+  populated in 2022-23 same as every other year - only the RUNNING TOTAL A1
+  checks it against is missing. Replaced that check with an independent one
+  using columns that ARE present: every point where SetWinner fires must show
+  a legal completed-set game score (`P1GamesWon`/`P2GamesWon`, e.g. 6-4 or
+  7-6), and the match's final tally must respect best-of (no player credited
+  with a 3rd/2nd set once already beaten). Result: 733/946 (2022) and 754/963
+  (2023) match directories now pass with ZERO anchor failures, 512 and 514
+  singles matches recovered - comparable to 2024's 492 and 2025's 492, not
+  the 47/61 the missing-field check left. A3 passes cleanly on both (60.3%,
+  59.8%). Sanity-checked the derived set-tally distribution before trusting
+  it: every value is a legal tennis outcome for a best-of-3 or best-of-5
+  mix (2-0/2-1/0-2/1-2 for women's, 3-0/3-1/3-2 and reverses for men's, plus
+  plausible retirement tallies like 1-0/0-0), no player ever shown beating
+  their own win threshold twice. Wrote `usopen_2022_points.parquet` and
+  `usopen_2023_points.parquet` (gitignored, regenerate via
+  `tune_scratch/build_point_table_legacy_years.py`). **All 5 backfill years
+  (2022-2026) are now usable; queue item 3 (shrink-factor re-estimate) is
+  unblocked.**
 

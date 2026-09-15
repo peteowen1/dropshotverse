@@ -5,11 +5,8 @@
 > Rolled-off narrative: [backlog/](backlog/)
 > Last updated: **2026-09-15.**
 >
-> **FIRST ACTION IN THIS REPO — Pete's call needed on the 2022-23 backfill (D-54).**
-> The four-year backfill finished (all present), but 2022 and 2023 are not
-> usable as captured: the raw feed has no `P1SetsWon`/`P2SetsWon` field for
-> those years, so almost nothing parses (47/946 and 61/963 match dirs). 2024
-> and 2025 are clean. See queue item 2 below for the fix options.
+> **2022-23 backfill FIXED (D-55).** All 5 years (2022-2026) are now usable -
+> the shrink-factor re-estimate (queue item 3) is unblocked.
 >
 > **Read first if you are cold:**
 > - The market question is CLOSED (D-5, D-6, D-10). Fourteen rounds, a clean
@@ -82,19 +79,17 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    yet committed. **PR #34 should still be closed without merging** - awaiting
    that action.
 2. ~~**Verify per-year field coverage** on the backfilled 2022-24 tapes.~~
-   **DONE 2026-09-15 (D-54) — 2022 and 2023 are NOT usable as they stand.**
-   The raw feed has no `P1SetsWon`/`P2SetsWon` field at all for those two
-   years (confirmed directly on the JSON, not inferred from the parsed
-   table), so `build_point_table.py`'s A1 replay check fails almost every
-   match: only 47/946 (2022) and 61/963 (2023) directories parse, against
-   568/899 (2024) and 632/944 (2025), both clean. **Awaiting Pete**: fix
-   2022-23 (derive sets won from `SetTrack` or from `GameWinner`
-   transitions - the latter already failed once for a different reason, see
-   `build_point_table.py`'s own docstring) or accept a 3-year sample.
-   `tune_scratch/check_backfill_year_coverage.py`.
-3. **Re-estimate the shrink factors** on the sample that's actually usable -
-   **3 years (2024-2026), not the 5 D-42 wanted**, unless Pete says to fix
-   2022-23 first. Blocked on Pete's call on item 2.
+   **DONE (D-54): found 2022-23 unusable as captured** (no `P1SetsWon`/
+   `P2SetsWon` field). ~~Pete's call: build the fix.~~ **DONE 2026-09-15
+   (D-55).** Not the approach that failed once before (SetWinner is a
+   tape-provided field here, not derived from GameWinner replay) - checked
+   it against `P1GamesWon`/`P2GamesWon` instead of the missing running total.
+   733/946 (2022) and 754/963 (2023) directories now pass with zero anchor
+   failures, 512/514 singles matches recovered. `usopen_2022_points.parquet`
+   / `usopen_2023_points.parquet` written (gitignored; regenerate via
+   `tune_scratch/build_point_table_legacy_years.py`).
+3. **Re-estimate the shrink factors on the full 5-year sample (2022-2026) -
+   unblocked.** Then settle hier versus serve/return Elo (see below).
 4. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
    round evidence (5,971 points vs the original 7 matches): arm D now beats
    arm C. Not urgent - `--live-score` is off and nothing published is
