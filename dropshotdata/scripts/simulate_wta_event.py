@@ -125,8 +125,14 @@ def build_field(entrants: list[dict], tour: str) -> dict:
     uids, names, seed_map = [], {}, {}
     synthetic = []
     for e in entrants:
-        uid = e.get("uid") or f"{tour}:NEW_{e['name'].replace(' ', '_')}"
-        if not e.get("uid"):
+        raw_uid = e.get("uid")
+        # A non-string uid (float NaN from an old entrants file predating the
+        # fetch_wta_upcoming.py fix, or any other bad value) must be treated
+        # as missing, not kept - `raw_uid or fallback` alone lets NaN through
+        # (it's truthy), mixing float and str and crashing the uid sort below.
+        has_real_uid = isinstance(raw_uid, str) and raw_uid
+        uid = raw_uid if has_real_uid else f"{tour}:NEW_{e['name'].replace(' ', '_')}"
+        if not has_real_uid:
             synthetic.append(e["name"])
         uids.append(uid)
         names[uid] = e["name"]

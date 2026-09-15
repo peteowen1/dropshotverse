@@ -291,8 +291,12 @@ def main() -> int:
         return 1
 
     out = REF / f"wta_{args.fetch}_{args.year}_entrants.json"
+    # An unresolved uid is pandas float NaN here, not None or "" - json.dumps
+    # writes that as a bare, unquoted NaN token, and a reader that only checks
+    # `uid or fallback` (NaN is truthy) keeps it, mixing float and str in a
+    # sort and crashing. Write real JSON null instead.
     payload = [dict(section=0, slot=0, seed=r.seed, country=r.country,
-                    name=r.name, uid=r.uid)
+                    name=r.name, uid=(r.uid if isinstance(r.uid, str) else None))
                for r in f.itertuples()]
     out.write_text(json.dumps(payload, indent=1, ensure_ascii=False),
                    encoding="utf-8")
