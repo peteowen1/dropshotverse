@@ -440,7 +440,26 @@ Consequences to hold onto:
   this one** - it is a production-path data-quality gap (could mean
   qualifying-round points are misattributed to the wrong tour wherever
   `event.isin(["1","2"])` is trusted) and deserves separate investigation.
-- **D-57 (2026-09-15)** — Pete asked whether the crosswalk works for the top 20;
+- **D-57 (2026-09-15)** — While checking D-56 for real damage: the live 2026
+  tape's tour_avg (used both for D-51's `SERVE_BASE` and its own drift check
+  in `screen_inmatch_seeded.py`) was computed over ALL 688 matches, not the
+  254 main-draw ones. 5-character match ids (qualifying/doubles/juniors,
+  `rescore_after_final.py`'s `round_coverage()` already knew this) are real
+  contamination, not just a weaker-player population: confirmed men's names
+  under a "2" (women's) 5-char id and vice versa. Sized on the live tape:
+  ATP main-draw-only serve rate is 0.627564 vs the blended 0.610918 D-51
+  used - a real 0.017 shift, ATP was clean the day of; WTA barely moves
+  (0.578741 vs 0.575873). Fixed both `SERVE_BASE` and the drift check to use
+  main-draw-only (`match_id` length 4) points, consistently. **Re-ran the
+  rescore: C vs D is UNCHANGED** (late rounds: C ECE 0.1014/LL 0.55213, D ECE
+  0.0950/LL 0.54376, both within noise of D-51's numbers) - the seeding solve
+  only uses `SERVE_BASE` as a symmetric centre, so a pairwise comparison is
+  insensitive to it. D-51's conclusion (C vs D reopened, not settled) stands.
+  The actual C/D scoring itself was never contaminated - it already only
+  scores matches with a live-draw pre-match number, which qualifying/doubles
+  never have. Only the drift-check constant was off. `docs/DECISIONS.md`
+  entries reference the corrected constant from here on.
+- **D-58 (2026-09-15)** — Pete asked whether the crosswalk works for the top 20;
   it didn't - `resolve_usopen_player_names.py`'s archive-wide match had real
   collisions on top players, not just journeymen: Casper Ruud vs his father
   Christian Ruud (ATP, 1980s-90s), Tommy Paul vs an unrelated Todd Paul, Ben
