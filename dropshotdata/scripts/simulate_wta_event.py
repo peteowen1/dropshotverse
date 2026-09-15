@@ -287,8 +287,27 @@ def main() -> None:
     snap = snaps.get(key, {})
     h2h = build_h2h_dict(set(field_uids))
     ptab = build_player_table(field_uids, tour, date0, surface, snap, playstyle_full, age_table)
+    # D-28: seeds 1..n_byes sit opposite a bye, matching the anchor at the
+    # bottom of this file (a seeded player with a bye must hold p_r64 == 1),
+    # so this reuses that rule rather than inventing a second one. Below
+    # n_seeds >= n_byes (the --allow-partial path, exactly today's Beijing
+    # field of 76/96 entrants and 0 seeds) random_bracket_with_byes hands the
+    # leftover byes to random free slots and redraws them every simulation,
+    # so no fixed uid->round mapping can describe the draw - model no byes
+    # rather than naming recipients the bracket will not actually use.
+    if n_byes and n_seeds >= n_byes:
+        first_round = {u: (1 if seed_map.get(u, n_byes + 1) <= n_byes else 0)
+                       for u in field_uids}
+        log(f"  {sum(first_round.values())} of {len(field_uids)} entrants enter "
+            f"in round two on a bye")
+    else:
+        first_round = None
+        if n_byes:
+            log(f"  {n_seeds} seeds for {n_byes} byes: leftover byes are drawn at random "
+                f"per simulation, so fatigue is NOT modelled for them this run")
     matrices = build_round_pred_matrices(field_uids, ptab, tour, surface, 3, level, h2h, date0,
-                                         cat_levels, models, STAGE_ORDER[:-1])
+                                         cat_levels, models, STAGE_ORDER[:-1],
+                                         first_round=first_round)
     idx = {u: k for k, u in enumerate(field_uids)}
     # TBD plays like the weakest entrant: the row with the lowest mean win prob in the first round matrix
     first = matrices[STAGE_ORDER[0]]

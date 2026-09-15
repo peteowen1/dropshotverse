@@ -50,7 +50,8 @@ def antisymmetrise(M: np.ndarray) -> np.ndarray:
 
 def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: str, surface: str, best_of: int,
                               tourney_level: str, h2h: dict, date0, cat_levels: dict,
-                              models: list, rounds: list[str]) -> dict[str, np.ndarray]:
+                              models: list, rounds: list[str],
+                              first_round: dict[str, int] | None = None) -> dict[str, np.ndarray]:
     """One full round-robin prediction pass per round value. Features other
     than `round` are identical across rounds (frozen pre-tournament state),
     so the shared base feature matrix is built once and only the `round`
@@ -69,6 +70,16 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
     this is a transform on predictions already made, not a model change or a
     retrain. xgb_bt_rating.py and build_blog_data.py already apply the same
     (L - L.T)/2 before taking BT row means; it was never applied at source.
+
+    `first_round` (D-28): maps a uid to the 0-based index into `rounds` of
+    that player's first MATCH. `fatigue_diff` is built once, flat 0.0, in
+    build_pairwise_features_base - exactly right for a draw with no byes,
+    where both players have always played the same number of matches. It is
+    wrong the moment there are byes: the round after the byes, one player has
+    a match in their legs and the other does not. Omitting `first_round`
+    (the default) leaves every caller's behaviour exactly as it was -
+    `simulate_us_open_2026.py`'s locked forecast (a 128 draw, no byes) never
+    needs to pass it and so is untouched by this parameter existing.
     """
     n = len(field_uids)
     idx = {u: k for k, u in enumerate(field_uids)}
@@ -76,6 +87,12 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
                                                                    tourney_level, h2h, date0)
     pairs_i = np.array([idx[u] for u in pairs_i_uid])
     pairs_j = np.array([idx[u] for u in pairs_j_uid])
+
+    fr_i = fr_j = None
+    if first_round:
+        fr = {u: int(first_round.get(u, 0)) for u in field_uids}
+        fr_i = np.array([fr[u] for u in pairs_i_uid])
+        fr_j = np.array([fr[u] for u in pairs_j_uid])
 
     matrices: dict[str, np.ndarray] = {}
     # W3 (D-26/D-27): weeks_since_last was computed once from date0, so every
@@ -95,6 +112,13 @@ def build_round_pred_matrices(field_uids: list[str], ptab: pd.DataFrame, tour: s
             # so only the pre-event difference survives, decayed.
             if tbm.RUST_TAU > 0 and "recent_load_diff" in Xdf:
                 Xdf["recent_load_diff"] = Xdf["recent_load_diff"] * np.exp(-2.0 * k_rnd / tbm.RUST_TAU)
+        if fr_i is not None:
+            # matches each player has already played at this event by this
+            # round (D-28). Positional numpy assignment: base's rows are in
+            # the same order as pairs_i_uid/pairs_j_uid, one loop built both.
+            played_i = np.maximum(k_rnd - fr_i, 0)
+            played_j = np.maximum(k_rnd - fr_j, 0)
+            Xdf["fatigue_diff"] = (played_i - played_j).astype(float)
         X = prep_X_d(Xdf, cat_levels)
         dmat = xgb.DMatrix(X, enable_categorical=True)
         p = np.clip(np.mean([m.predict(dmat) for m in models], axis=0), 1e-9, 1 - 1e-9)

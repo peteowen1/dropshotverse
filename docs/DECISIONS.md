@@ -340,4 +340,48 @@ Consequences to hold onto:
   and failed on the feature mismatch, published nothing, and was replaced by
   a hand run. Live odds for the six players left moved under a point, since
   all of them have played within two weeks.
+- **D-51 (2026-09-15)** — The 2026-09-14 08:00 scheduled rescore failed before
+  it could settle C vs D: the completed 688-match tape's serve-point win rate
+  had drifted from the mid-tournament `SERVE_BASE` constant in
+  `inmatch_seeding.py` by 0.0012 (ATP) and 0.0057 (WTA, worse but unreported -
+  the check raises on the first tour it hits). Refreshed `SERVE_BASE` from the
+  full 106,589-point final tape (atp 0.610918, wta 0.575873) and re-ran.
+  Result reverses D-18: on the robustness split (T fit on 41,460 round 1-3
+  points, scored on 5,971 round 4-7 points - up from the 7 matches D-18 was
+  decided on), arm D now beats arm C on late rounds, ECE 0.0940 vs 0.1015 and
+  log-loss 0.54332 vs 0.55129, same 0.694 accuracy. Arm D still fails its own
+  anchor D3 in the cross-fit-by-tour form (ATP T=1.095, WTA T=1.365, spread
+  0.270 against a 0.15 bar) - the two tours want different temperatures, so a
+  single recalibration is not honest either way. **C vs D is open again, not
+  settled**; `--live-score` stays off regardless, so nothing published is
+  affected. `dropshotdata/raw/usopen/rescore.log`.
+- **D-52 (2026-09-15)** — PR #34 was NOT merged; the NEXT-STEPS entry saying it
+  was "unblocked, ready to merge" was wrong. Low-effort review caught it: the
+  PR's base is `dev`, not `main`, and `dev` has diverged since the branch was
+  cut 2026-09-07 - GitHub now reports it `CONFLICTING`. The W3 layoff half of
+  the PR is also superseded: D-46/D-47 shipped `DSV_W3_LAYOFF_FIX` (env-var
+  gated) directly to `dev` on 2026-09-10, a different mechanism than this
+  PR's `round_aware`/`first_round`/`IN_EVENT_WEEKS`, none of which exist in
+  current `dev`. The one thing PR #34 has that `dev` still lacks: the D-28
+  fatigue/bye fix (`fatigue_diff` hardcoded 0.0 in `xgb_bt_rating.py:429`,
+  wrong once Beijing's 96-into-128 draw with byes is simulated). That piece
+  needs re-implementing against current `dev`; PR #34 itself should be closed,
+  not rebased - too much of it targets code that no longer exists.
+- **D-53 (2026-09-15)** — Re-implemented the D-28 fatigue/bye fix fresh against
+  current `dev` (not rebased from PR #34's stale branch). `build_round_pred_matrices`
+  takes an optional `first_round: dict[str, int] | None`, default `None`;
+  when given, `fatigue_diff` becomes `max(k-fr_i,0) - max(k-fr_j,0)` per round
+  instead of the flat 0.0 `build_pairwise_features_base` sets. Default `None`
+  means every existing caller (including the locked `simulate_us_open_2026.py`
+  and `simulate_usopen_live.py`, both 128 draws with no byes) is untouched by
+  construction - no `round_aware` flag needed this time, unlike PR #34's
+  approach. `simulate_wta_event.py` now computes `first_round` from
+  `seed_map`/`n_byes` (seed <= n_byes has a bye) only when `n_seeds >= n_byes`,
+  same guard as PR #34 had, for the same reason: below that (today's Beijing
+  field, 76/96 entrants, 0 seeds) `random_bracket_with_byes` redraws the
+  leftover byes every simulation, so no fixed uid->round map is honest.
+  8 anchors in `tune_scratch/test_w3_fatigue_bye.py`, all passing; a bye is a
+  permanent one-match deficit for the rest of the draw, not something that
+  "catches up" (differs from my first draft of the test, which assumed the
+  latter). Not committed; PR #34 still open, recommended to close.
 

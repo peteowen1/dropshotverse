@@ -28,13 +28,16 @@ from __future__ import annotations
 
 from ticket09_live_modes import p_match_from_state
 
-# Serve-point win rate by tour, from all 88,993 points of the 2026 US Open
-# tape (dropshotdata/usopen_2026_points.parquet, event 1 = men, 2 = women).
+# Serve-point win rate by tour, from all 106,589 points of the completed 2026
+# US Open tape (dropshotdata/usopen_2026_points.parquet, event 1 = men, 2 =
+# women; rebuilt post-final, 688 matches). Refreshed 2026-09-15 from the
+# 88,993-point mid-tournament figure: the early tape under-read ATP by 0.0012
+# and WTA by 0.0057 once the later rounds were in.
 # A constant rather than a recomputation because the live path runs on a
 # runner that has no point tape, and because the solve only uses this as the
 # CENTRE it splits around - the pairing's skill difference is what carries the
 # information, and that comes from the model.
-SERVE_BASE = {"atp": 0.609679, "wta": 0.570197}
+SERVE_BASE = {"atp": 0.610918, "wta": 0.575873}
 
 # How far the solved opening state may sit from the model's pre-match number
 # before the solve is treated as failed rather than approximate. This is the

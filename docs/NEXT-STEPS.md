@@ -80,15 +80,34 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
 
 **Queued, ranked:**
 
-1. **Merge [PR #34](https://github.com/peteowen1/dropshotverse/pull/34) after
-   the 09-14 re-score.** Round-aware layoff and fatigue, reviewed, CI green,
-   deliberately held: merging puts it in production within 30 minutes, and the
-   re-score should score the model that produced the published numbers.
+1. **PR #34 is STALE, not mergeable — do not merge as-is (D-52).** Base is
+   `dev` (not `main`), and `dev` has diverged since 2026-09-07: it now shows
+   `CONFLICTING`. Worse, the D-46/D-47 `DSV_W3_LAYOFF_FIX` env-var mechanism
+   (shipped 2026-09-10, superseding this branch) already solves the layoff
+   half of what PR #34 does, by a different, incompatible mechanism - PR #34's
+   `round_aware`/`first_round`/`IN_EVENT_WEEKS` symbols don't exist in current
+   `dev` at all. What PR #34 still has that `dev` does NOT: the D-28
+   fatigue/bye fix (`fatigue_diff` is still hardcoded to 0.0 in
+   `xgb_bt_rating.py:429`, wrong for Beijing's 96-into-128 draw with byes).
+   ~~**Next action: re-implement just the fatigue/bye piece against current
+   `dev`.**~~ **DONE 2026-09-15 (D-53)**: `first_round` param on
+   `build_round_pred_matrices`, default `None` (every existing caller
+   untouched by construction, no `round_aware` flag needed this time), wired
+   through `simulate_wta_event.py` behind the same `n_seeds >= n_byes` guard
+   PR #34 had. 8 anchors pass in `tune_scratch/test_w3_fatigue_bye.py`. Not
+   yet committed. **PR #34 should still be closed without merging** - awaiting
+   that action.
 2. **Verify per-year field coverage** on the backfilled 2022-24 tapes before
-   anything uses them. Feeds change shape across years and that has caught this
-   session twice.
+   anything uses them (all four years present: 2022 946, 2023 963, 2024 899,
+   2025 944 match folders). Feeds change shape across years and that has
+   caught this session twice.
 3. **Re-estimate the shrink factors** on the full five-year sample, then settle
    hier versus serve/return Elo (see below). Blocked on 2.
+4. **C vs D reopened (D-51).** The 09-15 re-score reverses D-18 on more late-
+   round evidence (5,971 points vs the original 7 matches): arm D now beats
+   arm C. Not urgent - `--live-score` is off and nothing published is
+   affected - but do not cite D-18 as settled until this is re-run on a full
+   season rather than one event's late rounds.
 
 **Undecided, and why — the serve/return rating.** Branch
 `feat/serve-return-ratings`, NOT merged, research-grade.
