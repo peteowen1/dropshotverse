@@ -261,6 +261,18 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    2026-09-06**: a `ConnectionResetError` mid-read escaped `fetch()`'s retry
    (it is an `OSError`, not a `URLError`) and killed the sweep. Now retried.
 
+10. **[#45](https://github.com/peteowen1/dropshotverse/issues/45)** — same
+    player, different ids across the published files. Root cause was the TML
+    bridge minting a synthetic id on any name spelling difference; fixed in
+    `bridge_tennismylife.py` (looser keys, ambiguous ones dropped), which the
+    daily ratings refresh and the live projection both use, so the next runs
+    carry the real ids. **Still open:** (a) `tennis/draw.json`'s producer is not
+    in this repo, so its `NEW_` ids need fixing where it is built (the real ids
+    are in `reference/usopen_*_entrants.json` and the predictions file); (b)
+    Bu has no ratings row because `build_blog_data.draw_uids_by_tour` takes the
+    field from the locked pre-tournament predictions, whose entrants list lacks
+    him. He has 223 archive matches and should be rated.
+
 ## Live deadlines (absolute dates)
 
 - **2026-09-13, after the final** — rebuild `usopen_2026_points.parquet`
