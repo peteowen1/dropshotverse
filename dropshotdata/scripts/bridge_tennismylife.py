@@ -22,6 +22,7 @@ this archive is 5-6 digits, so there's no realistic collision risk.
 from __future__ import annotations
 
 import hashlib
+import re
 import unicodedata
 from pathlib import Path
 
@@ -56,9 +57,69 @@ def norm(name: str) -> str:
     return strip_accents(str(name)).lower().strip()
 
 
+# A looser match is only trusted for an archive id that has played this recently.
+# The bridge exists for players active since BRIDGE_CUTOFF, so a real match for
+# one of them has recent archive history; a retired homonym from 1998 does not.
+LOOSE_MIN_YEAR = 2024
+
+
+def _tokens(name: str) -> list[str]:
+    """Accent-stripped, lower-cased words, letters only ("J.J. Wolf" -> j, j, wolf)."""
+    return [t for t in re.split(r"[^a-z]+", strip_accents(str(name)).lower()) if t]
+
+
+def loose_keys(name: str) -> list[str]:
+    """Keys tried, strictest first, when the exact `norm` key misses.
+
+    The archive and TML spell the same player differently and `norm` keeps
+    punctuation and word order, so each pair below missed and the player got a
+    synthetic id with no history (issue #45):
+      letters     "Elena Gabriela Ruse" / "Elena-Gabriela Ruse", "J.J. Wolf" / "J. J. Wolf"
+      sorted      "Xinyu Wang" / "Wang Xinyu" (surname first)
+      first+last  "Gabriela Knutson" / "Gabriela Andrea Knutson" (middle name)
+    One key namespace, not one per kind: a two-word name's first+last key is
+    its letters key, and that is how "Gabriela Knutson" reaches the archive's
+    three-word entry. Same three ideas as usopen_live_draw._alt_keys, which the
+    draw already uses."""
+    toks = _tokens(name)
+    if not toks:
+        return []
+    keys = ["".join(toks)]
+    if len(toks) >= 2:
+        keys.append("".join(sorted(toks)))
+        keys.append(toks[0] + toks[-1])
+    return list(dict.fromkeys(keys))
+
+
 def synthetic_id(name: str) -> int:
     h = int(hashlib.sha256(name.encode()).hexdigest(), 16) % 99_999_999
     return 900_000_000 + h
+
+
+def _archive_names(tour: str) -> pd.DataFrame:
+    """Every (name, id, year) the archive's tour-level, qualifying and ITF
+    files give a winner or loser, in file order then row order, winner before
+    loser within a row. Empty when no file exists."""
+    frames = []
+    for suffix in ("", "_qual_chall", "_qual_itf"):
+        for year in range(1995, 2027):
+            p = DD / f"raw/github/{tour}/{tour}_matches{suffix}_{year}.csv"
+            if not p.exists():
+                continue
+            f = pd.read_csv(p, low_memory=False,
+                            usecols=["winner_id", "winner_name", "loser_id", "loser_name"])
+            f["year"] = year
+            frames.append(f)
+    if not frames:
+        return pd.DataFrame({"name": [], "id": [], "year": []})
+    df = pd.concat(frames, ignore_index=True)
+    # interleave winner/loser per row so the order matches the row loop
+    long = pd.DataFrame({
+        "name": np.column_stack([df["winner_name"].values, df["loser_name"].values]).ravel(),
+        "id": np.column_stack([df["winner_id"].values, df["loser_id"].values]).ravel(),
+        "year": np.repeat(df["year"].values, 2),
+    })
+    return long[pd.notna(long["id"])]
 
 
 def build_name_to_id(tour: str) -> dict[str, int]:
@@ -70,32 +131,33 @@ def build_name_to_id(tour: str) -> dict[str, int]:
     # order, rows in order, winner before loser within a row, and the LAST
     # occurrence of a normalised name wins. Verified identical by
     # tune_scratch/verify_perf1_name_to_id.py.
-    frames = []
-    for suffix in ("", "_qual_chall", "_qual_itf"):
-        for year in range(1995, 2027):
-            p = DD / f"raw/github/{tour}/{tour}_matches{suffix}_{year}.csv"
-            if not p.exists():
-                continue
-            frames.append(pd.read_csv(p, low_memory=False,
-                                      usecols=["winner_id", "winner_name", "loser_id", "loser_name"]))
+    long = _archive_names(tour)
     name_to_id: dict[str, int] = {}
-    if frames:
-        df = pd.concat(frames, ignore_index=True)
-        # interleave winner/loser per row so the order matches the row loop
-        long = pd.DataFrame({
-            "name": np.column_stack([df["winner_name"].values, df["loser_name"].values]).ravel(),
-            "id": np.column_stack([df["winner_id"].values, df["loser_id"].values]).ravel(),
-        })
-        long = long[pd.notna(long["id"])]
+    if len(long):
         uniq = pd.Series(long["name"].unique())
         key_of = dict(zip(uniq, uniq.map(norm)))
-        long["key"] = long["name"].map(key_of)
+        long = long.assign(key=long["name"].map(key_of))
         last = long.drop_duplicates(subset="key", keep="last")
         name_to_id = dict(zip(last["key"], last["id"].astype("int64").map(int)))
     for wiki_key, archive_key in MANUAL_NAME_OVERRIDES.items():
         if archive_key in name_to_id:
             name_to_id[wiki_key] = name_to_id[archive_key]
     return name_to_id
+
+
+def build_loose_name_to_id(tour: str) -> dict[str, int]:
+    """`loose_keys` key -> id, over archive ids seen in LOOSE_MIN_YEAR or later.
+    A key that reaches more than one id is dropped, not resolved: attaching one
+    real player's history to another is worse than the synthetic id this is the
+    fallback for, because it looks right."""
+    long = _archive_names(tour)
+    long = long[long["year"] >= LOOSE_MIN_YEAR].drop_duplicates(subset=["name", "id"])
+    rows = [(key, int(i)) for name, i in zip(long["name"], long["id"]) for key in loose_keys(name)]
+    if not rows:
+        return {}
+    keyed = pd.DataFrame(rows, columns=["key", "id"]).drop_duplicates()
+    unique = keyed[keyed.groupby("key")["id"].transform("nunique") == 1]
+    return dict(zip(unique["key"], unique["id"]))
 
 
 def build_bridge(tour: str) -> pd.DataFrame:
@@ -106,17 +168,28 @@ def build_bridge(tour: str) -> pd.DataFrame:
     log(f"  {len(tml)} rows after {BRIDGE_CUTOFF.date()}")
 
     name_to_id = build_name_to_id(tour)
-    n_new = 0
+    loose = build_loose_name_to_id(tour)
+    n_new = n_loose = 0
+    loose_hits: dict[str, int] = {}
     for side in ("winner", "loser"):
         ids = []
         for name in tml[f"{side}_name"]:
             key = norm(name)
             if key in name_to_id:
                 ids.append(name_to_id[key])
+                continue
+            hit = next((loose[k] for k in loose_keys(name) if k in loose), None)
+            if hit is not None:
+                ids.append(hit)
+                n_loose += 1
+                loose_hits[name] = hit
             else:
                 ids.append(synthetic_id(key))
                 n_new += 1
         tml[f"{side}_id"] = ids
+    if loose_hits:
+        log(f"  {n_loose} slots matched the archive by a looser name key: "
+            + ", ".join(f"{n} -> {i}" for n, i in sorted(loose_hits.items())))
     log(f"  {n_new} winner/loser slots resolved to a synthetic new-player id "
         f"(genuinely absent from the archive under any spelling checked)")
 
