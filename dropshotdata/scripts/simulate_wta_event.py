@@ -42,6 +42,7 @@ import json
 import math
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,9 +81,55 @@ def log(m: str = "") -> None:
     print(m, flush=True)
 
 
+# The public R2 bucket answers 403 to urllib's default "Python-urllib" agent,
+# even for files that exist, so every read of the published copy sends one.
+HTTP_HEADERS = {"User-Agent": "dropshotverse-simulate_wta_event"}
+
+
 def _fetch_text(url: str) -> str:
-    with urllib.request.urlopen(url, timeout=15) as r:                 # noqa: S310
+    req = urllib.request.Request(url, headers=HTTP_HEADERS)
+    with urllib.request.urlopen(req, timeout=15) as r:                 # noqa: S310
         return r.read().decode("utf-8")
+
+
+def _is_missing(e: BaseException) -> bool:
+    """True only when the file genuinely does not exist yet (first run).
+
+    Any other failure (timeout, 403, 5xx, a malformed file, a missing key)
+    is NOT "nothing to merge": treating it as such writes this event alone
+    and wipes every other published event, so callers re-raise it instead.
+    """
+    if isinstance(e, FileNotFoundError):
+        return True
+    return isinstance(e, urllib.error.HTTPError) and e.code == 404
+
+
+def read_existing_parquet(local: Path, url: str) -> pd.DataFrame | None:
+    """The table to merge into: the local copy, else the published one.
+
+    Returns None only when neither exists. Every other read failure raises,
+    so the caller writes nothing rather than a single-event table.
+    """
+    if local.exists():
+        return pd.read_parquet(local)
+    try:
+        return pd.read_parquet(url, storage_options=HTTP_HEADERS)
+    except Exception as e:                                              # noqa: BLE001
+        if _is_missing(e):
+            return None
+        raise
+
+
+def read_existing_draw(local: Path, url: str) -> dict | None:
+    """Same rule as read_existing_parquet, for the draw JSON."""
+    if local.exists():
+        return json.loads(local.read_text(encoding="utf-8"))
+    try:
+        return json.loads(_fetch_text(url))
+    except Exception as e:                                              # noqa: BLE001
+        if _is_missing(e):
+            return None
+        raise
 
 
 # ------------------------------------------------------------------ inputs
@@ -446,11 +493,13 @@ def main() -> None:
     out = Path(args.out)
     prev = None
     if not args.no_merge:
-        try:
-            prev = pd.read_parquet(out) if out.exists() else pd.read_parquet(PUBLIC_URL)
+        # Fail closed: only "no table exists yet" falls back to this event
+        # alone. A failed or malformed read raises before anything is written.
+        prev = read_existing_parquet(out, PUBLIC_URL)
+        if prev is None:
+            log("no existing table to merge (not found); writing this event alone")
+        else:
             log(f"merging with existing table: {len(prev):,} rows, events {sorted(prev['tournament_id'].unique())}")
-        except Exception as e:                                       # noqa: BLE001
-            log(f"no existing table to merge ({type(e).__name__}); writing this event alone")
     if prev is not None and len(prev):
         prev = prev[prev["tournament_id"] != tournament_id]
         new = pd.concat([prev, new], ignore_index=True)
@@ -474,17 +523,16 @@ def main() -> None:
     draw_out = Path(args.out_draw)
     draw_payload = {"tournaments": [draw_entry]}
     if not args.no_merge:
-        try:
-            existing = json.loads(draw_out.read_text(encoding="utf-8")) if draw_out.exists() \
-                else json.loads(_fetch_text(PUBLIC_DRAW_URL))
-            # Fail closed on a malformed payload (mirrors the parquet merge
-            # below, which raises on a schema it does not recognise): a
-            # missing "tournaments" key must not silently become "zero other
-            # tournaments" and wipe every other published draw on write.
+        existing = read_existing_draw(draw_out, PUBLIC_DRAW_URL)
+        if existing is None:
+            log("no existing draw file to merge (not found); writing this event alone")
+        else:
+            # Fail closed on a malformed payload: a missing "tournaments" key
+            # raises KeyError here (nothing catches it) rather than silently
+            # becoming "zero other tournaments" and wiping every other
+            # published draw on write.
             others = [t for t in existing["tournaments"] if t.get("tournament_id") != tournament_id]
             draw_payload = {"tournaments": others + [draw_entry]}
-        except Exception as e:                                          # noqa: BLE001
-            log(f"no existing draw file to merge ({type(e).__name__}); writing this event alone")
     draw_out.parent.mkdir(parents=True, exist_ok=True)
     draw_out.write_text(json.dumps(draw_payload, indent=1), encoding="utf-8")
     log(f"wrote {draw_out} ({len(draw_payload['tournaments'])} event(s))")
@@ -494,10 +542,9 @@ def main() -> None:
     pw_out = Path(args.out_pairwise)
     pw_prev = None
     if not args.no_merge:
-        try:
-            pw_prev = pd.read_parquet(pw_out) if pw_out.exists() else pd.read_parquet(PUBLIC_PAIRWISE_URL)
-        except Exception as e:                                          # noqa: BLE001
-            log(f"no existing pairwise table to merge ({type(e).__name__}); writing this event alone")
+        pw_prev = read_existing_parquet(pw_out, PUBLIC_PAIRWISE_URL)
+        if pw_prev is None:
+            log("no existing pairwise table to merge (not found); writing this event alone")
     if pw_prev is not None and len(pw_prev):
         pw_prev = pw_prev[pw_prev["tournament_id"] != tournament_id]
         pairwise_new = pd.concat([pw_prev, pairwise_new], ignore_index=True)
