@@ -28,7 +28,7 @@ ATP and WTA. Started 2026-08-27.
 | `dropshotdata/raw/usopen/` | point-by-point capture of the 2026 US Open |
 | `dropshotdata/reference/` | committed inputs: US Open entrants lists |
 | `dropshotdata/blog/` | what gets published to R2 for inthegame-blog |
-| `.github/workflows/` | `live-projection.yml` (producer) and `check-freshness.yml` (alarm) |
+| `.github/workflows/` | `ratings-refresh.yml` (daily ratings table), `event-forecast.yml` (WTA event forecast, on dispatch), `archive-tennismylife.yml` (daily source snapshot), `check-freshness.yml` (alarm), `live-projection.yml` (US Open live producer, idle since the event ended), `tests.yml` (CI) |
 | `.scratch/dropshot-tennis-engine/` | tickets, reports, the charter, session logs |
 
 ## The research record (`.scratch/dropshot-tennis-engine/`)
@@ -50,29 +50,39 @@ exists is a frozen snapshot taken that day, published as the
 `sackmann-archive` Release. Archive coverage ends **2026-06-02**.
 
 A live bridge to `stats.tennismylife.org` (`scripts/bridge_tennismylife.py`)
-downloads the current season's tour-level matches on every run, so ratings are
-current to the last completed week, not stale at Roland Garros as the CSV
-filenames suggest. TML carries `score` (retirements detectable) but not
+downloads the tour-level season files from 2026 up to the current year (by
+today's date) on every run, so ratings are current to the last completed week,
+not stale at Roland Garros as the CSV filenames suggest. In January a new
+season's file that is not published yet is skipped with a warning; any other
+missing season stops the run. TML carries `score` (retirements detectable) but not
 `minutes`, and no WTA before 1990, which is why the archive stays the base
 (D-11; [#3](https://github.com/peteowen1/dropshotverse/issues/3) closed).
 
 ## Releases (the data bus)
 
-Two GitHub Releases carry everything not in git: `sackmann-archive` (the raw
-CSVs) and `model-inputs-2026-09` (Elo replays and the shipped model). Asset
+Three GitHub Releases carry everything not in git: `sackmann-archive` (the raw
+CSVs), `model-inputs-2026-09` (Elo replays and the shipped model) and
+`tennismylife-archive` (a daily snapshot of the current tennismylife season,
+from `archive-tennismylife.yml`). Asset
 list and the fresh-clone commands: [`dropshotdata/docs/README.md`](../dropshotdata/docs/README.md).
 
 ## What is live
 
-- **US Open 2026 projections** refresh to R2 every 30 minutes from the laptop
-  task `DropshotverseUSOpenLiveSim`. `live-projection.yml` on GitHub Actions
-  is the armed backup: the ITG Worker's `*/30` cron dispatches it only when
-  the R2 copy is more than 40 minutes old (D-13, D-14); a run takes under
-  three minutes on Linux.
-- **Freshness alarm**: `check-freshness.yml` reads the public R2 copy and
-  fails a run, which mails Pete, if the file is stale while an event is live.
-  It rides the same sporadic scheduler, so a quiet hour is not proof of health.
-- **Point-by-point capture**: laptop task `DropshotverseUSOpenCapture`, every
-  5 minutes to 2026-09-16 12:00 local.
+- **Ratings table**: `ratings-refresh.yml` runs daily at 06:00 UTC, replays
+  Elo with the tennismylife bridge and uploads `tennis/ratings.parquet`.
+- **WTA event forecasts**: `event-forecast.yml`, dispatched by hand once an
+  event's field is complete, upserts the event into
+  `tennis/upcoming_predictions.parquet` on R2.
+- **Source snapshot**: `archive-tennismylife.yml` runs daily at 05:20 UTC and
+  copies the current tennismylife season to the `tennismylife-archive` Release.
+- **Freshness alarm**: `check-freshness.yml` runs hourly, reads the public R2
+  copy and fails a run, which mails Pete, if the file is stale while an event
+  is live; it only warns on the ratings table's age. It rides GitHub's
+  sporadic scheduler, so a quiet hour is not proof of health.
+- **US Open 2026: ENDED.** The final was 2026-09-13. The laptop tasks
+  `DropshotverseUSOpenLiveSim` (projections every 30 minutes) and
+  `DropshotverseUSOpenCapture` (point-by-point capture) were disabled
+  2026-09-15, and the ITG Worker's dispatch of `live-projection.yml`, their
+  GitHub Actions backup, expired 2026-09-16T02:00Z (D-13, D-14).
 - **The ITG wall chart** — [inthegame-blog#581](https://github.com/peteowen1/inthegame-blog/issues/581),
   shipped 2026-09-01, runs on dropshot's own pairwise match model.
