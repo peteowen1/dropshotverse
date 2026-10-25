@@ -60,6 +60,15 @@ jobs:
           (cd dropshotdata/tune_scratch && unzip -q xgb_bagged_model_cache_v2_setgame.zip && rm xgb_bagged_model_cache_v2_setgame.zip)
           test "$(find dropshotdata/raw/github -name '*.csv' | wc -l)" -gt 400
 
+      # Optional: the published live projection carries the field as the bracket
+      # stood, including late entrants the locked pre-tournament file lacks
+      # (dropshotverse#45). Absent or unreachable is fine; the build then rates
+      # the locked field only, as before.
+      - name: Fetch the live draw field (optional)
+        shell: bash
+        run: |
+          curl -fsS --retry 2 -o dropshotdata/blog/live_predictions.parquet             https://pub-ee4bf5b599a047f9ac2b9facc1587008.r2.dev/tennis/live_predictions.parquet             || { echo "::warning::live_predictions.parquet not fetched; rating the locked field only"; rm -f dropshotdata/blog/live_predictions.parquet; }
+
       - name: Regenerate Elo with the current bridge (timed)
         working-directory: dropshotdata/scripts
         shell: bash

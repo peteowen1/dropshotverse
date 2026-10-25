@@ -266,12 +266,17 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
     bridge minting a synthetic id on any name spelling difference; fixed in
     `bridge_tennismylife.py` (looser keys, ambiguous ones dropped), which the
     daily ratings refresh and the live projection both use, so the next runs
-    carry the real ids. **Still open:** (a) `tennis/draw.json`'s producer is not
-    in this repo, so its `NEW_` ids need fixing where it is built (the real ids
-    are in `reference/usopen_*_entrants.json` and the predictions file); (b)
-    Bu has no ratings row because `build_blog_data.draw_uids_by_tour` takes the
-    field from the locked pre-tournament predictions, whose entrants list lacks
-    him. He has 223 archive matches and should be rated.
+    carry the real ids. (b) is now fixed: `build_blog_data.draw_uids_by_tour`
+    also unions in `blog/live_predictions.parquet` (the ratings-refresh workflow
+    fetches it from R2, optional), so late entrants such as Bu get a ratings row;
+    checked against the real archive (Bu `atp:207352` and Knutson `wta:213873`
+    both land in the pool; test `tune_scratch/test_draw_uids_union.py`). Takes
+    effect on the next ratings-refresh run. **Still open:** (a)
+    `tennis/draw.json`'s producer is not in this repo (`us_open_2026_drawonly.json`
+    here is the only local copy, dated 2026-08-31 and still carrying
+    `wta:NEW_Gabriela_Knutson`), so its `NEW_` ids need fixing where it is built
+    (the blog repo's tennis draw workflow); the live projection's own ids heal
+    on its next run with the bridge fix.
 
 ## Live deadlines (absolute dates)
 

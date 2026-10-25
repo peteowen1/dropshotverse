@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -52,6 +53,10 @@ from xgb_bt_rating import (AGE_DEFAULT, age_is_defaulted, build_h2h_dict,
 SCRATCH = DD / "tune_scratch"
 BLOG_DIR = DD / "blog"
 PREDICTIONS_JSON = SCRATCH / "us_open_2026_predictions.json"
+# The published live projection (simulate_usopen_live.py). Optional input: it
+# carries the field as the bracket actually stood, which the locked
+# pre-tournament file above cannot (issue #45).
+LIVE_PREDICTIONS_PARQUET = BLOG_DIR / "live_predictions.parquet"
 ELO_RAW = SCRATCH / "elo_raw_ratings_full.parquet"
 REFERENCE_SURFACE = "Hard"   # most common surface tour-wide - the ratings.parquet BT context
 REFERENCE_ROUND = "R32"      # neutral round, same convention xgb_bt_rating.py's own BT extraction uses
@@ -142,14 +147,32 @@ def build_name_lookup(bridged_df: pd.DataFrame) -> dict[str, str]:
     return long_all.drop_duplicates(subset="uid", keep="last").set_index("uid")["name"].to_dict()
 
 
-def draw_uids_by_tour() -> dict[str, set[str]]:
+def draw_uids_by_tour(live_path=None) -> dict[str, set[str]]:
     """Who is actually in the tournament this table will be joined against.
 
     Read from the same predictions JSON build_predictions_table() uses, so it
-    costs no new input and cannot drift from the field the site is showing."""
+    costs no new input and cannot drift from the field the site is showing.
+
+    Then the published live projection is unioned in when it is present
+    (dropshotverse#45). The locked pre-tournament file is frozen before the
+    draw is made, so anyone who entered afterwards (Yunchaokete Bu, a late
+    replacement) is in the draw the blog shows but not in this set, never gets a
+    ratings row, and the blog simulates him at the field median. Locked ids
+    stay in the set: an id the live file has dropped or re-spelled costs
+    nothing, because build_active_pool admits only uids with match history."""
     with open(PREDICTIONS_JSON, encoding="utf-8") as f:
         raw = json.load(f)
-    return {tour: set(data["probs"]) for tour, data in raw.items()}
+    out = {tour: set(data["probs"]) for tour, data in raw.items()}
+    live_path = LIVE_PREDICTIONS_PARQUET if live_path is None else live_path
+    if Path(live_path).exists():
+        live = pd.read_parquet(live_path, columns=["tour", "player_id"])
+        for tour, ids in live.groupby("tour")["player_id"]:
+            new = set(ids) - out.setdefault(tour, set())
+            if new:
+                log(f"  [{tour}] {len(new)} player(s) in the live draw but not the locked field "
+                    f"added to the ratings field")
+            out[tour] |= set(ids)
+    return out
 
 
 def build_ratings_table(models: list, cat_levels: dict, playstyle_full: pd.DataFrame, age_table: pd.DataFrame,
