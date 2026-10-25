@@ -73,6 +73,14 @@ jobs:
         working-directory: dropshotdata/scripts
         run: python regen_elo_raw_with_bridge.py
 
+      # Set and game Elo too (OPUS-redteam-2026-10-25 F1); the Release copies
+      # stop at Roland Garros 2026 (last tour-level row 2026-05-25). elo_freshness.py fails the run if any lags.
+      - name: Regenerate set and game Elo with the current bridge
+        working-directory: dropshotdata/scripts
+        run: |
+          python regen_set_game_elo_with_bridge.py
+          python elo_freshness.py
+
       - name: Fetch the calendar and entry list
         working-directory: dropshotdata/scripts
         shell: bash

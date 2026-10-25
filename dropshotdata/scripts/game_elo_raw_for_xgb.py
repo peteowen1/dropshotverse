@@ -1,15 +1,22 @@
 """Same as set_elo_raw_for_xgb.py but at GAME granularity (games-won
 fraction as evidence) - completes the match/set/game feature-toggle test
-Pete asked for. Mirrors set_elo_raw_for_xgb.py's structure exactly."""
+Pete asked for. Mirrors set_elo_raw_for_xgb.py's structure exactly.
+
+2026-10-25 (OPUS-redteam F1): built once from the archive alone and frozen at
+2026-06-02 until now; see set_elo_raw_for_xgb.py. The replay is
+`replay_game_elo()`; regen_set_game_elo_with_bridge.py runs it daily on the
+bridged archive. Running this script runs that regen for game Elo only.
+"""
 from __future__ import annotations
+
+import sys
 
 import numpy as np
 import pandas as pd
 
-import hierarchical_model as hm
-
 START = 1500.0
 SCALE = 400.0
+OUT_NAME = "game_elo_raw_ratings_full.parquet"
 
 
 def log(m: str) -> None:
@@ -24,11 +31,9 @@ def logistic(diff: float) -> float:
     return 1.0 / (1.0 + 10 ** (-diff / SCALE))
 
 
-def main() -> None:
-    log("loading prepared archive...")
-    df, dropped = hm.load_prepared(use_cache=True)
-    log(f"  {len(df):,} rows")
-
+def replay_game_elo(df: pd.DataFrame) -> pd.DataFrame:
+    """One row per match of `df` (hierarchical_model.prepare() output, in its
+    order) with both players' PRE-match game Elo and the implied p(winner)."""
     rating: dict[str, float] = {}
     n_matches: dict[str, int] = {}
     n = len(df)
@@ -37,7 +42,8 @@ def main() -> None:
     out_p = np.empty(n)
     used = np.zeros(n, dtype=bool)
 
-    for i, row in enumerate(df.itertuples(index=False)):
+    for i, row in enumerate(df[["winner_uid", "loser_uid", "total_games_w", "total_games_l"]]
+                            .itertuples(index=False)):
         w, l = row.winner_uid, row.loser_uid
         rw, rl = rating.get(w, START), rating.get(l, START)
         out_ro_w[i], out_ro_l[i] = rw, rl
@@ -61,16 +67,14 @@ def main() -> None:
         if (i + 1) % 300_000 == 0:
             log(f"  ...{i+1:,}/{n:,}")
 
-    log(f"usable rows: {used.sum():,}/{n:,} ({100*used.mean():.1f}%)")
-    out = pd.DataFrame({
+    log(f"  game Elo: usable rows {used.sum():,}/{n:,} ({100*used.mean():.1f}%)")
+    return pd.DataFrame({
         "date": df["date"].values, "tour": df["tour"].values, "level_file": df["level_file"].values,
         "winner_uid": df["winner_uid"].values, "loser_uid": df["loser_uid"].values,
         "game_elo_winner": out_ro_w, "game_elo_loser": out_ro_l, "p_winner_game_elo": out_p,
     })
-    out_path = r"C:\dev\dropshotverse\dropshotdata\tune_scratch\game_elo_raw_ratings_full.parquet"
-    out.to_parquet(out_path)
-    log(f"wrote {out_path} ({len(out):,} rows)")
 
 
 if __name__ == "__main__":
-    main()
+    import regen_set_game_elo_with_bridge as regen
+    sys.exit(regen.main(["--only", "game", *sys.argv[1:]]))
