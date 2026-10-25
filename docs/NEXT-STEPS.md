@@ -3,7 +3,7 @@
 > Living queue. Sessions update this when they finish work (rule in `C:\dev\CLAUDE.md`).
 > Decision log: [DECISIONS.md](DECISIONS.md) · Vault map: [HOME.md](HOME.md) ·
 > Rolled-off narrative: [backlog/](backlog/)
-> Last updated: **2026-09-15.**
+> Last updated: **2026-10-25.**
 >
 > **2022-23 backfill FIXED (D-55).** All 5 years (2022-2026) are now usable -
 > the shrink-factor re-estimate (queue item 3) is unblocked.
@@ -18,6 +18,12 @@
 > the main-draw count past its slot limit). A generic multi-event ITG page
 > shipped (`inthegame-blog` PR #694) - a new event needs no new page, just
 > another `tournament_id` in the data files this reads.
+>
+> **China Open (Beijing, started 2026-09-30) is still the last published forecast
+> as far as this repo knows.** Last known state is 2026-09-15 (published). The
+> worker did not read R2, so this is not checked since. Issue #44's prune
+> (a46d4ac, dd38685) drops it on the next write, and nothing writes until then.
+> Clearing it is Awaiting Pete item 7.
 >
 > **ATP is still blocked on a per-tournament field/entry list** - the
 > calendar (61 events, full season) and a validated deep ranking source
@@ -214,6 +220,12 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    Release or the ratings page's BT column reverts overnight.
 6. **Rust refinements, only if the comeback slice keeps rewarding it**: weight
    a match by sets or games played, and by whether it was won. D-49.
+7. **Issue #44: take the China Open off the published forecast.** The code fix
+   drops started events on every write, but nothing writes until the next run.
+   Either dispatch `event-forecast.yml` for an event that has not started yet
+   (group and `--ref` as in the workflow's inputs), or remove the China Open
+   rows from the three R2 files by hand. The worker cannot write R2. Schedule
+   decision: manual dispatch stays, no cron (D-60). Say so if you want a cron.
 
 ## Open queue
 
@@ -288,7 +300,7 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
 - **2026-09-13** — US Open men's final. `live-projection.yml` has no expiry.
   The laptop tasks run to **2026-09-16 12:00 local** (2026-09-15 22:00 New
   York); the point capture still depends on the laptop.
-- **~2026-09-23** — dispatch `event-forecast.yml` with group `1020` for the
+- ~~**2026-09-23** — dispatch `event-forecast.yml` with group `1020` for the
   China Open (Beijing, starts 2026-09-30) once the field shows 96 entrants
   and 32 seeds. On 09-07 it was 76 of 96 and 0 seeded, and the pipeline
   correctly refuses a partial field without `allow_partial`.
@@ -300,7 +312,8 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
   `dev`: Beijing resolves, 76/76 entrants at 100%, and it stops at the field
   guard as intended. **Dispatch with `--ref` matching where the fix lives**;
   `gh workflow run` defaults to the default branch, which cost one confusing
-  failure here.
+  failure here.~~ *Moot 2026-10-25: the China Open started 2026-09-30; see
+  Awaiting Pete 7.*
 - **2026-09-14 08:00** — scheduled task `DropshotverseRescoreAfterFinal` runs
   `rescore_after_final.cmd` once: rebuild the point table, re-run both in-match
   arms, print the late-round comparison beside the numbers on record. Log at
@@ -471,3 +484,13 @@ Still open from those reviews, in the order they are worth doing:
 - **Config D forward test** — would turn the +0.0247 upper bound into the
   shipped model's exact gap. Skipped: three measurements agree, and a model
   right 38% of the time when it dissents has no edge worth sizing.
+- **Published-copy fallback in the WTA event merge** — with no local table file,
+  `simulate_wta_event.py` merges into the copy on R2. A read that fails with
+  anything but a 404 raises, so a flaky read fails the dispatch red and writes
+  nothing. A 404 counts as "no table yet" (`_is_missing`), so a missing public
+  copy starts the merge from empty, and the next upload holds only the new event.
+  Not chased: retrying the read, or reading from another source.
+- **Seed threshold for smaller draws** — `expected_seeds` asks for 8 seeds in a
+  draw of 32 or fewer, 16 up to 64, and 32 above; `complete` needs no TBD slots
+  and at least that many seeds. Not chased: whether those numbers match each
+  tour's seeding rules for draws under 65 entrants. No check of that was made.
