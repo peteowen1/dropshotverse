@@ -68,6 +68,7 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 
+import elo_freshness
 import hierarchical_model as hm
 import train_best_model as tbm
 from simulate_tournament import DD, STAGE_ORDER, load_tournament_field
@@ -84,6 +85,11 @@ MODEL_CACHE_DIR = SCRATCH / "xgb_bagged_model_cache_v2_setgame"
 # fix) can be trained and scored without touching the parquet the live
 # US Open sim reads from the working tree every 30 minutes.
 ELO_RAW_PATH = Path(os.environ.get("DSV_ELO_RAW_PATH", str(SCRATCH / "elo_raw_ratings_full.parquet")))
+# Set and game Elo, overridable the same way (a scratch rebuild can be scored
+# without touching the files the live jobs read). elo_freshness.check_once()
+# refuses to rate when either lags overall Elo (OPUS-redteam-2026-10-25 F1).
+SET_ELO_PATH = Path(os.environ.get("DSV_SET_ELO_PATH", str(SCRATCH / "set_elo_raw_ratings_full.parquet")))
+GAME_ELO_PATH = Path(os.environ.get("DSV_GAME_ELO_PATH", str(SCRATCH / "game_elo_raw_ratings_full.parquet")))
 
 # Ticket 29 CI result (2026-08-29): match+set+game beat match-only with a
 # resolved CI on WTA (-0.00170, CI [-0.00321,-0.00006]); ALL and ATP were
@@ -157,8 +163,8 @@ def train_bagged_model(use_cache: bool = True):
     train = tbm.merge_hier(train_feat, train_hier_path)
     playstyle_full = tbm.build_playstyle_features()
     train = tbm.merge_playstyle(train, playstyle_full)
-    train = merge_granularity_elo(train, str(SCRATCH / "set_elo_raw_ratings_full.parquet"), "set")
-    train = merge_granularity_elo(train, str(SCRATCH / "game_elo_raw_ratings_full.parquet"), "game")
+    train = merge_granularity_elo(train, str(SET_ELO_PATH), "set")
+    train = merge_granularity_elo(train, str(GAME_ELO_PATH), "game")
     holdout = pd.read_parquet(SCRATCH / "xgb_features_v10_holdout.parquet")
     cat_levels = {c: sorted(set(train[c].dropna().unique()) | set(holdout[c].dropna().unique()))
                   for c in tbm.XGB_CATEGORICAL}
@@ -285,6 +291,9 @@ def _latest_rating_lookup(path: str, tour: str, date0, field_uids: list[str],
 
 def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
                        hier_snapshot: dict, playstyle_full: pd.DataFrame, age_table: pd.DataFrame) -> pd.DataFrame:
+    # A frozen set/game Elo beside a current overall Elo passed silently for
+    # two months (F1). Checked once per file version per process.
+    elo_freshness.check_once(ELO_RAW_PATH, SET_ELO_PATH, GAME_ELO_PATH)
     elo = pd.read_parquet(ELO_RAW_PATH)
     elo_t = elo[(elo["tour"] == tour) & (elo["level_file"] == "tour") & (elo["date"] < date0)]
 
@@ -294,9 +303,9 @@ def build_player_table(field_uids: list[str], tour: str, date0, surface: str,
     long_ro = long_ro[long_ro["uid"].isin(field_uids)].sort_values("date")
     latest_ro = long_ro.drop_duplicates(subset="uid", keep="last").set_index("uid")
 
-    latest_set_elo = _latest_rating_lookup(str(SCRATCH / "set_elo_raw_ratings_full.parquet"), tour, date0,
+    latest_set_elo = _latest_rating_lookup(str(SET_ELO_PATH), tour, date0,
                                            field_uids, "set_elo_winner", "set_elo_loser")
-    latest_game_elo = _latest_rating_lookup(str(SCRATCH / "game_elo_raw_ratings_full.parquet"), tour, date0,
+    latest_game_elo = _latest_rating_lookup(str(GAME_ELO_PATH), tour, date0,
                                             field_uids, "game_elo_winner", "game_elo_loser")
 
     elo_surf = elo_t[elo_t["surface"] == surface]

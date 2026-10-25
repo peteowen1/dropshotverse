@@ -5,7 +5,8 @@
 # labelled eight-day-old ratings as updated today. This job regenerates the
 # Elo replay with the current tennismylife bridge, rebuilds ratings.parquet
 # only (predictions.parquet is the LOCKED pre-tournament forecast and is not
-# touched), checks its anchors, and uploads that one file.
+# touched), checks its anchors, and uploads that one file. Since 2026-10-25
+# it regenerates set and game Elo too, and fails if any Elo input lags.
 #
 # Measured on the first dry run (2026-09-06, run 34037818980): Elo regeneration
 # 38 s, ratings build 114 s, whole job 3 min 50 s on ubuntu-latest. Daily at
@@ -76,6 +77,19 @@ jobs:
           start=$(date +%s)
           python regen_elo_raw_with_bridge.py
           echo "::notice::regen_elo_raw_with_bridge took $(( $(date +%s) - start )) s"
+
+      # Set and game Elo from the same bridged archive (OPUS-redteam-2026-10-25
+      # F1): until this step existed they came from the Release unchanged,
+      # frozen at Roland Garros 2026, while overall Elo above stayed current. The
+      # freshness check then fails the run if any of the three still lags.
+      - name: Regenerate set and game Elo with the current bridge (timed)
+        working-directory: dropshotdata/scripts
+        shell: bash
+        run: |
+          start=$(date +%s)
+          python regen_set_game_elo_with_bridge.py
+          echo "::notice::regen_set_game_elo_with_bridge took $(( $(date +%s) - start )) s"
+          python elo_freshness.py
 
       - name: Build ratings.parquet only (timed)
         working-directory: dropshotdata/scripts

@@ -10,22 +10,28 @@ per-match SETS-WON fraction instead of match win/loss) - produces one row
 per archive match with pre-match set-Elo ratings for both players, ready to
 merge into train_best_model.py's feature pipeline the same way the existing
 Elo/hier features already are.
+
+2026-10-25 (OPUS-redteam F1): this file was built once, on 2026-08-29, from
+the Sackmann archive alone, and never refreshed, so it stopped at 2026-06-02
+while overall Elo moved on with the tennismylife bridge. The replay is now
+`replay_set_elo()`, and the daily jobs call it through
+regen_set_game_elo_with_bridge.py, which builds set and game Elo together
+from the bridged archive. Running this script runs that regen for set Elo
+only; `--archive-only` reproduces the original archive-only file.
 """
 from __future__ import annotations
 
-import math
-from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
 
-import hierarchical_model as hm
 from parse_score_sets_permissive import parse_score_sets_permissive
 
-ARCHIVE = Path(r"C:\dev\dropshotverse\dropshotdata\raw\github")
 K_BASE, K_SHAPE, K_MIN = 250.0, 0.4, 16.0
 START = 1500.0
 SCALE = 400.0
+OUT_NAME = "set_elo_raw_ratings_full.parquet"
 
 
 def log(m: str) -> None:
@@ -40,12 +46,9 @@ def logistic(diff: float) -> float:
     return 1.0 / (1.0 + 10 ** (-diff / SCALE))
 
 
-def main() -> None:
-    log("loading prepared archive (reusing hierarchical_model's load_prepared - same"
-        " has_points/total_games_w/l/score columns and round-order fix)...")
-    df, dropped = hm.load_prepared(use_cache=True)
-    log(f"  {len(df):,} rows")
-
+def replay_set_elo(df: pd.DataFrame) -> pd.DataFrame:
+    """One row per match of `df` (hierarchical_model.prepare() output, in its
+    order) with both players' PRE-match set Elo and the implied p(winner)."""
     rating: dict[str, float] = {}
     n_matches: dict[str, int] = {}
     n = len(df)
@@ -54,7 +57,7 @@ def main() -> None:
     out_p = np.empty(n)
     used = np.zeros(n, dtype=bool)
 
-    for i, row in enumerate(df.itertuples(index=False)):
+    for i, row in enumerate(df[["winner_uid", "loser_uid", "score"]].itertuples(index=False)):
         w, l = row.winner_uid, row.loser_uid
         rw, rl = rating.get(w, START), rating.get(l, START)
         out_ro_w[i], out_ro_l[i] = rw, rl
@@ -80,17 +83,14 @@ def main() -> None:
         if (i + 1) % 300_000 == 0:
             log(f"  ...{i+1:,}/{n:,}")
 
-    log(f"usable (parseable score) rows: {used.sum():,}/{n:,} ({100*used.mean():.1f}%)")
-
-    out = pd.DataFrame({
+    log(f"  set Elo: usable (parseable score) rows {used.sum():,}/{n:,} ({100*used.mean():.1f}%)")
+    return pd.DataFrame({
         "date": df["date"].values, "tour": df["tour"].values, "level_file": df["level_file"].values,
         "winner_uid": df["winner_uid"].values, "loser_uid": df["loser_uid"].values,
         "set_elo_winner": out_ro_w, "set_elo_loser": out_ro_l, "p_winner_set_elo": out_p,
     })
-    out_path = r"C:\dev\dropshotverse\dropshotdata\tune_scratch\set_elo_raw_ratings_full.parquet"
-    out.to_parquet(out_path)
-    log(f"wrote {out_path} ({len(out):,} rows)")
 
 
 if __name__ == "__main__":
-    main()
+    import regen_set_game_elo_with_bridge as regen
+    sys.exit(regen.main(["--only", "set", *sys.argv[1:]]))
