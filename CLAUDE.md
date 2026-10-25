@@ -8,7 +8,7 @@ session that changes state.
 ## Shape of the repo
 
 - **One git repo.** `dropshotdata/` is a plain directory, not a sub-repo.
-  Commit from the root; `dev` for work, `main` via reviewed PR.
+  Commit from the root.
 - Python 3.13 at `C:\Python313\python.exe`. No R in the pipeline.
 - The live-path scripts resolve `dropshotdata/` from their own location via
   `scripts/_common.py` (`DD`, `SCRATCH`, `BLOG`, `RAW`), so they run from any
