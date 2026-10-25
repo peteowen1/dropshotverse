@@ -158,6 +158,7 @@ def build_ratings_table(models: list, cat_levels: dict, playstyle_full: pd.DataF
     draws = draw_uids_by_tour()
     rows = []
     unrated: dict[str, list[str]] = {}
+    pools: dict[str, list[str]] = {}
     for tour in ("atp", "wta"):
         log(f"  [{tour}] building active player pool...")
         draw = draws.get(tour, set())
@@ -176,13 +177,24 @@ def build_ratings_table(models: list, cat_levels: dict, playstyle_full: pd.DataF
             log(f"  [{tour}] WARNING: {len(missing)} draw player(s) have no match history in the "
                 f"52-week window and will have NO bt_rating: "
                 f"{', '.join(name_lookup.get(u, u) for u in missing)}")
-        if not field_uids:
-            continue
+        if field_uids:
+            pools[tour] = field_uids
 
-        snap = stu.build_snapshots({f"{tour}:ratings": {"date0": as_of, "field_uids": field_uids}}, df=bridged_df)
-        snap = snap.get(f"{tour}:ratings", {})
-        h2h = build_h2h_dict(set(field_uids))
-        ptab = build_player_table(field_uids, tour, as_of, REFERENCE_SURFACE, snap, playstyle_full, age_table)
+    # ONE replay for both tours. build_snapshots is a single pass over the
+    # whole archive (both tours) that snapshots every key's field when it
+    # reaches that key's date0; both tours share date0 = as_of, so one call
+    # gives the same states as one call per tour, and saves a full 1.19M-row
+    # replay (~32 s of the daily refresh, measured on run 39591374575).
+    # Likewise one h2h build over the union of both pools: uids carry their
+    # tour prefix, so the per-tour lookups are unchanged, and it reads the
+    # Elo parquet twice instead of four times.
+    snaps = stu.build_snapshots({f"{tour}:ratings": {"date0": as_of, "field_uids": field_uids}
+                                 for tour, field_uids in pools.items()}, df=bridged_df) if pools else {}
+    h2h = build_h2h_dict(set().union(*pools.values())) if pools else {}
+
+    for tour, field_uids in pools.items():
+        snap = snaps.get(f"{tour}:ratings", {})
+        ptab =build_player_table(field_uids, tour, as_of, REFERENCE_SURFACE, snap, playstyle_full, age_table)
 
         # NOTE: deliberately NOT publishing per-surface Elo (ptab's "rs").
         # Checked before shipping it (Sabalenka: rs=1340 on clay despite being
