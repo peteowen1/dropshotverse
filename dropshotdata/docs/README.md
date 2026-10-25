@@ -24,6 +24,7 @@ dropshotdata/
 |---|---|---|
 | `sackmann-archive` | `sackmann_archive_raw.tar.gz` (144 MB, extracts to `raw/github/`), `sackmann_matches.parquet` (29 MB) | `scripts/publish_archive_release.py` |
 | `model-inputs-2026-09` | `elo_raw_ratings_full.parquet`, `set_/game_elo_raw_ratings_full.parquet`, `diag_layoff.parquet`, `xgb_features_v10_holdout.parquet`, `xgb_bagged_model_cache_v2_setgame.zip`, `us_open_2026_predictions.json` | `scripts/publish_model_inputs_release.py` |
+| `tennismylife-archive` | `tml_atp.csv`, `tml_wta.csv`, `tml_manifest.json` (the current season, overwritten daily), plus dated copies `*_YYYYMMDD.*` | `.github/workflows/archive-tennismylife.yml` |
 
 Release tags are reused with `--clobber`, so check asset `updatedAt`, not the
 release date, to know how fresh a file is.

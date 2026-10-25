@@ -21,9 +21,11 @@ this archive is 5-6 digits, so there's no realistic collision risk.
 """
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import re
 import unicodedata
+import urllib.error
 from pathlib import Path
 
 import numpy as np
@@ -31,9 +33,44 @@ import pandas as pd
 
 import _common
 DD = _common.DD
-TML_URLS = {"atp": "https://stats.tennismylife.org/data/2026.csv",
-           "wta": "https://stats.tennismylife.org/data/2026_wta.csv"}
+# One file per season per tour: {year}.csv (ATP) and {year}_wta.csv (WTA).
+# The year used to be hard-coded to 2026, which would have frozen the ratings
+# at the end of 2026 with every check still green. Every season from
+# FIRST_TML_SEASON to the current one is read; BRIDGE_CUTOFF still decides
+# which rows count, so the older seasons only add history, never duplicates.
+FIRST_TML_SEASON = 2026
+TML_URL_PATTERNS = {"atp": "https://stats.tennismylife.org/data/{year}.csv",
+                    "wta": "https://stats.tennismylife.org/data/{year}_wta.csv"}
 BRIDGE_CUTOFF = pd.Timestamp("2026-05-25")   # archive's own last known date - only bridge matches strictly after this
+
+
+def tml_seasons(today: dt.date | None = None) -> list[int]:
+    """Every season the bridge reads: FIRST_TML_SEASON up to today's year."""
+    today = today or dt.date.today()
+    return list(range(FIRST_TML_SEASON, max(today.year, FIRST_TML_SEASON) + 1))
+
+
+def tml_url(tour: str, year: int) -> str:
+    return TML_URL_PATTERNS[tour].format(year=year)
+
+
+def read_tml(tour: str, today: dt.date | None = None, reader=pd.read_csv) -> pd.DataFrame:
+    """Every season's file for `tour`, stacked. A new season's file that is
+    not published yet (404 in January) is skipped with a warning; any other
+    missing season is an error, because that is the source going away."""
+    today = today or dt.date.today()
+    frames = []
+    for year in tml_seasons(today):
+        url = tml_url(tour, year)
+        try:
+            frames.append(reader(url, low_memory=False))
+        except urllib.error.HTTPError as e:
+            if e.code == 404 and year == today.year and today.month == 1:
+                log(f"  WARN: {url} is not published yet (404); the new season "
+                    f"has no matches in the bridge until it is")
+                continue
+            raise
+    return pd.concat(frames, ignore_index=True)
 
 # Hand-verified overrides for real name-order/hyphenation mismatches (same
 # discipline as parse_us_open_draws.py's - checked against the archive
@@ -161,8 +198,9 @@ def build_loose_name_to_id(tour: str) -> dict[str, int]:
 
 
 def build_bridge(tour: str) -> pd.DataFrame:
-    log(f"[{tour}] downloading tennismylife 2026 data...")
-    tml = pd.read_csv(TML_URLS[tour], low_memory=False)
+    seasons = tml_seasons()
+    log(f"[{tour}] downloading tennismylife data for {seasons[0]}-{seasons[-1]}...")
+    tml = read_tml(tour)
     tml["date"] = pd.to_datetime(tml["tourney_date"], format="%Y%m%d", errors="coerce")
     tml = tml[tml["date"] > BRIDGE_CUTOFF].copy()
     log(f"  {len(tml)} rows after {BRIDGE_CUTOFF.date()}")

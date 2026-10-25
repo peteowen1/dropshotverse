@@ -54,16 +54,38 @@ jobs:
         id: fetch
         run: |
           python - <<'PY'
-          import io, json, os, sys, urllib.request
+          import datetime as _dt, io, json, os, sys, urllib.error, urllib.request
           import pandas as pd
 
-          URLS = {"atp": "https://stats.tennismylife.org/data/2026.csv",
-                  "wta": "https://stats.tennismylife.org/data/2026_wta.csv"}
+          # The current season's file, by today's date (the year was once
+          # hard-coded to 2026). In January the new season's file may not be
+          # published yet, or still too small to pass the size check below;
+          # then the finished previous season is archived instead, with a
+          # warning. Any other 404 fails the job.
+          PATTERNS = {"atp": "https://stats.tennismylife.org/data/{year}.csv",
+                      "wta": "https://stats.tennismylife.org/data/{year}_wta.csv"}
           UA = {"User-Agent": "dropshotverse/0.1 (non-commercial research)"}
+          now = _dt.date.today()
+
+          def fetch(url):
+              return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60).read()
+
           summary = {}
-          for tour, url in URLS.items():
-              req = urllib.request.Request(url, headers=UA)
-              raw = urllib.request.urlopen(req, timeout=60).read()
+          for tour, pattern in PATTERNS.items():
+              year = now.year
+              url = pattern.format(year=year)
+              try:
+                  raw = fetch(url)
+              except urllib.error.HTTPError as e:
+                  if e.code != 404 or now.month != 1:
+                      raise
+                  raw = b""
+              if now.month == 1 and len(raw) < 10_000:
+                  print(f"::warning::{tour}: {url} is not published yet or still tiny "
+                        f"({len(raw)} bytes); archiving {year - 1} instead")
+                  year -= 1
+                  url = pattern.format(year=year)
+                  raw = fetch(url)
               if len(raw) < 10_000:
                   sys.exit(f"{tour}: {len(raw)} bytes is too small to be the season "
                            f"file; treating as the source going away, not as data")
@@ -76,14 +98,13 @@ jobs:
               dt = pd.to_datetime(d["tourney_date"], format="%Y%m%d", errors="coerce")
               stats = int(d["w_svpt"].notna().sum())
               open(f"tml_{tour}.csv", "wb").write(raw)
-              summary[tour] = {"rows": len(d), "last_match": str(dt.max().date()),
+              summary[tour] = {"season": year, "rows": len(d), "last_match": str(dt.max().date()),
                                "with_serve_stats": stats, "bytes": len(raw)}
               print(f"{tour}: {len(d):,} rows, last match {dt.max().date()}, "
                     f"{stats:,} with serve stats, {len(raw)/1024:.0f} KB")
 
           # Staleness is normal here, so it warns rather than fails.
-          import datetime as _dt
-          today = _dt.date.today()
+          today = now
           for tour, s in summary.items():
               lag = (today - _dt.date.fromisoformat(s["last_match"])).days
               s["lag_days"] = lag
