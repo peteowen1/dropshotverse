@@ -38,6 +38,24 @@ jobs:
       - name: Recursion, feed parsing and seeding
         run: python dropshotdata/tune_scratch/test_inmatch_seeding.py
 
+  elo-freshness:
+    name: stale Elo inputs fail the build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install pandas and pyarrow
+        run: python -m pip install --quiet pandas pyarrow
+
+      # OPUS-redteam-2026-10-25 F1: game Elo sat frozen at Roland Garros 2026 beside a
+      # current overall Elo for two months. Synthetic files, offline.
+      - name: Set/game Elo lagging overall Elo raises
+        run: python dropshotdata/tune_scratch/test_elo_freshness.py
+
   live-score-still-off:
     name: live scoring is off in production
     runs-on: ubuntu-latest
