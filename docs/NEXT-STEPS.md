@@ -22,7 +22,7 @@
 > **China Open (Beijing, started 2026-09-30) is still the last published forecast
 > as far as this repo knows.** Last known state is 2026-09-15 (published). The
 > worker did not read R2, so this is not checked since. Issue #44's prune
-> (a46d4ac, dd38685) drops it on the next write, and nothing writes until then.
+> drops it on the next write, and nothing writes until then.
 > Clearing it is Awaiting Pete item 7.
 >
 > **ATP is still blocked on a per-tournament field/entry list** - the
@@ -220,12 +220,15 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    Release or the ratings page's BT column reverts overnight.
 6. **Rust refinements, only if the comeback slice keeps rewarding it**: weight
    a match by sets or games played, and by whether it was won. D-49.
-7. **Issue #44: take the China Open off the published forecast.** The code fix
-   drops started events on every write, but nothing writes until the next run.
-   Either dispatch `event-forecast.yml` for an event that has not started yet
-   (group and `--ref` as in the workflow's inputs), or remove the China Open
-   rows from the three R2 files by hand. The worker cannot write R2. Schedule
-   decision: manual dispatch stays, no cron (D-60). Say so if you want a cron.
+7. **Issue #44: take the China Open off the published forecast.** Nothing
+   writes until a run happens. Dispatch `event-forecast.yml` with group `1020`:
+   a started event is not forecast, the three files are pruned to empty, and the
+   run ends 0 with no model work. Two things stand in the way: the Validate step
+   reads `ev.iloc[0]` and fails on an empty table (the exact edit is in the
+   issue #44 summary; `.github/` was off limits to the worker), and the worker
+   cannot write R2. Alternatively run `simulate_wta_event.py --group 1020`
+   locally and upload the three files with wrangler. Schedule decision: manual
+   dispatch stays, no cron (D-60). Say so if you want a cron.
 
 ## Open queue
 
