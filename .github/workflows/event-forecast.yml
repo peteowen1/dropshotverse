@@ -108,8 +108,12 @@ jobs:
           d = pd.read_parquet("dropshotdata/blog/upcoming_predictions.parquet")
           print(d.shape, "events:", sorted(d["tournament_id"].unique()))
           ev = d[d["tournament_id"] == os.environ["EVENT_ID"]]
-          print(ev.iloc[0][["tournament_name", "start_date", "field_status", "source", "ratings_as_of"]].to_string())
-          print(ev.nlargest(8, "p_title")[["player_name", "seed", "p_title", "p_f"]].to_string(index=False))
+          if len(ev) == 0:
+              # The target had started, so the run only pruned (issue #44).
+              print("target event not in the table (it had started and was pruned); table holds", len(d), "rows")
+          else:
+              print(ev.iloc[0][["tournament_name", "start_date", "field_status", "source", "ratings_as_of"]].to_string())
+              print(ev.nlargest(8, "p_title")[["player_name", "seed", "p_title", "p_f"]].to_string(index=False))
           EOF
 
       - uses: actions/setup-node@v7

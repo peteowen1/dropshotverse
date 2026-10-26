@@ -33,7 +33,14 @@ def prune_started(table: pd.DataFrame, as_of: pd.Timestamp) -> tuple[pd.DataFram
     kept rows and the sorted ids of the events that were dropped.
     """
     as_of = calendar_date(as_of)
+    if pd.isna(as_of):
+        # NaT compares False with everything, which would drop every event.
+        raise ValueError(f"prune_started: as_of {as_of!r} is not a date")
     dates = table["start_date"].map(calendar_date)
+    if len(table) and dates.isna().all():
+        # A renamed or nulled start_date would otherwise empty the live file
+        # and pass for "every event had started".
+        raise ValueError("prune_started: no row has a parseable start_date")
     keep = (dates >= as_of).to_numpy(dtype=bool)
     dropped = sorted(table.loc[~keep, "tournament_id"].unique())
     return table.loc[keep].copy(), dropped

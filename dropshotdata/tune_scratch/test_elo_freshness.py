@@ -133,5 +133,16 @@ check("calendar_date of garbage is NaT", pd.isna(et.calendar_date("not a date"))
 kept, dropped = et.prune_started(mixed.iloc[:0], AS_OF)
 check("empty input gives empty output", len(kept) == 0 and dropped == [])
 
+# A bad as-of or a start_date column with no dates must stop, not empty the file.
+def prune_raises(table, as_of):
+    try:
+        et.prune_started(table, as_of)
+    except ValueError:
+        return True
+    return False
+check("unparseable as-of raises", prune_raises(china, "not a date"))
+check("all start dates unparseable raises",
+      prune_raises(china.assign(start_date=None), AS_OF))
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
