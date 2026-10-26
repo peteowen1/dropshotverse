@@ -499,4 +499,6 @@ Consequences to hold onto:
   misses are all outside the top 20 (Etcheverry, Galan, O'Connell,
   Ramos-Vinolas, Schmiedlova, Ruse - hyphen/apostrophe/compound-name variants
   not yet worth chasing further).
+- **D-60 (2026-10-25)** — Issue #44: `event-forecast.yml` stays manual dispatch, no cron; each write drops started events from all three tables (China Open, started 2026-09-30, was still published).
+  Asking for a started event does no model work and only prunes, so the files can end empty. Pure rules in `event_tables.py`, tested in CI via `test_elo_freshness.py`; wiring in `test_wta_event_prune.py` (needs xgboost).
 

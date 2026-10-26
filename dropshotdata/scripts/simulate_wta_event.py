@@ -23,7 +23,13 @@ WHAT IT DOES
      unseeded run is written only with --allow-partial and tagged
      source="provisional".
   6. Writes rows keyed by tournament_id into blog/upcoming_predictions.parquet,
-     replacing that tournament's previous rows and keeping every other event.
+     replacing that tournament's previous rows and keeping every other event
+     that has not started yet. Every write also drops events whose start_date
+     is before --as-of (default: today, UTC), and the draw JSON and pairwise
+     table keep only the events left in the parquet. If the event asked for has
+     itself started, it is not forecast: before any model work the three files
+     are pruned the same way and the run ends. That can leave them empty (same
+     columns, no rows), which is a valid state.
      The locked US Open tables are never touched.
 
 ANCHORS, decided before looking: title probabilities sum to 1; every seed
@@ -51,6 +57,7 @@ import numpy as np
 import pandas as pd
 
 import _common
+from event_tables import calendar_date, prune_started
 import bridge_tennismylife as bridge
 import hierarchical_model as hm
 import simulate_tournament_updating as stu
@@ -130,6 +137,41 @@ def read_existing_draw(local: Path, url: str) -> dict | None:
         if _is_missing(e):
             return None
         raise
+
+
+def prune_published(args, as_of: pd.Timestamp) -> None:
+    """Rewrite the three published files without the events that have started.
+
+    The target event has already started, so it is not forecast. The tables
+    are still pruned, and every event may go: an empty table is written with
+    the same columns, and the draw file with no tournaments. A file that
+    exists nowhere is not created.
+    """
+    out, draw_out, pw_out = Path(args.out), Path(args.out_draw), Path(args.out_pairwise)
+    prev = read_existing_parquet(out, PUBLIC_URL)
+    if prev is None:
+        log("no existing table: nothing to prune, nothing written")
+        return
+    kept, dropped = prune_started(prev, as_of)
+    log(f"dropping started event(s) from the table: {dropped}")
+    keep_ids = set(kept["tournament_id"])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    kept.to_parquet(out, index=False)
+    log(f"wrote {out} ({len(kept):,} rows, {len(keep_ids)} event(s))")
+
+    existing = read_existing_draw(draw_out, PUBLIC_DRAW_URL)
+    if existing is not None:
+        payload = {"tournaments": [t for t in existing["tournaments"] if t.get("tournament_id") in keep_ids]}
+        draw_out.parent.mkdir(parents=True, exist_ok=True)
+        draw_out.write_text(json.dumps(payload, indent=1), encoding="utf-8")
+        log(f"wrote {draw_out} ({len(payload['tournaments'])} event(s))")
+
+    pw_prev = read_existing_parquet(pw_out, PUBLIC_PAIRWISE_URL)
+    if pw_prev is not None:
+        pw_kept = pw_prev[pw_prev["tournament_id"].isin(keep_ids)].copy()
+        pw_out.parent.mkdir(parents=True, exist_ok=True)
+        pw_kept.to_parquet(pw_out, index=False)
+        log(f"wrote {pw_out} ({len(pw_kept):,} rows, {pw_kept['tournament_id'].nunique()} event(s))")
 
 
 # ------------------------------------------------------------------ inputs
@@ -364,13 +406,26 @@ def main() -> None:
     ap.add_argument("--out-draw", default=str(OUT_DRAW_DEFAULT))
     ap.add_argument("--out-pairwise", default=str(OUT_PAIRWISE_DEFAULT))
     ap.add_argument("--no-merge", action="store_true", help="do not merge other events from the published table")
+    ap.add_argument("--as-of", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    help="UTC date YYYY-MM-DD (default: today). Events that started before it are pruned "
+                         "from the published tables on every write; if --group itself started before it, "
+                         "nothing is forecast and only the pruning runs")
     args = ap.parse_args()
 
     ev = calendar_row(args.group, args.year)
     tour = "wta"
     name = (ev.get("tournamentGroup") or {}).get("name", str(args.group)).title()
     title = ev.get("title") or name
-    date0 = pd.Timestamp(ev["startDate"])
+    date0 = calendar_date(ev["startDate"])
+    as_of = calendar_date(args.as_of)
+    if pd.isna(date0) or pd.isna(as_of):
+        raise SystemExit(f"unparseable date: startDate {ev['startDate']!r}, --as-of {args.as_of!r}")
+    if date0 < as_of:
+        log(f"{title} started {date0.date()}, before --as-of {as_of.date()}: not forecast; "
+            f"pruning the published tables only")
+        if not args.no_merge:
+            prune_published(args, as_of)
+        return
     surface = str(ev.get("surface") or "Hard").title()
     draw = int(ev.get("singlesDrawSize") or 0)
     level = level_code((ev.get("tournamentGroup") or {}).get("level", ""), draw)
@@ -503,6 +558,10 @@ def main() -> None:
     if prev is not None and len(prev):
         prev = prev[prev["tournament_id"] != tournament_id]
         new = pd.concat([prev, new], ignore_index=True)
+    new, dropped = prune_started(new, as_of)
+    if dropped:
+        log(f"dropping started event(s) from the table: {dropped}")
+    keep_ids = set(new["tournament_id"])
     out.parent.mkdir(parents=True, exist_ok=True)
     new.to_parquet(out, index=False)
     log(f"wrote {out} ({len(new):,} rows, {new['tournament_id'].nunique()} event(s))")
@@ -531,7 +590,10 @@ def main() -> None:
             # raises KeyError here (nothing catches it) rather than silently
             # becoming "zero other tournaments" and wiping every other
             # published draw on write.
-            others = [t for t in existing["tournaments"] if t.get("tournament_id") != tournament_id]
+            # Companions keep only events still in the pruned parquet, so an
+            # event that has started leaves all three published files together.
+            others = [t for t in existing["tournaments"]
+                      if t.get("tournament_id") != tournament_id and t.get("tournament_id") in keep_ids]
             draw_payload = {"tournaments": others + [draw_entry]}
     draw_out.parent.mkdir(parents=True, exist_ok=True)
     draw_out.write_text(json.dumps(draw_payload, indent=1), encoding="utf-8")
@@ -546,7 +608,7 @@ def main() -> None:
         if pw_prev is None:
             log("no existing pairwise table to merge (not found); writing this event alone")
     if pw_prev is not None and len(pw_prev):
-        pw_prev = pw_prev[pw_prev["tournament_id"] != tournament_id]
+        pw_prev = pw_prev[(pw_prev["tournament_id"] != tournament_id) & pw_prev["tournament_id"].isin(keep_ids)]
         pairwise_new = pd.concat([pw_prev, pairwise_new], ignore_index=True)
     pw_out.parent.mkdir(parents=True, exist_ok=True)
     pairwise_new.to_parquet(pw_out, index=False)
