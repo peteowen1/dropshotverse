@@ -3,6 +3,10 @@ when they line up (OPUS-redteam-2026-10-25 F1: game Elo sat at 2026-06-02 for
 two months beside a current overall Elo and nothing failed).
 
 Offline: tiny synthetic parquets in a temp dir. Needs pandas and pyarrow.
+
+Also holds the pruning rules for the published upcoming-event tables (issue
+#44, event_tables.py). They sit here because tests.yml already runs this file
+with exactly the packages they need; simulate_wta_event.py itself needs xgboost.
 """
 import os
 import sys
@@ -16,6 +20,7 @@ TMP = Path(tempfile.mkdtemp())
 os.environ["DROPSHOT_DATA_DIR"] = str(TMP)
 sys.path.insert(0, str(ROOT / "dropshotdata" / "scripts"))
 import elo_freshness as ef  # noqa: E402
+import event_tables as et  # noqa: E402
 
 fails = []
 
@@ -89,6 +94,44 @@ rc = ef.main(["--overall", str(overall), "--set", str(frozen_set), "--game", str
 check("CLI exits 1 on stale input", rc == 1)
 rc = ef.main(["--overall", str(overall), "--set", str(fresh_set), "--game", str(fresh_game)])
 check("CLI exits 0 on fresh input", rc == 0)
+
+# ---- issue #44: upcoming-event tables hold only events that have not started.
+AS_OF = pd.Timestamp("2026-10-26")
+china = pd.DataFrame({"tournament_id": "2026-1020", "start_date": "2026-09-30",
+                      "player_id": [f"wta:{i}" for i in range(76)], "p_title": 1 / 76})
+kept, dropped = et.prune_started(china, AS_OF)
+check("China Open (started 2026-09-30) is dropped", dropped == ["2026-1020"])
+check("pruning every event leaves zero rows", len(kept) == 0)
+check("empty result keeps the columns", list(kept.columns) == list(china.columns))
+kept.to_parquet(TMP / "empty_upcoming.parquet", index=False)
+back = pd.read_parquet(TMP / "empty_upcoming.parquet")
+check("empty table round-trips through parquet with its schema",
+      len(back) == 0 and list(back.columns) == list(china.columns) and back["start_date"].dtype == china["start_date"].dtype)
+
+mixed = pd.DataFrame({
+    "tournament_id": ["past", "today", "future", "garbage", "missing"],
+    "start_date": ["2026-09-23", "2026-10-26", "2026-11-01", "not a date", None]})
+kept, dropped = et.prune_started(mixed, AS_OF)
+check("event starting on as-of is kept, later kept",
+      list(kept["tournament_id"]) == ["today", "future"])
+check("past, unparseable and missing dates are dropped", dropped == ["garbage", "missing", "past"])
+
+# A date with an offset must not raise TypeError against the tz-naive as-of,
+# and keeps its calendar date as written.
+offs = pd.DataFrame({"tournament_id": ["a", "b", "c"],
+                     "start_date": ["2026-10-25T23:00:00+10:00", "2026-10-26T00:30:00-08:00", "2026-11-02T00:00:00Z"]})
+try:
+    kept, dropped = et.prune_started(offs, AS_OF)
+    check("offset-bearing start dates do not raise and keep their written date",
+          dropped == ["a"] and list(kept["tournament_id"]) == ["b", "c"])
+except TypeError as e:
+    check(f"offset-bearing start dates do not raise ({e})", False)
+check("calendar_date drops the offset, keeps the written day",
+      et.calendar_date("2026-09-30T00:00:00+10:00") == pd.Timestamp("2026-09-30"))
+check("calendar_date of a tz-aware as-of is tz-naive", et.calendar_date(pd.Timestamp("2026-10-26", tz="UTC")).tz is None)
+check("calendar_date of garbage is NaT", pd.isna(et.calendar_date("not a date")) and pd.isna(et.calendar_date(None)))
+kept, dropped = et.prune_started(mixed.iloc[:0], AS_OF)
+check("empty input gives empty output", len(kept) == 0 and dropped == [])
 
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)

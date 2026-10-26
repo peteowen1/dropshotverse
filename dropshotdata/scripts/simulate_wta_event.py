@@ -26,8 +26,10 @@ WHAT IT DOES
      replacing that tournament's previous rows and keeping every other event
      that has not started yet. Every write also drops events whose start_date
      is before --as-of (default: today, UTC), and the draw JSON and pairwise
-     table keep only the events left in the parquet. An event that has already
-     started is refused before any model work, so nothing is written for it.
+     table keep only the events left in the parquet. If the event asked for has
+     itself started, it is not forecast: before any model work the three files
+     are pruned the same way and the run ends. That can leave them empty (same
+     columns, no rows), which is a valid state.
      The locked US Open tables are never touched.
 
 ANCHORS, decided before looking: title probabilities sum to 1; every seed
@@ -55,6 +57,7 @@ import numpy as np
 import pandas as pd
 
 import _common
+from event_tables import calendar_date, prune_started
 import bridge_tennismylife as bridge
 import hierarchical_model as hm
 import simulate_tournament_updating as stu
@@ -136,16 +139,39 @@ def read_existing_draw(local: Path, url: str) -> dict | None:
         raise
 
 
-def prune_started(table: pd.DataFrame, as_of: pd.Timestamp) -> tuple[pd.DataFrame, list[str]]:
-    """Keep the rows of events that have not started (start_date >= as_of).
+def prune_published(args, as_of: pd.Timestamp) -> None:
+    """Rewrite the three published files without the events that have started.
 
-    An event starting on as_of itself is kept. An unparseable start_date is
-    dropped, since nothing shows the event is still upcoming. Returns the kept
-    rows and the sorted ids of the events that were dropped.
+    The target event has already started, so it is not forecast. The tables
+    are still pruned, and every event may go: an empty table is written with
+    the same columns, and the draw file with no tournaments. A file that
+    exists nowhere is not created.
     """
-    keep = pd.to_datetime(table["start_date"], errors="coerce") >= as_of
-    dropped = sorted(table.loc[~keep, "tournament_id"].unique())
-    return table.loc[keep].copy(), dropped
+    out, draw_out, pw_out = Path(args.out), Path(args.out_draw), Path(args.out_pairwise)
+    prev = read_existing_parquet(out, PUBLIC_URL)
+    if prev is None:
+        log("no existing table: nothing to prune, nothing written")
+        return
+    kept, dropped = prune_started(prev, as_of)
+    log(f"dropping started event(s) from the table: {dropped}")
+    keep_ids = set(kept["tournament_id"])
+    out.parent.mkdir(parents=True, exist_ok=True)
+    kept.to_parquet(out, index=False)
+    log(f"wrote {out} ({len(kept):,} rows, {len(keep_ids)} event(s))")
+
+    existing = read_existing_draw(draw_out, PUBLIC_DRAW_URL)
+    if existing is not None:
+        payload = {"tournaments": [t for t in existing["tournaments"] if t.get("tournament_id") in keep_ids]}
+        draw_out.parent.mkdir(parents=True, exist_ok=True)
+        draw_out.write_text(json.dumps(payload, indent=1), encoding="utf-8")
+        log(f"wrote {draw_out} ({len(payload['tournaments'])} event(s))")
+
+    pw_prev = read_existing_parquet(pw_out, PUBLIC_PAIRWISE_URL)
+    if pw_prev is not None:
+        pw_kept = pw_prev[pw_prev["tournament_id"].isin(keep_ids)].copy()
+        pw_out.parent.mkdir(parents=True, exist_ok=True)
+        pw_kept.to_parquet(pw_out, index=False)
+        log(f"wrote {pw_out} ({len(pw_kept):,} rows, {pw_kept['tournament_id'].nunique()} event(s))")
 
 
 # ------------------------------------------------------------------ inputs
@@ -381,19 +407,25 @@ def main() -> None:
     ap.add_argument("--out-pairwise", default=str(OUT_PAIRWISE_DEFAULT))
     ap.add_argument("--no-merge", action="store_true", help="do not merge other events from the published table")
     ap.add_argument("--as-of", default=datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-                    help="UTC date YYYY-MM-DD (default: today). Events that started before it are refused "
-                         "and pruned from the published tables on every write")
+                    help="UTC date YYYY-MM-DD (default: today). Events that started before it are pruned "
+                         "from the published tables on every write; if --group itself started before it, "
+                         "nothing is forecast and only the pruning runs")
     args = ap.parse_args()
 
     ev = calendar_row(args.group, args.year)
     tour = "wta"
     name = (ev.get("tournamentGroup") or {}).get("name", str(args.group)).title()
     title = ev.get("title") or name
-    date0 = pd.Timestamp(ev["startDate"])
-    as_of = pd.Timestamp(args.as_of)
+    date0 = calendar_date(ev["startDate"])
+    as_of = calendar_date(args.as_of)
+    if pd.isna(date0) or pd.isna(as_of):
+        raise SystemExit(f"unparseable date: startDate {ev['startDate']!r}, --as-of {args.as_of!r}")
     if date0 < as_of:
-        raise SystemExit(f"{title} started {date0.date()}, before --as-of {as_of.date()}: "
-                         f"it is not forecast and nothing is written")
+        log(f"{title} started {date0.date()}, before --as-of {as_of.date()}: not forecast; "
+            f"pruning the published tables only")
+        if not args.no_merge:
+            prune_published(args, as_of)
+        return
     surface = str(ev.get("surface") or "Hard").title()
     draw = int(ev.get("singlesDrawSize") or 0)
     level = level_code((ev.get("tournamentGroup") or {}).get("level", ""), draw)

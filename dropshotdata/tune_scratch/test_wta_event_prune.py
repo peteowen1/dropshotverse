@@ -1,8 +1,11 @@
 """simulate_wta_event must drop started events from every published table.
 
-A started event is refused before any model work. Each write drops events
+A started event is not forecast: no model work runs and only the pruning
+happens, which may empty the files. Each write drops events
 whose start_date is before --as-of from the merged parquet, and the draw JSON
 and pairwise table keep only the events that survive in that parquet.
+Needs xgboost (the script imports the model stack), so CI does not run this;
+the pure pruning rules are tested in test_elo_freshness.py, which CI does run.
 Offline: the model layer is stubbed; the table reads and writes are real, in a
 temp directory. Every run has a local table file first, so no read falls back
 to the public copy.
@@ -99,25 +102,42 @@ def write_empty(d):
     pd.DataFrame(columns=["tournament_id", "player_a", "player_b", "p"]).to_parquet(d / OUTS[2], index=False)
 
 
-def test_prune_started(d):
-    t = pd.DataFrame({
-        "tournament_id": ["2026-1019", "2026-1020", "2026-1021", "2026-1022", "2026-1023"],
-        "start_date": ["2026-09-23", AS_OF, "2026-11-01", "not a date", None],
-    })
-    kept, dropped = s.prune_started(t, pd.Timestamp(AS_OF))
-    assert list(kept["tournament_id"]) == ["2026-1020", "2026-1021"], list(kept["tournament_id"])
-    assert dropped == ["2026-1019", "2026-1022", "2026-1023"], dropped
-    kept, dropped = s.prune_started(t.iloc[:0], pd.Timestamp(AS_OF))
-    assert len(kept) == 0 and dropped == [], (len(kept), dropped)
-
-
-def test_started_event_refused_before_model_work(d):
+def test_started_event_is_not_forecast_but_tables_are_pruned(d):
+    """The China Open case: group 1020 started 2026-09-30 and is in the
+    published tables. Asking for it does no model work and drops it."""
     write_prev(d)
-    before = [(d / n).read_bytes() for n in OUTS]
     code, calls = run(d, "2026-09-30", "--allow-partial", "--as-of", AS_OF, group=1020)
-    assert code and "before --as-of" in code, code
+    assert code is None, code
     assert calls["model"] == 0, calls
-    assert [(d / n).read_bytes() for n in OUTS] == before, "published tables changed on a refused run"
+    ids = ["2026-1030", "2026-1040"]
+    assert sorted(pd.read_parquet(d / OUTS[0])["tournament_id"].unique()) == ids
+    assert [t["tournament_id"] for t in json.loads((d / OUTS[1]).read_text(encoding="utf-8"))["tournaments"]] == ids
+    assert sorted(pd.read_parquet(d / OUTS[2])["tournament_id"].unique()) == ids
+
+
+def test_started_event_can_empty_the_tables(d):
+    """Only started events published: all three files end empty, with schema."""
+    rows = [{"tournament_id": "2026-1020", "start_date": "2026-09-30", "player_id": u, "p_title": 0.25} for u in UIDS]
+    cols = list(rows[0])
+    pd.DataFrame(rows).to_parquet(d / OUTS[0], index=False)
+    (d / OUTS[1]).write_text(json.dumps({"tournaments": [{"tournament_id": "2026-1020"}]}), encoding="utf-8")
+    pd.DataFrame([{"tournament_id": "2026-1020", "player_a": "x", "player_b": "y", "p": 0.5}]).to_parquet(
+        d / OUTS[2], index=False)
+    code, calls = run(d, "2026-09-30", "--as-of", AS_OF, group=1020)
+    assert code is None and calls["model"] == 0, (code, calls)
+    table = pd.read_parquet(d / OUTS[0])
+    assert len(table) == 0 and list(table.columns) == cols, (len(table), list(table.columns))
+    assert json.loads((d / OUTS[1]).read_text(encoding="utf-8")) == {"tournaments": []}
+    pw = pd.read_parquet(d / OUTS[2])
+    assert len(pw) == 0 and list(pw.columns) == ["tournament_id", "player_a", "player_b", "p"], list(pw.columns)
+
+
+def test_started_event_with_no_tables_writes_nothing(d):
+    with mock.patch.object(s, "read_existing_parquet", lambda local, url: None), \
+            mock.patch.object(s, "read_existing_draw", lambda local, url: None):
+        code, calls = run(d, "2026-09-30", "--as-of", AS_OF, group=1020)
+    assert code is None and calls["model"] == 0, (code, calls)
+    assert [n for n in OUTS if (d / n).exists()] == []
 
 
 def test_prunes_started_events_from_all_three_files(d):
@@ -150,14 +170,15 @@ def test_default_as_of_is_today_utc(d):
     write_empty(d)
     today = datetime.now(timezone.utc).date()
     code, calls = run(d, (today - timedelta(days=1)).isoformat(), "--allow-partial")
-    assert code and "before --as-of" in code, code
-    assert calls["model"] == 0, calls
+    assert code is None and calls["model"] == 0, (code, calls)
+    assert len(pd.read_parquet(d / OUTS[0])) == 0
     code, _ = run(d, (today + timedelta(days=30)).isoformat(), "--allow-partial")
     assert code is None, code
     assert sorted(pd.read_parquet(d / OUTS[0])["tournament_id"].unique()) == ["2026-1050"]
 
 
-TESTS = [test_prune_started, test_started_event_refused_before_model_work,
+TESTS = [test_started_event_is_not_forecast_but_tables_are_pruned, test_started_event_can_empty_the_tables,
+         test_started_event_with_no_tables_writes_nothing,
          test_prunes_started_events_from_all_three_files, test_empty_published_table,
          test_default_as_of_is_today_utc]
 
