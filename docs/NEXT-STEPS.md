@@ -214,10 +214,8 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    00:05 (D-47)**, with the debutant case (NaN, learned) and the second
    retrain (D-48 keep-all, D-49 rust, D-50). Republish the model-inputs
    Release and PR are in the same session.
-5. **Watch the first scheduled runs on the new bag**: laptop task 00:34 AEST
-   2026-09-10 (the 00:04 run failed inside the swap window, by design) and
-   `ratings-refresh.yml` at 06:00 UTC, which must fetch the republished
-   Release or the ratings page's BT column reverts overnight.
+5. ~~**Watch the first scheduled runs on the new bag**~~ — EXPIRED (monday
+   sweep 2026-10-29): those runs were 2026-09-10, seven weeks ago.
 6. **Rust refinements, only if the comeback slice keeps rewarding it**: weight
    a match by sets or games played, and by whether it was won. D-49.
 7. **Issue #44: take the China Open off the published forecast.** Nothing
