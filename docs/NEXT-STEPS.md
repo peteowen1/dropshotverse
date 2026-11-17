@@ -267,9 +267,12 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    offset was absorbing half of every match's form; fixed with
    `DSV_SURF_RW_SCALE=0.0`. Standalone point model 0.745 -> 0.698; through
    XGBoost, aggregate unchanged, tail rows better. Issue #1 can close on this.
-8. **[#2](https://github.com/peteowen1/dropshotverse/issues/2)** — the WTA
+8. ~~**[#2](https://github.com/peteowen1/dropshotverse/issues/2)** — the WTA
    public live-scores API. Its in-play fields have never been observed
-   populating.
+   populating.~~ — **ANSWERED 2026-11-17 (D-61)**: `Serve`, `PointA`/`PointB`
+   populate for a `P` match; the feed can roll back, so pick the newest
+   `LastUpdated`. Tiebreak points and non-`P` states still unseen. Nothing is
+   built on it yet.
 9. ~~**`DropshotverseUSOpenCapture` exits 1 intermittently.**~~ — **FIXED
    2026-09-06**: a `ConnectionResetError` mid-read escaped `fetch()`'s retry
    (it is an `OSError`, not a `URLError`) and killed the sweep. Now retried.

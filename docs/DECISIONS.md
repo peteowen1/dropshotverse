@@ -501,4 +501,5 @@ Consequences to hold onto:
   not yet worth chasing further).
 - **D-60 (2026-10-25)** — Issue #44: `event-forecast.yml` stays manual dispatch, no cron; each write drops started events from all three tables (China Open, started 2026-09-30, was still published).
   Asking for a started event does no model work and only prunes, so the files can end empty. Pure rules in `event_tables.py`, tested in CI via `test_elo_freshness.py`; wiring in `test_wta_event_prune.py` (needs xgboost).
-
+- **D-61 (2026-11-17)** — Issue #2: `api.wtatennis.com/tennis/matches/global` serves `Serve` and `PointA`/`PointB` for a live (`P`) match, seen on a WTA 125 (Colina, event 2076) over ~3 min; Pete approved site use on 2026-08-31.
+  Feed is not monotonic (a correction lowered the point score), so take the newest `LastUpdated`. Tiebreak points and the other states are unobserved. No code built. Evidence: [issues/32](../.scratch/dropshot-tennis-engine/issues/32-wta-public-api-live-scores.md).
