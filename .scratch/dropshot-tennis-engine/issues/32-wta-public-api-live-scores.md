@@ -1,5 +1,5 @@
 Type: finding
-Status: confirmed open API; live in-play field population NOT yet observed
+Status: confirmed open API; live in-play fields (`Serve`, `PointA`/`PointB`) OBSERVED populating 2026-11-17 (see Update)
 
 ## Finding
 
@@ -139,3 +139,34 @@ extending live coverage to ATP tour events. **That was wrong** - it is
 post-match only (Tournament Calendar, Results, Key Stats, Rally Analysis,
 Stroke Analysis, Court Vision, "matches from Antwerp 2021 onwards"), exactly
 as ticket 03 line 56 had already recorded. No live capability.
+
+## Update 2026-11-17 - the open question is answered
+
+Pete approved site use on 2026-08-31 (issue #2 comment); the licensing
+blocker is closed. The in-play field question is now answered too.
+
+One `GET /tennis/matches/global` at 22:49 UTC returned 31 matches (event
+`2076`, "LP Open by IND - Colina, CHI", a **WTA 125**, plus 3 finished WTA
+Finals doubles matches). One match was
+`MatchState: "P"`: `LS027`, `Serve: "A"`, `PointA: "0"`, `PointB: "0"`,
+`ScoreSet1A/B: 6/3`, `ScoreSet2A/B: 2/3`, `ScoreString: "6-3,2-3"`,
+`BinPacketBase64: null`. Ten polls 20 s apart over ~3 min showed `PointA/B`
+moving (`0-0` -> `15-30` -> `15-15`) with `LastUpdated` advancing.
+
+Things a consumer must handle:
+
+- **The feed is not monotonic.** `LastUpdated` 22:50:02 gave `15-30`; the
+  next change had `LastUpdated` 22:49:47 and `15-15`, i.e. an operator
+  correction rolled the point back. Take the record with the newest
+  `LastUpdated` per `MatchID`, and never assume points only go up.
+- The record updates in bursts (no change for ~100 s at the start; the
+  match-global call re-served the same `LastUpdated` on 4 consecutive polls).
+- `PointA`/`PointB` are strings (`"0","15","30","40","A"`); `""` when not live.
+- `BinPacketBase64` was `null` on live and finished matches alike: no
+  richer per-point detail seen.
+
+Still not observed: tiebreak points in `PointA/B` (`ScoreTbSet*` were empty,
+no tiebreak in play), `S`/`M`/`D`/`R`/`E` states, and a WTA 500 or tour-level
+event live (the one live event was the WTA 125). So "the fields populate" is
+confirmed for a `P` match at a WTA 125, the tier no other source covers; the rest of the enum is still taken
+from the bundle, not seen.
