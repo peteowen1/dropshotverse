@@ -218,7 +218,8 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
    sweep 2026-10-29): those runs were 2026-09-10, seven weeks ago.
 6. **Rust refinements, only if the comeback slice keeps rewarding it**: weight
    a match by sets or games played, and by whether it was won. D-49.
-7. **Issue #44: take the China Open off the published forecast.** Nothing
+7. EXPIRED (monday sweep 2026-11-23): issue #44 was closed 2026-10-27. Text kept for the Validate-step note.
+   **Issue #44: take the China Open off the published forecast.** Nothing
    writes until a run happens. Dispatch `event-forecast.yml` with group `1020`:
    a started event is not forecast, the three files are pruned to empty, and the
    run ends 0 with no model work. Two things stand in the way: the Validate step
@@ -295,6 +296,9 @@ Roughly 6.5 hours total, ~1.3 GB, about 944 matches a year.
     on its next run with the bridge fix.
 
 ## Live deadlines (absolute dates)
+
+> EXPIRED (monday sweep 2026-11-23): the two 2026-09-13 US Open items below are ten weeks past. Whether the
+> post-final rebuild of `usopen_2026_points.parquet` was run was not checked; if arm D still matters, re-date it.
 
 - **2026-09-13, after the final** — rebuild `usopen_2026_points.parquet`
   (`python build_point_table.py`) and re-run `screen_inmatch_seeded.py` then
