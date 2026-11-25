@@ -10,7 +10,7 @@ Workflow: [`ratings-refresh.yml`](https://github.com/peteowen1/dropshotverse/blo
 
 One job, once a day. It replays player Elo over the archived matches plus every tennismylife match since 25 May 2026, rebuilds ratings.parquet (and only that file: the locked pre-tournament predictions.parquet is not touched), checks it, and uploads it. Only scheduled runs from main are counted, and dry runs are not (they skip the upload).
 
-**What starts it, and what it starts:** GitHub's own schedule, 06:00 UTC daily (about 5pm Sydney); GitHub's cron is best-effort, so recent runs have started anywhere from about 11pm to 4:30am Sydney (5 to 11 hours late). It can also be started by hand, with an optional dry-run box that builds and checks but does not upload.
+**What starts it, and what it starts:** GitHub's own schedule, 5pm Sydney time daily in summer (4pm in winter); GitHub's cron is best-effort, so recent runs have started anywhere from about 11pm to 4:30am Sydney (5 to 11 hours late). It can also be started by hand, with an optional dry-run box that builds and checks but does not upload.
 
 ### The order jobs run in
 
