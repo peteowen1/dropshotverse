@@ -1,0 +1,353 @@
+{
+ "repo": "peteowen1/dropshotverse",
+ "doc_path": "docs/PIPELINE.md",
+ "title": "dropshotverse ratings pipeline",
+ "about": "What the daily tennis ratings refresh does on GitHub Actions, in order, and how long each part takes: from fetching the stored match archive and the latest tennismylife results to the new ratings.parquet landing on the data store the site reads. Only the ratings refresh is listed. The live tournament projection (live-projection.yml) is left out because its last successful run was on 16 Sep 2026, the end of the US Open window; archive-tennismylife.yml is left out because it only keeps a backup copy of the tennismylife files and nothing in the ratings build reads that copy (the build fetches tennismylife live); check-freshness.yml is a monitor.",
+ "newest_run_utc": "2026-11-24T17:08:26Z",
+ "newest_run_sydney": "25 Nov 2026, 4:08am",
+ "pipelines": [
+  {
+   "name": "Ratings refresh",
+   "workflow": "ratings-refresh.yml",
+   "about": "One job, once a day. It replays player Elo over the archived matches plus every tennismylife match since 25 May 2026, rebuilds ratings.parquet (and only that file: the locked pre-tournament predictions.parquet is not touched), checks it, and uploads it. Only scheduled runs from main are counted, and dry runs are not (they skip the upload).",
+   "triggers": "GitHub's own schedule, 06:00 UTC daily (about 5pm Sydney); GitHub's cron is best-effort, so recent runs have started anywhere from about 11pm to 4:30am Sydney (5 to 11 hours late). It can also be started by hand, with an optional dry-run box that builds and checks but does not upload.",
+   "median_s": 165.0,
+   "min_s": 150.0,
+   "max_s": 197.0,
+   "runs": [
+    {
+     "id": 45445183544,
+     "url": "https://github.com/peteowen1/dropshotverse/actions/runs/45445183544",
+     "event": "schedule",
+     "branch": "main",
+     "title": "Ratings refresh",
+     "started_utc": "2026-11-24T17:08:26Z",
+     "started_sydney": "25 Nov 2026, 4:08am",
+     "wall_s": 197.0,
+     "queued_s": 2.0
+    },
+    {
+     "id": 45229698104,
+     "url": "https://github.com/peteowen1/dropshotverse/actions/runs/45229698104",
+     "event": "schedule",
+     "branch": "main",
+     "title": "Ratings refresh",
+     "started_utc": "2026-11-23T17:37:37Z",
+     "started_sydney": "24 Nov 2026, 4:37am",
+     "wall_s": 150.0,
+     "queued_s": 3.0
+    },
+    {
+     "id": 45031815453,
+     "url": "https://github.com/peteowen1/dropshotverse/actions/runs/45031815453",
+     "event": "schedule",
+     "branch": "main",
+     "title": "Ratings refresh",
+     "started_utc": "2026-11-22T14:15:21Z",
+     "started_sydney": "23 Nov 2026, 1:15am",
+     "wall_s": 155.0,
+     "queued_s": 3.0
+    },
+    {
+     "id": 44913656340,
+     "url": "https://github.com/peteowen1/dropshotverse/actions/runs/44913656340",
+     "event": "schedule",
+     "branch": "main",
+     "title": "Ratings refresh",
+     "started_utc": "2026-11-21T14:23:10Z",
+     "started_sydney": "22 Nov 2026, 1:23am",
+     "wall_s": 165.0,
+     "queued_s": 2.0
+    },
+    {
+     "id": 44759045071,
+     "url": "https://github.com/peteowen1/dropshotverse/actions/runs/44759045071",
+     "event": "schedule",
+     "branch": "main",
+     "title": "Ratings refresh",
+     "started_utc": "2026-11-20T15:01:11Z",
+     "started_sydney": "21 Nov 2026, 2:01am",
+     "wall_s": 168.0,
+     "queued_s": 2.0
+    }
+   ],
+   "jobs": [
+    {
+     "name": "refresh",
+     "about": "Rebuilds the ratings table from the stored archive and the latest tennismylife matches, checks it and publishes it",
+     "legs": 1,
+     "median_s": 165.0,
+     "min_s": 150.0,
+     "max_s": 197.0,
+     "leg_median_s": 165.0,
+     "slowest_leg_median_s": 165.0,
+     "runs_seen": 5,
+     "steps": [
+      {
+       "name": "Set up job",
+       "about": "GitHub starts the machine and downloads the actions this job uses",
+       "source": "builtin",
+       "median_s": 0.0,
+       "min_s": 0.0,
+       "max_s": 3.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Run actions/checkout@v7",
+       "about": "Downloads this repo's code onto the machine",
+       "source": "builtin",
+       "median_s": 2.0,
+       "min_s": 1.0,
+       "max_s": 5.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Run actions/setup-python@v5",
+       "about": "Installs Python",
+       "source": "builtin",
+       "median_s": 0.0,
+       "min_s": 0.0,
+       "max_s": 1.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Install dependencies",
+       "about": "Installs the Python packages the build needs (pandas, numpy, xgboost, pyarrow)",
+       "source": "config",
+       "median_s": 18.0,
+       "min_s": 16.0,
+       "max_s": 21.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Fetch archive and model inputs from Releases",
+       "about": "Downloads the frozen Sackmann match archive (sackmann-archive release) and the shipped XGBoost model files (model-inputs-2026-09 release), unpacks them, and fails if fewer than 400 archive CSV files turned up",
+       "source": "config",
+       "median_s": 6.0,
+       "min_s": 5.0,
+       "max_s": 11.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Fetch the live draw field (optional)",
+       "about": "Downloads live_predictions.parquet from the data store so players in the current tournament draw are rated even if the locked field lacks them; if it cannot be fetched it warns and rates the locked field only",
+       "source": "config",
+       "median_s": 1.0,
+       "min_s": 0.0,
+       "max_s": 1.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Regenerate Elo with the current bridge (timed)",
+       "about": "Runs regen_elo_raw_with_bridge.py: replays overall and per-surface Elo over the archive plus the tennismylife matches since 25 May 2026 (fetched live from stats.tennismylife.org)",
+       "source": "config",
+       "median_s": 28.0,
+       "min_s": 24.0,
+       "max_s": 36.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Regenerate set and game Elo with the current bridge (timed)",
+       "about": "Runs regen_set_game_elo_with_bridge.py to replay set-level and game-level Elo the same way, then elo_freshness.py, which fails the run if either lags the overall Elo by more than 14 days",
+       "source": "config",
+       "median_s": 21.0,
+       "min_s": 18.0,
+       "max_s": 25.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Build ratings.parquet only (timed)",
+       "about": "Runs build_blog_data.py --ratings-only: loads the cached XGBoost model, re-reads the archive plus tennismylife matches, builds each player's Elo and Bradley-Terry rating for the top 150 per tour plus the current draw, checks the anchors (fails and writes nothing if they do not pass), and writes ratings.parquet",
+       "source": "config",
+       "median_s": 74.0,
+       "min_s": 61.0,
+       "max_s": 95.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Validate",
+       "about": "Checks ratings.parquet exists and prints its size, as-of date and the top five of each tour by rating",
+       "source": "config",
+       "median_s": 1.0,
+       "min_s": 0.0,
+       "max_s": 1.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Run actions/setup-node@v7",
+       "about": "Installs Node 20 for the upload tool (skipped on dry runs)",
+       "source": "config",
+       "median_s": 3.0,
+       "min_s": 3.0,
+       "max_s": 4.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Upload ratings.parquet to R2",
+       "about": "Installs wrangler and uploads ratings.parquet to the inthegame-data bucket on Cloudflare R2 (tennis/ratings.parquet), retrying up to 3 times (skipped on dry runs)",
+       "source": "config",
+       "median_s": 7.0,
+       "min_s": 5.0,
+       "max_s": 7.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Verify the published copy",
+       "about": "Downloads the published ratings.parquet back from the data store and checks it reads; it only warns (does not fail the run) if the file's build time is more than 1 day old (check_blog_data_freshness.py --ratings; skipped on dry runs)",
+       "source": "config",
+       "median_s": 1.0,
+       "min_s": 1.0,
+       "max_s": 1.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Post Run actions/setup-node@v7",
+       "about": "Clean-up for an earlier step (saves caches, removes credentials)",
+       "source": "builtin",
+       "median_s": 0.0,
+       "min_s": 0.0,
+       "max_s": 0.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Post Run actions/setup-python@v5",
+       "about": "Clean-up for an earlier step (saves caches, removes credentials)",
+       "source": "builtin",
+       "median_s": 0.0,
+       "min_s": 0.0,
+       "max_s": 0.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Post Run actions/checkout@v7",
+       "about": "Clean-up for an earlier step (saves caches, removes credentials)",
+       "source": "builtin",
+       "median_s": 1.0,
+       "min_s": 0.0,
+       "max_s": 1.0,
+       "n": 5,
+       "of": 5
+      },
+      {
+       "name": "Complete job",
+       "about": "GitHub closes the job and cleans up the machine",
+       "source": "builtin",
+       "median_s": 0.0,
+       "min_s": 0.0,
+       "max_s": 0.0,
+       "n": 5,
+       "of": 5
+      }
+     ],
+     "stages": {
+      "the stages of build_blog_data.py": [
+       {
+        "name": "loading cached bagged XGBoost model (skip retrain)",
+        "median_s": 20.688891,
+        "min_s": 18.777416,
+        "max_s": 24.519729,
+        "n": 5
+       },
+       {
+        "name": "building ratings.parquet",
+        "median_s": 53.641872,
+        "min_s": 42.664763,
+        "max_s": 69.321388,
+        "n": 5
+       }
+      ],
+      "the Bradley-Terry round-robin, by tour": [
+       {
+        "name": "atp",
+        "median_s": 14.413236,
+        "min_s": 11.769221,
+        "max_s": 18.797228,
+        "n": 5
+       },
+       {
+        "name": "wta",
+        "median_s": 7.859543,
+        "min_s": 6.348344,
+        "max_s": 10.105648,
+        "n": 5
+       }
+      ]
+     },
+     "stage_notes": {
+      "the stages of build_blog_data.py": "Each stage runs from its `=== name ===` line to the next one; the last runs to the end of the step.",
+      "the Bradley-Terry round-robin, by tour": "Each part runs from its `building BT round-robin` line to the next one; the women's part includes the anchor checks and writing the file."
+     },
+     "stage_about": {
+      "loading cached bagged XGBoost model (skip retrain)": "Loads the saved XGBoost model files instead of retraining, then re-reads the archive plus tennismylife matches and the age table",
+      "building ratings.parquet": "Builds the table: picks the active players, computes Elo and the head-to-head Bradley-Terry ratings, checks the anchors and writes the file. The Bradley-Terry part is broken out in the next table; the rest is the active-player pool and the Elo replay",
+      "atp": "Men's Bradley-Terry round-robin: every pairing of the active players run through the model (ends at the start of the women's part)",
+      "wta": "Women's Bradley-Terry round-robin, then the anchor checks and the file write (runs to the end of the step)"
+     }
+    }
+   ],
+   "phases": [
+    {
+     "jobs": [
+      "refresh"
+     ],
+     "median_s": 165.0,
+     "min_s": 150.0,
+     "max_s": 197.0,
+     "slowest": "refresh",
+     "parallel": false
+    }
+   ],
+   "critical_path": [
+    "refresh"
+   ],
+   "slowest_steps": [
+    {
+     "job": "refresh",
+     "step": "Build ratings.parquet only (timed)",
+     "about": "Runs build_blog_data.py --ratings-only: loads the cached XGBoost model, re-reads the archive plus tennismylife matches, builds each player's Elo and Bradley-Terry rating for the top 150 per tour plus the current draw, checks the anchors (fails and writes nothing if they do not pass), and writes ratings.parquet",
+     "median_s": 74.0
+    },
+    {
+     "job": "refresh",
+     "step": "Regenerate Elo with the current bridge (timed)",
+     "about": "Runs regen_elo_raw_with_bridge.py: replays overall and per-surface Elo over the archive plus the tennismylife matches since 25 May 2026 (fetched live from stats.tennismylife.org)",
+     "median_s": 28.0
+    },
+    {
+     "job": "refresh",
+     "step": "Regenerate set and game Elo with the current bridge (timed)",
+     "about": "Runs regen_set_game_elo_with_bridge.py to replay set-level and game-level Elo the same way, then elo_freshness.py, which fails the run if either lags the overall Elo by more than 14 days",
+     "median_s": 21.0
+    },
+    {
+     "job": "refresh",
+     "step": "Install dependencies",
+     "about": "Installs the Python packages the build needs (pandas, numpy, xgboost, pyarrow)",
+     "median_s": 18.0
+    },
+    {
+     "job": "refresh",
+     "step": "Upload ratings.parquet to R2",
+     "about": "Installs wrangler and uploads ratings.parquet to the inthegame-data bucket on Cloudflare R2 (tennis/ratings.parquet), retrying up to 3 times (skipped on dry runs)",
+     "median_s": 7.0
+    }
+   ]
+  }
+ ],
+ "warnings": []
+}

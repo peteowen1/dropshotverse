@@ -1,0 +1,61 @@
+{
+  "repo": "peteowen1/dropshotverse",
+  "title": "dropshotverse ratings pipeline",
+  "about": "What the daily tennis ratings refresh does on GitHub Actions, in order, and how long each part takes: from fetching the stored match archive and the latest tennismylife results to the new ratings.parquet landing on the data store the site reads. Only the ratings refresh is listed. The live tournament projection (live-projection.yml) is left out because its last successful run was on 16 Sep 2026, the end of the US Open window; archive-tennismylife.yml is left out because it only keeps a backup copy of the tennismylife files and nothing in the ratings build reads that copy (the build fetches tennismylife live); check-freshness.yml is a monitor.",
+  "runs": 5,
+  "pipelines": [
+    {
+      "name": "Ratings refresh",
+      "workflow": "ratings-refresh.yml",
+      "about": "One job, once a day. It replays player Elo over the archived matches plus every tennismylife match since 25 May 2026, rebuilds ratings.parquet (and only that file: the locked pre-tournament predictions.parquet is not touched), checks it, and uploads it. Only scheduled runs from main are counted, and dry runs are not (they skip the upload).",
+      "triggers": "GitHub's own schedule, 06:00 UTC daily (about 5pm Sydney); GitHub's cron is best-effort, so recent runs have started anywhere from about 11pm to 4:30am Sydney (5 to 11 hours late). It can also be started by hand, with an optional dry-run box that builds and checks but does not upload.",
+      "select": {
+        "events": ["schedule"],
+        "branch": "main",
+        "require_jobs": ["^refresh$"],
+        "min_seconds": 60
+      },
+      "jobs": [
+        {
+          "name": "refresh",
+          "match": "^refresh$",
+          "about": "Rebuilds the ratings table from the stored archive and the latest tennismylife matches, checks it and publishes it",
+          "steps": {
+            "Install dependencies": "Installs the Python packages the build needs (pandas, numpy, xgboost, pyarrow)",
+            "Fetch archive and model inputs from Releases": "Downloads the frozen Sackmann match archive (sackmann-archive release) and the shipped XGBoost model files (model-inputs-2026-09 release), unpacks them, and fails if fewer than 400 archive CSV files turned up",
+            "Fetch the live draw field (optional)": "Downloads live_predictions.parquet from the data store so players in the current tournament draw are rated even if the locked field lacks them; if it cannot be fetched it warns and rates the locked field only",
+            "Regenerate Elo with the current bridge (timed)": "Runs regen_elo_raw_with_bridge.py: replays overall and per-surface Elo over the archive plus the tennismylife matches since 25 May 2026 (fetched live from stats.tennismylife.org)",
+            "Regenerate set and game Elo with the current bridge (timed)": "Runs regen_set_game_elo_with_bridge.py to replay set-level and game-level Elo the same way, then elo_freshness.py, which fails the run if either lags the overall Elo by more than 14 days",
+            "Build ratings.parquet only (timed)": "Runs build_blog_data.py --ratings-only: loads the cached XGBoost model, re-reads the archive plus tennismylife matches, builds each player's Elo and Bradley-Terry rating for the top 150 per tour plus the current draw, checks the anchors (fails and writes nothing if they do not pass), and writes ratings.parquet",
+            "Validate": "Checks ratings.parquet exists and prints its size, as-of date and the top five of each tour by rating",
+            "Run actions/setup-node@v7": "Installs Node 20 for the upload tool (skipped on dry runs)",
+            "Upload ratings.parquet to R2": "Installs wrangler and uploads ratings.parquet to the inthegame-data bucket on Cloudflare R2 (tennis/ratings.parquet), retrying up to 3 times (skipped on dry runs)",
+            "Verify the published copy": "Downloads the published ratings.parquet back from the data store and checks it reads; it only warns (does not fail the run) if the file's build time is more than 1 day old (check_blog_data_freshness.py --ratings; skipped on dry runs)"
+          },
+          "log": {
+            "headers": [
+              {
+                "regex": "^=== (?P<name>.+?) ===$",
+                "label": "the stages of build_blog_data.py"
+              },
+              {
+                "regex": "^\\s*\\[(?P<name>atp|wta)\\] building BT round-robin",
+                "label": "the Bradley-Terry round-robin, by tour"
+              }
+            ],
+            "about": {
+              "loading cached bagged XGBoost model (skip retrain)": "Loads the saved XGBoost model files instead of retraining, then re-reads the archive plus tennismylife matches and the age table",
+              "building ratings.parquet": "Builds the table: picks the active players, computes Elo and the head-to-head Bradley-Terry ratings, checks the anchors and writes the file. The Bradley-Terry part is broken out in the next table; the rest is the active-player pool and the Elo replay",
+              "atp": "Men's Bradley-Terry round-robin: every pairing of the active players run through the model (ends at the start of the women's part)",
+              "wta": "Women's Bradley-Terry round-robin, then the anchor checks and the file write (runs to the end of the step)"
+            }
+          },
+          "stage_notes": {
+            "the stages of build_blog_data.py": "Each stage runs from its `=== name ===` line to the next one; the last runs to the end of the step.",
+            "the Bradley-Terry round-robin, by tour": "Each part runs from its `building BT round-robin` line to the next one; the women's part includes the anchor checks and writing the file."
+          }
+        }
+      ]
+    }
+  ]
+}
